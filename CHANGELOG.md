@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-07-07
+
 - Added clearer screenshots to the GitHub homepage and README.
 - Improved tooltip texts with short explanations for each field.
 - Reworded metric tooltips so they explain what each field means.
