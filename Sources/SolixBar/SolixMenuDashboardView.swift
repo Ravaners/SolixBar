@@ -39,12 +39,12 @@ final class SolixMenuDashboardView: NSView {
         let title = NSTextField(labelWithString: snapshot.siteName)
         title.font = .boldSystemFont(ofSize: 18)
         title.textColor = .labelColor
-        title.toolTip = "Name der SOLIX-Anlage."
+        title.toolTip = "Name deiner SOLIX-Anlage."
 
         let updated = NSTextField(labelWithString: "Aktualisiert \(RelativeDateTimeFormatter().localizedString(for: snapshot.updatedAt, relativeTo: Date()))")
         updated.font = .systemFont(ofSize: 12, weight: .medium)
         updated.textColor = .secondaryLabelColor
-        updated.toolTip = "Zeitpunkt der letzten Daten."
+        updated.toolTip = "Wann die Werte zuletzt aktualisiert wurden."
 
         let status = badge(snapshot.status ?? "Online", color: statusColor)
 
@@ -111,11 +111,12 @@ final class SolixMenuDashboardView: NSView {
     }
 
     private func primaryMetricPanel(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor) -> NSView {
-        let panel = NSView()
-        panel.toolTip = "\(title): \(value ?? "-")"
+        let panel = AnimatedPanelView()
+        panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
         panel.layer?.cornerRadius = 14
-        panel.layer?.backgroundColor = panelColor.cgColor
+        panel.baseColor = panelColor
+        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.20 : 0.08).blended(withFraction: 0.82, of: panelColor) ?? panelColor
         panel.layer?.borderWidth = 1
         panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
 
@@ -153,8 +154,11 @@ final class SolixMenuDashboardView: NSView {
     }
 
     private func compactMetricRow(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor) -> NSView {
-        let row = NSView()
-        row.toolTip = "\(title): \(value ?? "-")"
+        let row = AnimatedPanelView()
+        row.toolTip = tooltip(for: title, value: value)
+        row.baseColor = panelColor
+        row.highlightColor = color.withAlphaComponent(isDarkMode ? 0.16 : 0.06).blended(withFraction: 0.9, of: panelColor) ?? panelColor
+        row.layer?.cornerRadius = 10
         let icon = iconPlate(symbol: symbol, color: color, size: 30, pointSize: 17)
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
@@ -189,11 +193,12 @@ final class SolixMenuDashboardView: NSView {
     }
 
     private func badge(_ text: String, color: NSColor) -> NSView {
-        let view = NSView()
-        view.toolTip = "Aktueller Anlagenstatus."
+        let view = AnimatedPanelView()
+        view.toolTip = "Zeigt, ob die Datenquelle online ist."
         view.wantsLayer = true
         view.layer?.cornerRadius = 12
-        view.layer?.backgroundColor = color.withAlphaComponent(0.18).cgColor
+        view.baseColor = color.withAlphaComponent(0.18)
+        view.highlightColor = color.withAlphaComponent(0.28)
         view.layer?.borderWidth = 1
         view.layer?.borderColor = color.withAlphaComponent(0.5).cgColor
 
@@ -261,6 +266,26 @@ final class SolixMenuDashboardView: NSView {
         return value > 0 ? "+\(value) W" : "\(value) W"
     }
 
+    private func tooltip(for title: String, value: String?) -> String {
+        let current = value ?? "-"
+        switch title {
+        case "Akku":
+            return "Aktueller Ladezustand des Speichers: \(current)."
+        case "Solar":
+            return "Aktuelle Solarleistung der Module: \(current)."
+        case "Hausverbrauch":
+            return "Aktueller Verbrauch im Haus: \(current)."
+        case "Netzbezug":
+            return "Leistung aus dem Netz. Negative Werte bedeuten Einspeisung: \(current)."
+        case "Akku-Fluss":
+            return "Lade- oder Entladeleistung des Akkus: \(current)."
+        case "Heutiger Ertrag":
+            return "Bisher erzeugte Energie seit Tagesbeginn: \(current)."
+        default:
+            return "\(title): \(current)."
+        }
+    }
+
     private var backgroundColor: NSColor {
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
@@ -275,6 +300,10 @@ final class SolixMenuDashboardView: NSView {
                 ? NSColor(calibratedRed: 0.13, green: 0.14, blue: 0.15, alpha: 1)
                 : NSColor.white
         }
+    }
+
+    private var isDarkMode: Bool {
+        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
     }
 
     private var statusColor: NSColor {

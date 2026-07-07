@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added clearer screenshots to the GitHub homepage and README.
+- Improved tooltip texts with short explanations for each field.
+- Raised graph power scale to at least 2000 W.
+- Added subtle graph line animation.
+- Added soft animated backgrounds to dashboard and widget metric panels.
+
 ## 0.1.0 - 2026-07-07
 
 Initial local release of SolixBar.

@@ -32,6 +32,8 @@
     <line x1="334" y1="602" x2="866" y2="602" stroke="#d9e2dc"/>
     <line x1="334" y1="546" x2="866" y2="546" stroke="#d9e2dc"/>
     <line x1="334" y1="490" x2="866" y2="490" stroke="#d9e2dc"/>
+    <text x="804" y="492" fill="#8d9a93" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">2000 W</text>
+    <text x="816" y="604" fill="#8d9a93" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">0 W</text>
     <path d="M334 591 C412 578 448 560 520 564 C594 568 630 522 705 536 C772 548 812 508 866 516" fill="none" stroke="#2c8f63" stroke-width="7" stroke-linecap="round"/>
     <path d="M334 594 C410 530 459 538 523 500 C590 462 645 508 710 492 C779 474 818 522 866 497" fill="none" stroke="#e4a72f" stroke-width="7" stroke-linecap="round"/>
     <path d="M334 574 C415 588 469 610 538 598 C612 585 672 612 735 594 C792 578 826 590 866 579" fill="none" stroke="#2d71d6" stroke-width="7" stroke-linecap="round"/>

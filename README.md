@@ -6,6 +6,12 @@ It provides a compact menu bar readout, a modern dropdown dashboard, a history g
 
 Project homepage files are in [`docs/`](docs/) and can be published with GitHub Pages.
 
+## Screenshots
+
+![SolixBar menu bar preview](docs/assets/menubar-shot.svg)
+
+![SolixBar graph preview](docs/assets/graph-shot.svg)
+
 ## Features
 
 - Native AppKit menu bar app.
@@ -14,7 +20,7 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 - Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
 - Login autostart support.
 - Dropdown dashboard with battery, solar, home consumption, grid import, battery flow, daily yield, and status.
-- History graph for battery, solar, and grid import.
+- Animated history graph for battery, solar, and grid import.
 - Graph ranges: current, 24 hours, 7 days, 30 days, and custom.
 - Enlarged graph view on click.
 - Floating desktop widget window.

@@ -57,13 +57,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let container = NSView()
 
         modePopup.addItems(withTitles: ["Demo", "Lokaler JSON-Befehl", "JSON-URL"])
-        modePopup.toolTip = "Quelle der SOLIX-Daten."
+        modePopup.toolTip = "Legt fest, woher SolixBar die Werte lädt."
         commandField.placeholderString = "/usr/bin/env python3 scripts/solix_snapshot.py"
-        commandField.toolTip = "Lokaler Befehl, der JSON ausgibt."
+        commandField.toolTip = "Führt einen lokalen Befehl aus und liest dessen JSON-Ausgabe."
         urlField.placeholderString = "http://127.0.0.1:8787/solix.json"
-        urlField.toolTip = "URL mit SOLIX-JSON-Daten."
+        urlField.toolTip = "Lädt die Werte von einer JSON-Adresse."
         intervalField.placeholderString = "300"
-        intervalField.toolTip = "Aktualisierung in Sekunden."
+        intervalField.toolTip = "Zeit zwischen zwei Aktualisierungen in Sekunden."
 
         for textField in [commandField, urlField, intervalField] {
             textField.delegate = self
@@ -75,14 +75,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
         autostartButton.target = self
         autostartButton.action = #selector(toggleAutostart)
-        autostartButton.toolTip = "Startet die App beim Login."
+        autostartButton.toolTip = "Startet SolixBar automatisch nach dem Anmelden."
         autostartStatus.textColor = .secondaryLabelColor
         autostartStatus.lineBreakMode = .byTruncatingMiddle
-        showIconButton.toolTip = "Blendet das App-Symbol ein."
-        showLabelsButton.toolTip = "Zeigt Namen vor den Werten."
-        showMetricSymbolsButton.toolTip = "Zeigt Symbole in der Menübar."
-        scaleSlider.toolTip = "Größe der Menübar-Anzeige."
-        scaleValue.toolTip = "Aktuelle Skalierung."
+        showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
+        showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
+        showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
+        scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
+        scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
 
         let title = NSTextField(labelWithString: "SOLIX Bar")
         title.font = .boldSystemFont(ofSize: 20)
@@ -95,12 +95,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
         let cancel = NSButton(title: "Abbrechen", target: self, action: #selector(cancelSettings))
         cancel.bezelStyle = .rounded
-        cancel.toolTip = "Verwirft Vorschau-Änderungen."
+        cancel.toolTip = "Verwirft die Vorschau und stellt die alten Einstellungen wieder her."
 
         let save = NSButton(title: "Speichern", target: self, action: #selector(saveSettings))
         save.bezelStyle = .rounded
         save.keyEquivalent = "\r"
-        save.toolTip = "Speichert die Einstellungen."
+        save.toolTip = "Speichert die aktuellen Einstellungen dauerhaft."
 
         for view in [title, tabs, cancel, save] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -248,7 +248,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ].map { metrics in
             metrics.map { metric in
                 let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(applyPreview))
-                button.toolTip = "In der Menübar anzeigen."
+                button.toolTip = metricTooltip(metric)
                 metricButtons[metric] = button
                 return button
             }
@@ -269,7 +269,44 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func label(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.textColor = .secondaryLabelColor
+        label.toolTip = labelTooltip(text)
         return label
+    }
+
+    private func metricTooltip(_ metric: BarMetric) -> String {
+        switch metric {
+        case .battery:
+            return "Zeigt den aktuellen Akkustand in Prozent in der Menüleiste."
+        case .solar:
+            return "Zeigt die aktuelle Solarleistung in Watt in der Menüleiste."
+        case .home:
+            return "Zeigt den aktuellen Hausverbrauch in Watt in der Menüleiste."
+        case .grid:
+            return "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt."
+        case .batteryFlow:
+            return "Zeigt, ob der Akku gerade lädt oder entlädt."
+        case .today:
+            return "Zeigt den heutigen Solarertrag in kWh."
+        case .status:
+            return "Zeigt den aktuellen Status der Datenquelle."
+        }
+    }
+
+    private func labelTooltip(_ text: String) -> String {
+        switch text {
+        case "Skalierung":
+            return "Passt die Größe der Menüleistenanzeige an."
+        case "Modus":
+            return "Wählt Demo, lokalen JSON-Befehl oder JSON-URL."
+        case "Befehl":
+            return "Der lokale Befehl muss ein JSON-Objekt ausgeben."
+        case "URL":
+            return "Die Adresse muss ein JSON-Objekt liefern."
+        case "Intervall":
+            return "Legt fest, wie oft neue Daten geholt werden."
+        default:
+            return text
+        }
     }
 
     private func loadSettings() {

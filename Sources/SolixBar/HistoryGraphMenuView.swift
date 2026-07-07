@@ -32,14 +32,14 @@ final class HistoryGraphMenuView: NSView {
         let title = NSTextField(labelWithString: "Verlauf")
         title.font = .boldSystemFont(ofSize: 13)
         title.textColor = .labelColor
-        title.toolTip = "Verlauf der Messwerte."
+        title.toolTip = "Zeigt den zeitlichen Verlauf von Akku, Solar und Netzbezug."
 
         segmented.target = self
         segmented.action = #selector(changeRange)
         segmented.segmentStyle = .rounded
         segmented.controlSize = .small
         segmented.font = .systemFont(ofSize: 11, weight: .semibold)
-        segmented.toolTip = "Zeitraum des Grafen."
+        segmented.toolTip = "Wählt den Zeitraum für den Graphen."
 
         customDaysField.placeholderString = "Tage"
         customDaysField.target = self
@@ -48,7 +48,7 @@ final class HistoryGraphMenuView: NSView {
         customDaysField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
         customDaysField.backgroundColor = fieldBackground
         customDaysField.textColor = .labelColor
-        customDaysField.toolTip = "Tage für individuellen Zeitraum."
+        customDaysField.toolTip = "Anzahl der Tage für den individuellen Zeitraum."
 
         for view in [title, segmented, customDaysField, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false

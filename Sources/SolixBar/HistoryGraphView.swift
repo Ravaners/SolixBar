@@ -3,6 +3,9 @@ import AppKit
 final class HistoryGraphView: NSView {
     private let samples: [SolixHistorySample]
     private let rangeTitle: String
+    private var animationProgress: CGFloat = 0
+    private var animationTimer: Timer?
+    private let animationStart = Date()
     var onClick: (() -> Void)?
 
     private let batteryColor = NSColor(calibratedRed: 0.20, green: 0.78, blue: 0.46, alpha: 1)
@@ -18,7 +21,8 @@ final class HistoryGraphView: NSView {
         layer?.backgroundColor = graphBackground.cgColor
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
-        toolTip = "Klicken für große Ansicht."
+        toolTip = "Zeigt Akku, Solar und Netzbezug im gewählten Zeitraum. Klick öffnet die große Ansicht."
+        startLineAnimation()
     }
 
     required init?(coder: NSCoder) {
@@ -45,9 +49,30 @@ final class HistoryGraphView: NSView {
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
         drawTimeLabels(in: plot)
-        drawLine(values: batteryPoints(in: plot), color: batteryColor, width: 2.8)
-        drawLine(values: solarPoints(in: plot, maxPower: maxPower), color: solarColor, width: 2.8)
-        drawLine(values: gridPoints(in: plot, maxPower: maxPower), color: gridColor, width: 2.8)
+        drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 2.8)
+        drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 2.8)
+        drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 2.8)
+    }
+
+    private func startLineAnimation() {
+        animationTimer = Timer.scheduledTimer(
+            timeInterval: 1.0 / 30.0,
+            target: self,
+            selector: #selector(tickLineAnimation(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+    }
+
+    @objc private func tickLineAnimation(_ timer: Timer) {
+        let elapsed = Date().timeIntervalSince(animationStart)
+        let progress = min(1, elapsed / 0.9)
+        animationProgress = easeOutCubic(CGFloat(progress))
+        needsDisplay = true
+        if progress >= 1 {
+            timer.invalidate()
+            animationTimer = nil
+        }
     }
 
     private func drawBackground() {
@@ -182,6 +207,22 @@ final class HistoryGraphView: NSView {
         }
     }
 
+    private func animatedPoints(_ points: [NSPoint]) -> [NSPoint] {
+        guard points.count >= 2, animationProgress < 1 else { return points }
+        let target = CGFloat(points.count - 1) * animationProgress
+        let fullIndex = max(0, min(points.count - 1, Int(target.rounded(.down))))
+        var visible = Array(points.prefix(fullIndex + 1))
+        guard fullIndex < points.count - 1 else { return visible }
+        let fraction = target - CGFloat(fullIndex)
+        let start = points[fullIndex]
+        let end = points[fullIndex + 1]
+        visible.append(NSPoint(
+            x: start.x + (end.x - start.x) * fraction,
+            y: start.y + (end.y - start.y) * fraction
+        ))
+        return visible
+    }
+
     private func drawLegend() {
         let y = bounds.maxY - 25
         drawLegendItem(title: "Akku", color: batteryColor, x: max(120, bounds.width - 225), y: y)
@@ -199,8 +240,12 @@ final class HistoryGraphView: NSView {
         let values = samples.flatMap { sample -> [Int] in
             [sample.solarWatts ?? 0, max(0, sample.gridWatts ?? 0)]
         }
-        let rawMax = max(100, values.max() ?? 100)
-        return Int(ceil(Double(rawMax) / 100.0) * 100)
+        let rawMax = max(2000, values.max() ?? 2000)
+        return Int(ceil(Double(rawMax) / 500.0) * 500)
+    }
+
+    private func easeOutCubic(_ value: CGFloat) -> CGFloat {
+        1 - pow(1 - value, 3)
     }
 
     private func drawText(_ text: String, at point: NSPoint, font: NSFont, color: NSColor) {

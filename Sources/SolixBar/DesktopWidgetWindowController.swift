@@ -57,12 +57,12 @@ final class DesktopWidgetView: NSView {
         let title = NSTextField(labelWithString: snapshot?.siteName ?? "Anker SOLIX")
         title.font = .boldSystemFont(ofSize: 23)
         title.textColor = .labelColor
-        title.toolTip = "Name der SOLIX-Anlage."
+        title.toolTip = "Name deiner SOLIX-Anlage."
 
         let subtitle = NSTextField(labelWithString: snapshot.map { "Aktualisiert \(RelativeDateTimeFormatter().localizedString(for: $0.updatedAt, relativeTo: Date()))" } ?? "Warte auf Daten")
         subtitle.textColor = .secondaryLabelColor
         subtitle.font = .systemFont(ofSize: 12, weight: .medium)
-        subtitle.toolTip = "Zeitpunkt der letzten Daten."
+        subtitle.toolTip = "Wann die Werte zuletzt aktualisiert wurden."
 
         let statusPill = statusBadge()
 
@@ -140,11 +140,12 @@ final class DesktopWidgetView: NSView {
     }
 
     private func metricPanel(title: String, value: String, symbol: String, color: NSColor, valueSize: CGFloat) -> NSView {
-        let panel = NSView()
-        panel.toolTip = "\(title): \(value)"
+        let panel = AnimatedPanelView()
+        panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
         panel.layer?.cornerRadius = 12
-        panel.layer?.backgroundColor = panelBackground.cgColor
+        panel.baseColor = panelBackground
+        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.18 : 0.07).blended(withFraction: 0.88, of: panelBackground) ?? panelBackground
         panel.layer?.borderWidth = 1
         panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
 
@@ -198,11 +199,12 @@ final class DesktopWidgetView: NSView {
     }
 
     private func statusBadge() -> NSView {
-        let badge = NSView()
-        badge.toolTip = "Aktueller Anlagenstatus."
+        let badge = AnimatedPanelView()
+        badge.toolTip = "Zeigt, ob die Datenquelle online ist."
         badge.wantsLayer = true
         badge.layer?.cornerRadius = 13
-        badge.layer?.backgroundColor = statusColor.withAlphaComponent(0.18).cgColor
+        badge.baseColor = statusColor.withAlphaComponent(0.18)
+        badge.highlightColor = statusColor.withAlphaComponent(0.28)
         badge.layer?.borderWidth = 1
         badge.layer?.borderColor = statusColor.withAlphaComponent(0.45).cgColor
 
@@ -246,6 +248,29 @@ final class DesktopWidgetView: NSView {
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
                 ? NSColor(calibratedRed: 0.14, green: 0.15, blue: 0.16, alpha: 1)
                 : NSColor(calibratedRed: 1, green: 1, blue: 1, alpha: 1)
+        }
+    }
+
+    private var isDarkMode: Bool {
+        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
+
+    private func tooltip(for title: String, value: String) -> String {
+        switch title {
+        case "Akku":
+            return "Aktueller Ladezustand des Speichers: \(value)."
+        case "Solar":
+            return "Aktuelle Solarleistung der Module: \(value)."
+        case "Haus":
+            return "Aktueller Verbrauch im Haus: \(value)."
+        case "Netzbezug":
+            return "Leistung aus dem Netz. Negative Werte bedeuten Einspeisung: \(value)."
+        case "Batteriefluss":
+            return "Lade- oder Entladeleistung des Akkus: \(value)."
+        case "Heutiger Ertrag":
+            return "Bisher erzeugte Energie seit Tagesbeginn: \(value)."
+        default:
+            return "\(title): \(value)."
         }
     }
 
