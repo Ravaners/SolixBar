@@ -148,7 +148,7 @@ async def main():
                 site.get("to_grid_power"),
             ),
             "batteryWatts": _as_int(battery_watts),
-            "todayKWh": _first_number(today_kwh, site.get("today_energy"), site.get("energy_today")),
+            "todayKWh": _first_number(today_kwh, site.get("today_energy"), site.get("energy_today"), 0),
             "totalKWh": _first_number(
                 site.get("total_energy"),
                 site.get("energy_total"),

@@ -16,6 +16,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let solixCountryField = NSTextField()
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
+    private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
+    private let solixHint = NSTextField(wrappingLabelWithString: "Nur fuer den vorbereiteten SOLIX-Befehl. Mail und Passwort werden lokal gespeichert.")
+    private let solixEmailRow = NSStackView()
+    private let solixPasswordRow = NSStackView()
+    private let solixCountryRow = NSStackView()
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
@@ -203,15 +208,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         rows.orientation = .vertical
         rows.spacing = 12
 
-        let solixTitle = sectionTitle("SOLIX Login")
-        let solixHint = NSTextField(wrappingLabelWithString: "Mail und Passwort werden lokal gespeichert. Beim Speichern stellt SolixBar den passenden JSON-Befehl automatisch ein.")
+        solixTitle.font = .boldSystemFont(ofSize: 13)
         solixHint.textColor = .secondaryLabelColor
 
         rows.addArrangedSubview(formRow(labelText: "Modus", control: modePopup))
         rows.addArrangedSubview(solixTitle)
-        rows.addArrangedSubview(formRow(labelText: "Mail", control: solixEmailField))
-        rows.addArrangedSubview(formRow(labelText: "Passwort", control: solixPasswordField))
-        rows.addArrangedSubview(formRow(labelText: "Land", control: solixCountryField))
+        configure(row: solixEmailRow, labelText: "Mail", control: solixEmailField)
+        configure(row: solixPasswordRow, labelText: "Passwort", control: solixPasswordField)
+        configure(row: solixCountryRow, labelText: "Land", control: solixCountryField)
+        rows.addArrangedSubview(solixEmailRow)
+        rows.addArrangedSubview(solixPasswordRow)
+        rows.addArrangedSubview(solixCountryRow)
         rows.addArrangedSubview(solixHint)
         configure(row: commandRow, labelText: "Befehl", control: commandField)
         configure(row: urlRow, labelText: "URL", control: urlField)
@@ -427,7 +434,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
         settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
-        if shouldUseSolixHelper {
+        if settings.dataSourceMode == .command && shouldUseSolixHelper {
             settings.dataSourceMode = .command
             settings.command = solixHelperCommand
             commandField.stringValue = solixHelperCommand
@@ -441,13 +448,24 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case 1:
             commandRow.isHidden = false
             urlRow.isHidden = true
+            setSolixRowsHidden(false)
         case 2:
             commandRow.isHidden = true
             urlRow.isHidden = false
+            setSolixRowsHidden(true)
         default:
             commandRow.isHidden = true
             urlRow.isHidden = true
+            setSolixRowsHidden(true)
         }
+    }
+
+    private func setSolixRowsHidden(_ hidden: Bool) {
+        solixTitle.isHidden = hidden
+        solixHint.isHidden = hidden
+        solixEmailRow.isHidden = hidden
+        solixPasswordRow.isHidden = hidden
+        solixCountryRow.isHidden = hidden
     }
 
     private func restoreOriginalSettings() {
@@ -483,8 +501,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     @objc private func saveSettings() {
         isSaving = true
-        saveSolixCredentialsIfNeeded()
         applyControlsToSettings()
+        if settings.dataSourceMode == .command {
+            saveSolixCredentialsIfNeeded()
+            if shouldUseSolixHelper {
+                settings.command = solixHelperCommand
+                commandField.stringValue = solixHelperCommand
+            }
+        }
         onSave()
         window?.close()
     }

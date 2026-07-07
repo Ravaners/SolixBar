@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.11 - 2026-07-07
+
+- Fixed data-source settings so Demo, local JSON command, and JSON URL can be selected again without SOLIX login fields forcing the local helper mode.
+- Data-source settings now only show the fields relevant to the selected mode.
+- Improved desktop widget resizing with native resize support, wider visible resize handles, and a direct widget-size slider.
+- Kept today energy visible by falling back to `0.00 kWh` while Anker has not yet reported a daily energy total.
+- Updated the GitHub Pages site to describe the corrected live setup and widget behavior.
+
 ## 0.1.10 - 2026-07-07
 
 - Fixed live SOLIX mapping for Solarbank 4 systems so the app receives real battery, solar, home load, grid, and battery-flow values instead of empty `null` fields.

@@ -91,8 +91,11 @@ Recommended local command for SolixBar:
 ```
 
 The app can create the local ignored credentials file for you. Open
-`Einstellungen` -> `Datenquelle`, enter email, password, and country under
-`SOLIX Login`, then press `Speichern`.
+`Einstellungen` -> `Datenquelle`, choose `Lokaler JSON-Befehl`, enter email,
+password, and country under `SOLIX Login`, then press `Speichern`.
+
+You can still switch back to `Demo` or `JSON-URL`; SolixBar only shows the
+fields needed for the selected mode.
 
 SolixBar writes this local file:
 
