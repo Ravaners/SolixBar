@@ -9,15 +9,16 @@ final class DesktopWidgetWindowController: NSWindowController {
         self.snapshotProvider = snapshotProvider
         self.graphProvider = graphProvider
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 390, height: 520),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 430, height: 680),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "SOLIX Widget"
-        window.minSize = NSSize(width: 360, height: 460)
-        window.contentMinSize = NSSize(width: 360, height: 460)
+        window.minSize = NSSize(width: 380, height: 560)
+        window.contentMinSize = NSSize(width: 380, height: 560)
         window.maxSize = NSSize(width: 920, height: 1160)
+        window.contentResizeIncrements = NSSize(width: 1, height: 1)
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.level = .floating
@@ -33,18 +34,28 @@ final class DesktopWidgetWindowController: NSWindowController {
     }
 
     func rebuild() {
-        window?.contentView = DesktopWidgetView(snapshot: snapshotProvider(), samples: graphProvider())
+        guard let window else { return }
+        let oldFrame = window.frame
+        let contentSize = window.contentView?.bounds.size ?? window.contentLayoutRect.size
+        let widgetView = DesktopWidgetView(snapshot: snapshotProvider(), samples: graphProvider())
+        widgetView.frame = NSRect(origin: .zero, size: contentSize)
+        widgetView.autoresizingMask = [.width, .height]
+        window.contentView = widgetView
+        window.setFrame(oldFrame, display: true)
     }
 }
 
 final class DesktopWidgetView: NSView {
     private let snapshot: SolixSnapshot?
     private let samples: [SolixHistorySample]
+    private var activeResizeZone: WidgetResizeZone?
+    private var resizeStartMouseLocation = NSPoint.zero
+    private var resizeStartFrame = NSRect.zero
 
     init(snapshot: SolixSnapshot?, samples: [SolixHistorySample]) {
         self.snapshot = snapshot
         self.samples = samples
-        super.init(frame: NSRect(x: 0, y: 0, width: 390, height: 520))
+        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: 680))
         wantsLayer = true
         layer?.cornerRadius = 20
         layer?.backgroundColor = widgetBackground.cgColor
@@ -55,6 +66,39 @@ final class DesktopWidgetView: NSView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(NSRect(x: bounds.maxX - 14, y: 0, width: 14, height: bounds.height), cursor: .resizeLeftRight)
+        addCursorRect(NSRect(x: 0, y: 0, width: bounds.width, height: 14), cursor: .resizeUpDown)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let zone = resizeZone(at: convert(event.locationInWindow, from: nil)) else {
+            super.mouseDown(with: event)
+            return
+        }
+        activeResizeZone = zone
+        resizeStartMouseLocation = NSEvent.mouseLocation
+        resizeStartFrame = window?.frame ?? .zero
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let activeResizeZone, let window else {
+            super.mouseDragged(with: event)
+            return
+        }
+        DesktopWidgetView.resize(
+            window: window,
+            from: resizeStartFrame,
+            mouseStart: resizeStartMouseLocation,
+            zone: activeResizeZone
+        )
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        activeResizeZone = nil
+        super.mouseUp(with: event)
     }
 
     private func buildView() {
@@ -147,6 +191,39 @@ final class DesktopWidgetView: NSView {
             resizeHandle.widthAnchor.constraint(equalToConstant: 24),
             resizeHandle.heightAnchor.constraint(equalToConstant: 24)
         ])
+    }
+
+    fileprivate static func resize(
+        window: NSWindow,
+        from startFrame: NSRect,
+        mouseStart: NSPoint,
+        zone: WidgetResizeZone
+    ) {
+        let current = NSEvent.mouseLocation
+        let deltaX = current.x - mouseStart.x
+        let deltaY = current.y - mouseStart.y
+        let minSize = window.minSize
+        let maxSize = window.maxSize
+
+        var frame = startFrame
+        if zone.includesRight {
+            frame.size.width = min(maxSize.width, max(minSize.width, startFrame.width + deltaX))
+        }
+        if zone.includesBottom {
+            frame.size.height = min(maxSize.height, max(minSize.height, startFrame.height - deltaY))
+            frame.origin.y = startFrame.maxY - frame.height
+        }
+        window.setFrame(frame, display: true, animate: false)
+    }
+
+    private func resizeZone(at point: NSPoint) -> WidgetResizeZone? {
+        let edge: CGFloat = 18
+        let right = point.x >= bounds.maxX - edge
+        let bottom = point.y <= bounds.minY + edge
+        if right && bottom { return .bottomRight }
+        if right { return .right }
+        if bottom { return .bottom }
+        return nil
     }
 
     private func bigMetric(title: String, value: String, symbol: String, color: NSColor) -> NSView {
@@ -325,6 +402,20 @@ final class DesktopWidgetView: NSView {
     }
 }
 
+fileprivate enum WidgetResizeZone {
+    case right
+    case bottom
+    case bottomRight
+
+    var includesRight: Bool {
+        self == .right || self == .bottomRight
+    }
+
+    var includesBottom: Bool {
+        self == .bottom || self == .bottomRight
+    }
+}
+
 final class WidgetResizeHandleView: NSView {
     private var startMouseLocation = NSPoint.zero
     private var startFrame = NSRect.zero
@@ -332,7 +423,7 @@ final class WidgetResizeHandleView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .resizeLeftRight)
+        addCursorRect(bounds, cursor: .resizeUpDown)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -342,16 +433,12 @@ final class WidgetResizeHandleView: NSView {
 
     override func mouseDragged(with event: NSEvent) {
         guard let window else { return }
-        let current = NSEvent.mouseLocation
-        let minSize = window.minSize
-        let deltaX = current.x - startMouseLocation.x
-        let deltaY = current.y - startMouseLocation.y
-
-        var frame = startFrame
-        frame.size.width = max(minSize.width, startFrame.width + deltaX)
-        frame.size.height = max(minSize.height, startFrame.height - deltaY)
-        frame.origin.y = startFrame.maxY - frame.height
-        window.setFrame(frame, display: true)
+        DesktopWidgetView.resize(
+            window: window,
+            from: startFrame,
+            mouseStart: startMouseLocation,
+            zone: .bottomRight
+        )
     }
 
     override func draw(_ dirtyRect: NSRect) {

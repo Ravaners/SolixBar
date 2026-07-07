@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.5 - 2026-07-07
+
+- Fixed desktop widget resizing by preserving the current window frame during refreshes.
+- Increased the default widget height for a longer graph area.
+- Added resize behavior to the right edge, bottom edge, and bottom-right handle.
+
 ## 0.1.4 - 2026-07-07
 
 - Added an optional menu bar energy-flow field with colored up/down arrows for solar, battery, and grid flow.
