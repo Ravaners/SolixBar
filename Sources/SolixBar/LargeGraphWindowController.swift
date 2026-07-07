@@ -18,6 +18,7 @@ final class LargeGraphWindowController: NSWindowController {
             defer: false
         )
         window.title = "SOLIX Verlauf"
+        window.minSize = NSSize(width: 620, height: 400)
         window.center()
         super.init(window: window)
         window.contentView = buildView()

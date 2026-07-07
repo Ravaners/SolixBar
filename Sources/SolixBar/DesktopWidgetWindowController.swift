@@ -10,11 +10,12 @@ final class DesktopWidgetWindowController: NSWindowController {
         self.graphProvider = graphProvider
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 390, height: 520),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "SOLIX Widget"
+        window.minSize = NSSize(width: 360, height: 460)
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.level = .floating
@@ -89,8 +90,8 @@ final class DesktopWidgetView: NSView {
         ])
         grid.rowSpacing = 10
         grid.columnSpacing = 10
-        grid.column(at: 0).width = 166
-        grid.column(at: 1).width = 166
+        grid.column(at: 0).width = 160
+        grid.column(at: 1).width = 160
 
         let graph = HistoryGraphView(
             samples: samples,
@@ -119,12 +120,12 @@ final class DesktopWidgetView: NSView {
 
             battery.topAnchor.constraint(equalTo: subtitle.bottomAnchor, constant: 18),
             battery.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
-            battery.widthAnchor.constraint(equalToConstant: 166),
+            battery.trailingAnchor.constraint(equalTo: centerXAnchor, constant: -6),
             battery.heightAnchor.constraint(equalToConstant: 92),
 
             solar.topAnchor.constraint(equalTo: battery.topAnchor),
+            solar.leadingAnchor.constraint(equalTo: centerXAnchor, constant: 6),
             solar.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
-            solar.widthAnchor.constraint(equalToConstant: 166),
             solar.heightAnchor.constraint(equalToConstant: 92),
 
             grid.topAnchor.constraint(equalTo: battery.bottomAnchor, constant: 12),

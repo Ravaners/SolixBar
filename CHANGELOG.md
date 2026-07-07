@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+## 0.1.3 - 2026-07-07
+
 - Hid unused command or URL fields in the data source settings depending on the selected mode.
+- Made the desktop widget resizable.
+- Added minimum sizing to the detached graph window for safer resizing.
 
 ## 0.1.2 - 2026-07-07
 
