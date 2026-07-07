@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SolixBar - macOS Menueleisten-App fuer Anker SOLIX</title>
+    <meta name="description" content="SolixBar zeigt Anker SOLIX Akku-, Solar- und Netzbezugsdaten direkt in der macOS-Menueleiste.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="SolixBar Start">
+        <img src="assets/solixbar-icon.png" alt="" class="brand-icon">
+        <span>SolixBar</span>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <a href="#features">Funktionen</a>
+        <a href="#screens">Bilder</a>
+        <a href="#install">Installation</a>
+        <a href="https://github.com/Ravaners/SolixBar">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">macOS Menueleisten-App fuer Anker SOLIX</p>
+          <h1>SolixBar</h1>
+          <p class="lead">
+            Behalte Akku, Solarertrag, Netzbezug und Verbrauch direkt in der Menueleiste im Blick,
+            mit modernem Dashboard, Verlaufsgraf und frei waehlbarer Anzeige.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/Ravaners/SolixBar">Auf GitHub ansehen</a>
+            <a class="button" href="#install">Einrichtung ansehen</a>
+          </div>
+        </div>
+        <figure class="hero-visual">
+          <img src="assets/solixbar-preview.svg" alt="Vorschau der SolixBar Menueleistenanzeige und des Dashboards">
+        </figure>
+      </section>
+
+      <section id="features" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Uebersicht</p>
+          <h2>Alles Wichtige dort, wo du es sofort siehst.</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Menueleiste</h3>
+            <p>Waehle selbst, welche Werte angezeigt werden: Akku, Solar, Zuhause, Netzbezug, Batteriestrom und heutiger Ertrag.</p>
+          </article>
+          <article>
+            <h3>Dashboard</h3>
+            <p>Das Aufklappmenue zeigt die wichtigsten Daten gross, klar lesbar und mit farbigen Symbolen.</p>
+          </article>
+          <article>
+            <h3>Verlaufsgraf</h3>
+            <p>Akku, Solar und Netzbezug lassen sich fuer Aktuell, 24 Stunden, 7 Tage, 30 Tage oder individuell betrachten.</p>
+          </article>
+          <article>
+            <h3>Desktop-Widget</h3>
+            <p>Ein eigenes schwebendes Fenster zeigt die SOLIX-Daten sauber auf dem Schreibtisch.</p>
+          </article>
+          <article>
+            <h3>Flexible Datenquelle</h3>
+            <p>SolixBar kann Demo-Daten, einen lokalen JSON-Befehl oder eine JSON-URL verwenden.</p>
+          </article>
+          <article>
+            <h3>Privat gebaut</h3>
+            <p>Zugangsdaten und lokale Laufzeitdateien gehoeren nicht ins Repository und werden bewusst ausgeschlossen.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="screens" class="section split">
+        <div>
+          <p class="eyebrow">Bilder</p>
+          <h2>Modern, ruhig und schnell erfassbar.</h2>
+          <p>
+            Die App ist fuer den taeglichen Blick auf deine SOLIX-Anlage gedacht:
+            kompakt in der Menueleiste, detailliert beim Klick und mit groesserem Graphen bei Bedarf.
+          </p>
+        </div>
+        <div class="screen-stack">
+          <img src="assets/menubar-shot.svg" alt="SolixBar Menueleistenanzeige mit Akku, Solar und Netzbezug">
+          <img src="assets/graph-shot.svg" alt="SolixBar Verlaufsgraf fuer Akku, Solar und Netzbezug">
+        </div>
+      </section>
+
+      <section id="install" class="section install">
+        <div class="section-heading">
+          <p class="eyebrow">Installation</p>
+          <h2>Lokales Bauen und Starten</h2>
+        </div>
+        <div class="steps">
+          <article>
+            <span>1</span>
+            <h3>App bauen</h3>
+            <code>sh scripts/package_app.sh</code>
+          </article>
+          <article>
+            <span>2</span>
+            <h3>App starten</h3>
+            <code>open outputs/SolixBar.app</code>
+          </article>
+          <article>
+            <span>3</span>
+            <h3>Datenquelle waehlen</h3>
+            <p>In den Einstellungen Demo, Lokaler JSON-Befehl oder JSON-URL auswaehlen.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>SolixBar</span>
+      <span>Native macOS AppKit App fuer Anker SOLIX Uebersichtsdaten.</span>
+    </footer>
+  </body>
+</html>

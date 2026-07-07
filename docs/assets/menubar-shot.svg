@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 230" role="img" aria-labelledby="title desc">
+  <title id="title">SolixBar Menueleiste</title>
+  <desc id="desc">Eine stilisierte macOS Menueleiste mit SolixBar Werten.</desc>
+  <rect width="980" height="230" rx="24" fill="#fbfcf9"/>
+  <rect x="44" y="52" width="892" height="70" rx="18" fill="#111815"/>
+  <circle cx="82" cy="87" r="8" fill="#ff6257"/>
+  <circle cx="110" cy="87" r="8" fill="#ffbd2e"/>
+  <circle cx="138" cy="87" r="8" fill="#28c840"/>
+  <g font-family="Inter, Arial, sans-serif" font-weight="800" font-size="24">
+    <text x="397" y="95" fill="#ebfff2">82%</text>
+    <text x="477" y="95" fill="#fff2c8">642 W</text>
+    <text x="581" y="95" fill="#d8e8ff">Netzbezug 86 W</text>
+    <text x="764" y="95" fill="#ffffff">3,7 kWh</text>
+  </g>
+  <g transform="translate(72 154)" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5b6962">
+    <circle cx="0" cy="0" r="7" fill="#2c8f63"/>
+    <text x="18" y="6">Akku</text>
+    <circle cx="116" cy="0" r="7" fill="#e4a72f"/>
+    <text x="134" y="6">Solar</text>
+    <circle cx="236" cy="0" r="7" fill="#2d71d6"/>
+    <text x="254" y="6">Netzbezug</text>
+    <circle cx="404" cy="0" r="7" fill="#111815"/>
+    <text x="422" y="6">Heutiger Ertrag</text>
+  </g>
+</svg>

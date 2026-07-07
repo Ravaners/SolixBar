@@ -4,6 +4,8 @@ SolixBar is a native macOS menu bar app for showing Anker SOLIX battery and sola
 
 It provides a compact menu bar readout, a modern dropdown dashboard, a history graph, and a floating desktop widget window.
 
+Project homepage files are in [`docs/`](docs/) and can be published with GitHub Pages.
+
 ## Features
 
 - Native AppKit menu bar app.

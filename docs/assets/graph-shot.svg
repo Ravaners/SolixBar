@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" role="img" aria-labelledby="title desc">
+  <title id="title">SolixBar Verlaufsgraf</title>
+  <desc id="desc">Ein Verlaufsgraf mit Akku, Solar und Netzbezug.</desc>
+  <rect width="980" height="520" rx="24" fill="#ffffff"/>
+  <text x="46" y="70" fill="#17211d" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900">Verlauf</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="18" font-weight="750">
+    <rect x="624" y="42" width="70" height="36" rx="10" fill="#111815"/>
+    <text x="643" y="66" fill="#ffffff">24h</text>
+    <rect x="704" y="42" width="58" height="36" rx="10" fill="#eef4ef"/>
+    <text x="723" y="66" fill="#5b6962">7T</text>
+    <rect x="772" y="42" width="72" height="36" rx="10" fill="#eef4ef"/>
+    <text x="791" y="66" fill="#5b6962">30T</text>
+    <rect x="854" y="42" width="82" height="36" rx="10" fill="#eef4ef"/>
+    <text x="873" y="66" fill="#5b6962">Eig.</text>
+  </g>
+  <g stroke="#d9e2dc" stroke-width="2">
+    <line x1="92" y1="404" x2="900" y2="404"/>
+    <line x1="92" y1="334" x2="900" y2="334"/>
+    <line x1="92" y1="264" x2="900" y2="264"/>
+    <line x1="92" y1="194" x2="900" y2="194"/>
+    <line x1="92" y1="124" x2="900" y2="124"/>
+  </g>
+  <g fill="#5b6962" font-family="Inter, Arial, sans-serif" font-size="16">
+    <text x="42" y="410">0%</text>
+    <text x="35" y="270">50%</text>
+    <text x="28" y="130">100%</text>
+    <text x="904" y="410">0 W</text>
+    <text x="904" y="270">600 W</text>
+    <text x="904" y="130">1200 W</text>
+    <text x="92" y="456">00:00</text>
+    <text x="412" y="456">12:00</text>
+    <text x="818" y="456">Jetzt</text>
+  </g>
+  <path d="M92 360 C168 350 208 320 278 326 C362 333 414 262 500 282 C584 302 646 220 718 246 C794 272 844 212 900 224" fill="none" stroke="#2c8f63" stroke-width="8" stroke-linecap="round"/>
+  <path d="M92 388 C151 330 217 246 292 204 C360 166 420 132 502 138 C586 144 650 185 720 230 C790 276 846 334 900 378" fill="none" stroke="#e4a72f" stroke-width="8" stroke-linecap="round"/>
+  <path d="M92 376 C158 392 225 408 292 386 C372 360 433 394 506 376 C584 358 640 402 720 374 C792 348 840 360 900 344" fill="none" stroke="#2d71d6" stroke-width="8" stroke-linecap="round"/>
+  <g font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">
+    <circle cx="92" cy="90" r="7" fill="#2c8f63"/>
+    <text x="108" y="96" fill="#17211d">Akku</text>
+    <circle cx="186" cy="90" r="7" fill="#e4a72f"/>
+    <text x="202" y="96" fill="#17211d">Solar</text>
+    <circle cx="284" cy="90" r="7" fill="#2d71d6"/>
+    <text x="300" y="96" fill="#17211d">Netzbezug</text>
+  </g>
+</svg>
