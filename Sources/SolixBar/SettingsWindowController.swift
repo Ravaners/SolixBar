@@ -16,6 +16,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
     private let showLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
     private let showMetricSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
+    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Energiefluss-Pfeile anzeigen", target: nil, action: nil)
     private let scaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.6, target: nil, action: nil)
     private let scaleValue = NSTextField(labelWithString: "100 %")
     private var metricButtons: [BarMetric: NSButton] = [:]
@@ -69,7 +70,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, showIconButton, showLabelsButton, showMetricSymbolsButton, scaleSlider] {
+        for control in [modePopup, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, scaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -81,6 +82,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
+        showEnergyFlowArrowsButton.toolTip = "Zeigt farbige Pfeile für die Richtung des Energieflusses in der Menüleiste."
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
 
@@ -144,7 +146,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleValue.alignment = .right
         scaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [metricTitle, metricGrid, displayTitle, showIconButton, showLabelsButton, showMetricSymbolsButton, scaleRow] {
+        for view in [metricTitle, metricGrid, displayTitle, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, scaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -169,7 +171,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showMetricSymbolsButton.topAnchor.constraint(equalTo: showLabelsButton.bottomAnchor, constant: 8),
             showMetricSymbolsButton.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            scaleRow.topAnchor.constraint(equalTo: showMetricSymbolsButton.bottomAnchor, constant: 16),
+            showEnergyFlowArrowsButton.topAnchor.constraint(equalTo: showMetricSymbolsButton.bottomAnchor, constant: 8),
+            showEnergyFlowArrowsButton.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsButton.bottomAnchor, constant: 16),
             scaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
@@ -327,6 +332,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.state = settings.showMenuBarIcon ? .on : .off
         showLabelsButton.state = settings.showMetricLabels ? .on : .off
         showMetricSymbolsButton.state = settings.showMenuBarMetricSymbols ? .on : .off
+        showEnergyFlowArrowsButton.state = settings.showEnergyFlowArrows ? .on : .off
         scaleSlider.doubleValue = settings.menuBarScale
         scaleValue.stringValue = "\(Int(round(scaleSlider.doubleValue * 100))) %"
 
@@ -365,6 +371,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.showMenuBarIcon = showIconButton.state == .on
         settings.showMetricLabels = showLabelsButton.state == .on
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
+        settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
     }
 

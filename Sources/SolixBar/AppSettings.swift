@@ -159,6 +159,7 @@ struct AppSettingsSnapshot {
     var showMenuBarIcon: Bool
     var showMetricLabels: Bool
     var showMenuBarMetricSymbols: Bool
+    var showEnergyFlowArrows: Bool
     var menuBarScale: Double
     var historyRange: HistoryRange
     var customHistoryDays: Double
@@ -232,6 +233,14 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "showMenuBarMetricSymbols") }
     }
 
+    var showEnergyFlowArrows: Bool {
+        get {
+            guard defaults.object(forKey: "showEnergyFlowArrows") != nil else { return false }
+            return defaults.bool(forKey: "showEnergyFlowArrows")
+        }
+        set { defaults.set(newValue, forKey: "showEnergyFlowArrows") }
+    }
+
     var menuBarScale: Double {
         get {
             let value = defaults.double(forKey: "menuBarScale")
@@ -281,6 +290,7 @@ final class AppSettings {
             showMenuBarIcon: showMenuBarIcon,
             showMetricLabels: showMetricLabels,
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
+            showEnergyFlowArrows: showEnergyFlowArrows,
             menuBarScale: menuBarScale,
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
@@ -297,6 +307,7 @@ final class AppSettings {
         showMenuBarIcon = snapshot.showMenuBarIcon
         showMetricLabels = snapshot.showMetricLabels
         showMenuBarMetricSymbols = snapshot.showMenuBarMetricSymbols
+        showEnergyFlowArrows = snapshot.showEnergyFlowArrows
         menuBarScale = snapshot.menuBarScale
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays

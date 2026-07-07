@@ -18,6 +18,7 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 - Demo data mode for testing without credentials.
 - Live data via local JSON command or JSON URL.
 - Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
+- Optional colored energy-flow arrows in the menu bar.
 - Login autostart support.
 - Dropdown dashboard with battery, solar, home consumption, grid import, battery flow, daily yield, total yield, and status.
 - Animated history graph for battery, solar, and grid import.

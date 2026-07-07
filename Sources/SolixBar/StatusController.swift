@@ -58,7 +58,7 @@ final class StatusController: NSObject {
         }
 
         let battery = snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
-        if settings.showMenuBarMetricSymbols {
+        if settings.showMenuBarMetricSymbols || settings.showEnergyFlowArrows {
             setStatusAttributedTitle(barAttributedText(for: snapshot))
         } else {
             let parts = settings.barMetrics.map { metric in
@@ -266,7 +266,7 @@ final class StatusController: NSObject {
         case .battery:
             batteryColor(snapshot.batteryPercent)
         case .solar:
-            NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
+            solarColor
         case .home:
             .systemBlue
         case .grid:
@@ -299,6 +299,10 @@ final class StatusController: NSObject {
     private func gridColor(_ watts: Int?) -> NSColor {
         guard let watts else { return .systemGray }
         return watts > 0 ? .systemBlue : .systemTeal
+    }
+
+    private var solarColor: NSColor {
+        NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
     }
 
     private func batteryFlowSymbol(_ watts: Int?) -> String {
@@ -348,13 +352,50 @@ final class StatusController: NSObject {
             if index > 0 {
                 result.append(textAttachment(separator()))
             }
-            if let image = coloredSymbol(symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot), accessibilityDescription: metric.title) {
+            if settings.showEnergyFlowArrows,
+               let flow = energyFlowArrow(for: metric, snapshot: snapshot),
+               let image = coloredSymbol(flow.symbol, color: flow.color, accessibilityDescription: flow.description) {
+                result.append(imageAttachment(image))
+                result.append(textAttachment(" "))
+            }
+            if settings.showMenuBarMetricSymbols,
+               let image = coloredSymbol(symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot), accessibilityDescription: metric.title) {
                 result.append(imageAttachment(image))
                 result.append(textAttachment(" "))
             }
             result.append(textAttachment(barText(for: metric, snapshot: snapshot)))
         }
         return result
+    }
+
+    private func energyFlowArrow(for metric: BarMetric, snapshot: SolixSnapshot) -> (symbol: String, color: NSColor, description: String)? {
+        switch metric {
+        case .solar:
+            guard let watts = snapshot.solarWatts else { return nil }
+            return watts > 0
+                ? ("arrow.down.circle.fill", solarColor, "Solar erzeugt Energie")
+                : ("minus.circle.fill", .systemGray, "Keine Solarleistung")
+        case .grid:
+            guard let watts = snapshot.gridWatts else { return nil }
+            if watts > 0 {
+                return ("arrow.up.circle.fill", .systemRed, "Strom wird aus dem Netz bezogen")
+            }
+            if watts < 0 {
+                return ("arrow.down.circle.fill", .systemGreen, "Strom wird ins Netz eingespeist")
+            }
+            return ("minus.circle.fill", .systemGray, "Kein Netzfluss")
+        case .batteryFlow:
+            guard let watts = snapshot.batteryWatts else { return nil }
+            if watts > 0 {
+                return ("arrow.down.circle.fill", .systemGreen, "Akku gibt Strom ab")
+            }
+            if watts < 0 {
+                return ("arrow.up.circle.fill", .systemOrange, "Akku wird geladen")
+            }
+            return ("minus.circle.fill", .systemGray, "Kein Akku-Fluss")
+        default:
+            return nil
+        }
     }
 
     private func imageAttachment(_ image: NSImage) -> NSAttributedString {
