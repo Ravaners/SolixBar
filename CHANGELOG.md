@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.10 - 2026-07-07
+
+- Fixed live SOLIX mapping for Solarbank 4 systems so the app receives real battery, solar, home load, grid, and battery-flow values instead of empty `null` fields.
+- Added a guarded today-energy lookup for the live SOLIX helper.
+
 ## 0.1.9 - 2026-07-07
 
 - Added SOLIX login fields for email, password, and country directly to the data source settings.
