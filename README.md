@@ -84,6 +84,20 @@ The JSON should look like this:
 
 Anker does not provide a stable public SOLIX API. This project includes a helper script prepared for the unofficial community library `thomluther/anker-solix-api`.
 
+Recommended local command for SolixBar:
+
+```bash
+/Users/holger/Documents/Codex/2026-07-06/bi/scripts/run_solix_snapshot.sh
+```
+
+Create a local ignored credentials file at `work/solixbar.env`:
+
+```bash
+ANKER_SOLIX_USER='you@example.com'
+ANKER_SOLIX_PASSWORD='your-password'
+ANKER_SOLIX_COUNTRY='DE'
+```
+
 Example command for SolixBar after replacing credentials:
 
 ```bash
