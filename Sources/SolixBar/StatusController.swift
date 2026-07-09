@@ -29,9 +29,7 @@ final class StatusController: NSObject {
                 self?.openDetachedMenuBar()
             }
         }
-        timer = Timer.scheduledTimer(withTimeInterval: settings.refreshInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
-        }
+        scheduleRefreshTimer()
     }
 
     func prepareForTermination() {
@@ -78,6 +76,20 @@ final class StatusController: NSObject {
             detachedMenuBarWindow?.rebuild()
             largeGraphWindow?.rebuild()
         }
+    }
+
+    private func scheduleRefreshTimer() {
+        timer?.invalidate()
+        let interval = max(60, settings.refreshInterval)
+        let newTimer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.refresh()
+            }
+        }
+        newTimer.tolerance = min(5, interval * 0.1)
+        RunLoop.main.add(newTimer, forMode: .common)
+        timer = newTimer
+        AppLogger.info("Refresh timer scheduled every \(Int(interval)) seconds in common run loop modes.")
     }
 
     private func updateTitle() {
@@ -804,10 +816,7 @@ final class StatusController: NSObject {
     }
 
     private func applyCurrentSettings(refreshNow: Bool) {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: settings.refreshInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
-        }
+        scheduleRefreshTimer()
         applyAppearance()
         updateMenuBarIcon()
         clearStaleSnapshotIfNeeded()

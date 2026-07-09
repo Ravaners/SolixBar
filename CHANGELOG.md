@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.3.7 - 2026-07-10
+
+- Fixed automatic refresh scheduling by running the macOS refresh timer in common run loop modes, so updates continue reliably while menus or UI tracking are active.
+
 ## 0.3.6 - 2026-07-10
 
 - Restored high-contrast bright text in the detached slim bar with a darker glass surface and text shadow.
