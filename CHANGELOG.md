@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.22 - 2026-07-09
+
+- Moved the detached slim menu bar to desktop-accessory level so normal app windows always appear in front of it.
+
 ## 0.1.21 - 2026-07-09
 
 - Added fullscreen-space detection for the detached slim menu bar: it remains available on normal desktops but hides automatically on fullscreen app spaces.

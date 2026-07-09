@@ -31,7 +31,7 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 
 ## Version
 
-Current version: `0.1.21`
+Current version: `0.1.22`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

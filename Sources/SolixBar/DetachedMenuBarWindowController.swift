@@ -2,6 +2,7 @@ import AppKit
 
 @MainActor
 final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegate {
+    private static let desktopAccessoryLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
     private let settings = AppSettings.shared
     private let attributedBarProvider: () -> NSAttributedString?
     private let onClose: () -> Void
@@ -21,7 +22,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
             defer: false
         )
         window.title = "SOLIX Leiste"
-        window.level = .normal
+        window.level = Self.desktopAccessoryLevel
         window.isMovableByWindowBackground = true
         window.collectionBehavior = [.canJoinAllSpaces]
         window.hasShadow = true
