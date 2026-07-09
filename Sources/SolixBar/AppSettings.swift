@@ -168,6 +168,7 @@ struct AppSettingsSnapshot {
     var showMenuBarMetricSymbols: Bool
     var showEnergyFlowArrows: Bool
     var menuBarScale: Double
+    var detachedMenuBarScale: Double
     var historyRange: HistoryRange
     var customHistoryDays: Double
     var graphMetrics: [GraphMetric]
@@ -256,6 +257,14 @@ final class AppSettings {
         set { defaults.set(min(1.6, max(0.75, newValue)), forKey: "menuBarScale") }
     }
 
+    var detachedMenuBarScale: Double {
+        get {
+            let value = defaults.double(forKey: "detachedMenuBarScale")
+            return value > 0 ? min(1.9, max(0.75, value)) : 1.0
+        }
+        set { defaults.set(min(1.9, max(0.75, newValue)), forKey: "detachedMenuBarScale") }
+    }
+
     var historyRange: HistoryRange {
         get { HistoryRange(rawValue: defaults.string(forKey: "historyRange") ?? "") ?? .day }
         set { defaults.set(newValue.rawValue, forKey: "historyRange") }
@@ -299,6 +308,7 @@ final class AppSettings {
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
             showEnergyFlowArrows: showEnergyFlowArrows,
             menuBarScale: menuBarScale,
+            detachedMenuBarScale: detachedMenuBarScale,
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
             graphMetrics: graphMetrics
@@ -316,6 +326,7 @@ final class AppSettings {
         showMenuBarMetricSymbols = snapshot.showMenuBarMetricSymbols
         showEnergyFlowArrows = snapshot.showEnergyFlowArrows
         menuBarScale = snapshot.menuBarScale
+        detachedMenuBarScale = snapshot.detachedMenuBarScale
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
         graphMetrics = snapshot.graphMetrics

@@ -29,6 +29,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Pfeile beim Energiefluss anzeigen", target: nil, action: nil)
     private let scaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.6, target: nil, action: nil)
     private let scaleValue = NSTextField(labelWithString: "100 %")
+    private let detachedScaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.9, target: nil, action: nil)
+    private let detachedScaleValue = NSTextField(labelWithString: "100 %")
     private var metricButtons: [BarMetric: NSButton] = [:]
     private var originalSettings: AppSettingsSnapshot?
     private var originalAutostart = false
@@ -86,7 +88,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, scaleSlider] {
+        for control in [modePopup, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -101,6 +103,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showEnergyFlowArrowsButton.toolTip = "Schaltet die farbigen Richtungspfeile für das Energiefluss-Feld und einzelne Energie-Werte ein oder aus."
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
+        detachedScaleSlider.toolTip = "Vergrößert oder verkleinert nur die abgedockte Menüleistenanzeige."
+        detachedScaleValue.toolTip = "Aktuell eingestellte Größe der abgedockten Leiste."
 
         let title = NSTextField(labelWithString: "SOLIX Bar \(AppVersion.short)")
         title.font = .boldSystemFont(ofSize: 20)
@@ -161,8 +165,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleRow.spacing = 12
         scaleValue.alignment = .right
         scaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
+        let detachedScaleRow = NSStackView(views: [label("Abgedockt"), detachedScaleSlider, detachedScaleValue])
+        detachedScaleRow.orientation = .horizontal
+        detachedScaleRow.spacing = 12
+        detachedScaleValue.alignment = .right
+        detachedScaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [metricTitle, metricGrid, displayTitle, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, scaleRow] {
+        for view in [metricTitle, metricGrid, displayTitle, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, scaleRow, detachedScaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -192,7 +201,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
             scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsButton.bottomAnchor, constant: 16),
             scaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
+            scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
+
+            detachedScaleRow.topAnchor.constraint(equalTo: scaleRow.bottomAnchor, constant: 10),
+            detachedScaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            detachedScaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
 
         return container
@@ -356,6 +369,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         switch text {
         case "Skalierung":
             return "Passt die Größe der Menüleistenanzeige an."
+        case "Abgedockt":
+            return "Passt nur die Größe der abgedockten Menüleistenleiste an."
         case "Modus":
             return "Wählt Demo, lokalen JSON-Befehl oder JSON-URL."
         case "Mail":
@@ -395,6 +410,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showEnergyFlowArrowsButton.state = settings.showEnergyFlowArrows ? .on : .off
         scaleSlider.doubleValue = settings.menuBarScale
         scaleValue.stringValue = "\(Int(round(scaleSlider.doubleValue * 100))) %"
+        detachedScaleSlider.doubleValue = settings.detachedMenuBarScale
+        detachedScaleValue.stringValue = "\(Int(round(detachedScaleSlider.doubleValue * 100))) %"
 
         let selected = Set(settings.barMetrics)
         for metric in BarMetric.allCases {
@@ -434,6 +451,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
         settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
+        settings.detachedMenuBarScale = detachedScaleSlider.doubleValue
         if settings.dataSourceMode == .command && shouldUseSolixHelper {
             settings.dataSourceMode = .command
             settings.command = solixHelperCommand
@@ -491,6 +509,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     @objc private func applyPreview() {
         guard !isLoading else { return }
         scaleValue.stringValue = "\(Int(round(scaleSlider.doubleValue * 100))) %"
+        detachedScaleValue.stringValue = "\(Int(round(detachedScaleSlider.doubleValue * 100))) %"
         applyControlsToSettings()
         onPreview()
     }

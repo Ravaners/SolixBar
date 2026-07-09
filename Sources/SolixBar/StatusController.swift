@@ -38,7 +38,11 @@ final class StatusController: NSObject {
     }
 
     private func refresh() {
-        setStatusTitle("SOLIX ...")
+        if isMenuBarDetached {
+            setStatusAttributedTitle(detachedMenuBarStatusAttributedTitle())
+        } else {
+            setStatusTitle("SOLIX ...")
+        }
         Task {
             do {
                 let snapshot = try await provider().fetchSnapshot()
@@ -62,7 +66,7 @@ final class StatusController: NSObject {
 
     private func updateTitle() {
         if isMenuBarDetached {
-            setStatusTitle(detachedMenuBarStatusTitle())
+            setStatusAttributedTitle(detachedMenuBarStatusAttributedTitle())
             return
         }
 
@@ -73,7 +77,7 @@ final class StatusController: NSObject {
 
         let battery = snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
         if settings.showMenuBarMetricSymbols || settings.showEnergyFlowArrows || settings.barMetrics.contains(.flow) {
-            setStatusAttributedTitle(barAttributedText(for: snapshot))
+            setStatusAttributedTitle(barAttributedText(for: snapshot, scale: settings.menuBarScale))
         } else {
             let parts = settings.barMetrics.map { metric in
                 barText(for: metric, snapshot: snapshot)
@@ -277,8 +281,8 @@ final class StatusController: NSObject {
         item.button?.attributedTitle = title
     }
 
-    private func separator() -> String {
-        settings.menuBarScale < 0.95 ? " " : "  "
+    private func separator(scale: Double? = nil) -> String {
+        (scale ?? settings.menuBarScale) < 0.95 ? " " : "  "
     }
 
     private func symbol(for metric: BarMetric, snapshot: SolixSnapshot) -> String {
@@ -386,39 +390,39 @@ final class StatusController: NSObject {
         settings.showMetricLabels ? "\(metric.shortTitle) \(value)" : value
     }
 
-    private func barAttributedText(for snapshot: SolixSnapshot) -> NSAttributedString {
+    private func barAttributedText(for snapshot: SolixSnapshot, scale: Double) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar] : settings.barMetrics
         for (index, metric) in metrics.enumerated() {
             if index > 0 {
-                result.append(textAttachment(separator()))
+                result.append(textAttachment(separator(scale: scale), scale: scale))
             }
             if metric == .flow {
-                appendFlowField(to: result, snapshot: snapshot)
+                appendFlowField(to: result, snapshot: snapshot, scale: scale)
                 continue
             }
             if settings.showEnergyFlowArrows,
                let flow = energyFlowText(for: metric, snapshot: snapshot) {
-                result.append(textAttachment(flow.text, color: flow.color, weight: .bold))
-                result.append(textAttachment(" "))
+                result.append(textAttachment(flow.text, color: flow.color, weight: .bold, scale: scale))
+                result.append(textAttachment(" ", scale: scale))
             }
             if settings.showMenuBarMetricSymbols,
                let image = coloredSymbol(symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot), accessibilityDescription: metric.title) {
-                result.append(imageAttachment(image))
-                result.append(textAttachment(" "))
+                result.append(imageAttachment(image, scale: scale))
+                result.append(textAttachment(" ", scale: scale))
             }
-            result.append(textAttachment(barText(for: metric, snapshot: snapshot), color: valueColor(for: metric, snapshot: snapshot)))
+            result.append(textAttachment(barText(for: metric, snapshot: snapshot), color: valueColor(for: metric, snapshot: snapshot), scale: scale))
         }
         return result
     }
 
-    private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot) {
+    private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot, scale: Double) {
         if settings.showMetricLabels {
-            result.append(textAttachment("Flow ", color: .secondaryLabelColor))
+            result.append(textAttachment("Flow ", color: .secondaryLabelColor, scale: scale))
         }
 
         guard settings.showEnergyFlowArrows else {
-            result.append(textAttachment("aus", color: .secondaryLabelColor))
+            result.append(textAttachment("aus", color: .secondaryLabelColor, scale: scale))
             return
         }
 
@@ -429,14 +433,14 @@ final class StatusController: NSObject {
                 continue
             }
             if didAppend {
-                result.append(textAttachment(" "))
+                result.append(textAttachment(" ", scale: scale))
             }
-            result.append(textAttachment(flow.text, color: flow.color, weight: .bold))
+            result.append(textAttachment(flow.text, color: flow.color, weight: .bold, scale: scale))
             didAppend = true
         }
 
         if !didAppend {
-            result.append(textAttachment("-", color: .secondaryLabelColor))
+            result.append(textAttachment("-", color: .secondaryLabelColor, scale: scale))
         }
     }
 
@@ -490,21 +494,21 @@ final class StatusController: NSObject {
         }
     }
 
-    private func imageAttachment(_ image: NSImage) -> NSAttributedString {
+    private func imageAttachment(_ image: NSImage, scale: Double) -> NSAttributedString {
         let attachment = NSTextAttachment()
-        let size = round(13 * settings.menuBarScale)
+        let size = round(13 * scale)
         image.size = NSSize(width: size, height: size)
         attachment.image = image
         attachment.bounds = NSRect(x: 0, y: -2, width: size, height: size)
         return NSAttributedString(attachment: attachment)
     }
 
-    private func textAttachment(_ string: String, color: NSColor = .labelColor, weight: NSFont.Weight = .medium) -> NSAttributedString {
+    private func textAttachment(_ string: String, color: NSColor = .labelColor, weight: NSFont.Weight = .medium, scale: Double) -> NSAttributedString {
         NSAttributedString(
             string: string,
             attributes: [
                 .font: NSFont.monospacedDigitSystemFont(
-                    ofSize: round((string.contains("⬇") || string.contains("⬆")) ? 15 * settings.menuBarScale : 13 * settings.menuBarScale),
+                    ofSize: round((string.contains("⬇") || string.contains("⬆")) ? 15 * scale : 13 * scale),
                     weight: weight
                 ),
                 .foregroundColor: color
@@ -643,10 +647,9 @@ final class StatusController: NSObject {
     @objc private func openDetachedMenuBar() {
         if detachedMenuBarWindow == nil {
             detachedMenuBarWindow = DetachedMenuBarWindowController(
-                snapshotProvider: { [weak self] in self?.currentSnapshot() },
                 attributedBarProvider: { [weak self] in
                     guard let self, let snapshot = self.currentSnapshot() else { return nil }
-                    return self.barAttributedText(for: snapshot)
+                    return self.barAttributedText(for: snapshot, scale: self.settings.detachedMenuBarScale)
                 },
                 onClose: { [weak self] in
                     self?.isMenuBarDetached = false
@@ -660,11 +663,30 @@ final class StatusController: NSObject {
         detachedMenuBarWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
     }
 
-    private func detachedMenuBarStatusTitle() -> String {
-        guard let snapshot = currentSnapshot() else {
-            return lastError == nil ? "Online" : "Offline"
+    private func detachedMenuBarStatusAttributedTitle() -> NSAttributedString {
+        let isOnline: Bool
+        if let snapshot = currentSnapshot() {
+            isOnline = snapshot.status?.localizedCaseInsensitiveContains("offline") != true
+        } else {
+            isOnline = lastError == nil
         }
-        return snapshot.status?.localizedCaseInsensitiveContains("offline") == true ? "Offline" : "Online"
+
+        let result = NSMutableAttributedString()
+        result.append(NSAttributedString(
+            string: "● ",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: round(12 * settings.menuBarScale), weight: .bold),
+                .foregroundColor: isOnline ? NSColor.systemGreen : NSColor.systemRed
+            ]
+        ))
+        result.append(NSAttributedString(
+            string: isOnline ? "Online" : "Offline",
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * settings.menuBarScale), weight: .semibold),
+                .foregroundColor: NSColor.labelColor
+            ]
+        ))
+        return result
     }
 
     private func statusButtonFrameOnScreen() -> NSRect? {

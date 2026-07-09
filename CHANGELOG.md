@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.16 - 2026-07-09
+
+- Improved the detached slim bar background with a more readable modern macOS-style surface.
+- Removed the duplicated Online/Offline label from the detached slim bar.
+- The macOS menu bar now shows Online/Offline with a colored status dot while the slim bar is detached.
+- Added a separate scaling control for the detached slim bar.
+
 ## 0.1.15 - 2026-07-09
 
 - Fixed the detachable slim menu-bar window so it uses the same symbols, arrows, colors, order, and selected values as the real macOS menu bar.

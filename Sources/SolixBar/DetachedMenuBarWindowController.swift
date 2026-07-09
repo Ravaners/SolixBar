@@ -2,17 +2,14 @@ import AppKit
 
 @MainActor
 final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegate {
-    private let snapshotProvider: () -> SolixSnapshot?
     private let attributedBarProvider: () -> NSAttributedString?
     private let onClose: () -> Void
     private var didNotifyClose = false
 
     init(
-        snapshotProvider: @escaping () -> SolixSnapshot?,
         attributedBarProvider: @escaping () -> NSAttributedString?,
         onClose: @escaping () -> Void
     ) {
-        self.snapshotProvider = snapshotProvider
         self.attributedBarProvider = attributedBarProvider
         self.onClose = onClose
         let window = NSPanel(
@@ -50,7 +47,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         let attributedText = attributedBarProvider()
         let oldFrame = window.frame
         let targetSize = targetSize(for: attributedText, screen: window.screen)
-        let view = DetachedMenuBarView(attributedText: attributedText, snapshot: snapshotProvider(), onClose: { [weak self] in
+        let view = DetachedMenuBarView(attributedText: attributedText, onClose: { [weak self] in
             self?.closeFromButton()
         })
         view.frame = NSRect(origin: .zero, size: targetSize)
@@ -82,12 +79,14 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
 
     private func targetSize(for attributedText: NSAttributedString?, screen: NSScreen?) -> NSSize {
         let textWidth = ceil(attributedText?.size().width ?? 152)
-        let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? 34 : 0
-        let closeWidth: CGFloat = 46
-        let horizontalPadding: CGFloat = 32
+        let scale = AppSettings.shared.detachedMenuBarScale
+        let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? round(34 * scale) : 0
+        let closeWidth: CGFloat = round(44 * scale)
+        let horizontalPadding: CGFloat = round(34 * scale)
         let width = textWidth + iconWidth + closeWidth + horizontalPadding
         let visibleWidth = screen?.visibleFrame.width ?? 900
-        return NSSize(width: min(max(width, 260), visibleWidth - 24), height: 44)
+        let height = min(68, max(44, round(44 * scale)))
+        return NSSize(width: min(max(width, 260), visibleWidth - 24), height: height)
     }
 
     private func positionBelowMenuBar(anchor: NSRect?) {
@@ -110,13 +109,11 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
 
 private final class DetachedMenuBarView: NSView {
     private let attributedText: NSAttributedString?
-    private let snapshot: SolixSnapshot?
     private let onClose: () -> Void
     private let settings = AppSettings.shared
 
-    init(attributedText: NSAttributedString?, snapshot: SolixSnapshot?, onClose: @escaping () -> Void) {
+    init(attributedText: NSAttributedString?, onClose: @escaping () -> Void) {
         self.attributedText = attributedText
-        self.snapshot = snapshot
         self.onClose = onClose
         super.init(frame: NSRect(x: 0, y: 0, width: 640, height: 44))
         wantsLayer = true
@@ -140,6 +137,14 @@ private final class DetachedMenuBarView: NSView {
         glass.translatesAutoresizingMaskIntoConstraints = false
         addSubview(glass)
 
+        let fill = NSView()
+        fill.wantsLayer = true
+        fill.layer?.cornerRadius = 16
+        fill.layer?.masksToBounds = true
+        fill.layer?.backgroundColor = readableBackground.cgColor
+        fill.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(fill)
+
         let border = NSView()
         border.wantsLayer = true
         border.layer?.cornerRadius = 16
@@ -152,12 +157,13 @@ private final class DetachedMenuBarView: NSView {
         let stack = NSStackView()
         stack.orientation = .horizontal
         stack.alignment = .centerY
-        stack.spacing = 10
+        stack.spacing = round(10 * settings.detachedMenuBarScale)
 
         if settings.showMenuBarIcon, let image = appIcon() {
             let imageView = NSImageView(image: image)
-            imageView.widthAnchor.constraint(equalToConstant: 24).isActive = true
-            imageView.heightAnchor.constraint(equalToConstant: 24).isActive = true
+            let iconSize = round(24 * settings.detachedMenuBarScale)
+            imageView.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
+            imageView.heightAnchor.constraint(equalToConstant: iconSize).isActive = true
             stack.addArrangedSubview(imageView)
         }
 
@@ -175,22 +181,14 @@ private final class DetachedMenuBarView: NSView {
             stack.addArrangedSubview(label)
         }
 
-        if let status = statusText {
-            let label = NSTextField(labelWithString: status)
-            label.font = .systemFont(ofSize: 11, weight: .semibold)
-            label.textColor = isOnline ? .systemGreen : .systemRed
-            label.setContentCompressionResistancePriority(.required, for: .horizontal)
-            label.toolTip = isOnline ? "Live-Daten sind verbunden." : "Keine Live-Daten verbunden."
-            stack.addArrangedSubview(label)
-        }
-
         let closeButton = NSButton(title: "×", target: self, action: #selector(close))
         closeButton.isBordered = false
-        closeButton.font = .systemFont(ofSize: 18, weight: .bold)
+        closeButton.font = .systemFont(ofSize: round(18 * settings.detachedMenuBarScale), weight: .bold)
         closeButton.contentTintColor = .secondaryLabelColor
         closeButton.toolTip = "Abgedockte Leiste schließen."
-        closeButton.widthAnchor.constraint(equalToConstant: 28).isActive = true
-        closeButton.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        let closeSize = round(28 * settings.detachedMenuBarScale)
+        closeButton.widthAnchor.constraint(equalToConstant: closeSize).isActive = true
+        closeButton.heightAnchor.constraint(equalToConstant: closeSize).isActive = true
 
         for view in [stack, closeButton] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -203,16 +201,21 @@ private final class DetachedMenuBarView: NSView {
             glass.topAnchor.constraint(equalTo: topAnchor),
             glass.bottomAnchor.constraint(equalTo: bottomAnchor),
 
+            fill.leadingAnchor.constraint(equalTo: leadingAnchor),
+            fill.trailingAnchor.constraint(equalTo: trailingAnchor),
+            fill.topAnchor.constraint(equalTo: topAnchor),
+            fill.bottomAnchor.constraint(equalTo: bottomAnchor),
+
             border.leadingAnchor.constraint(equalTo: leadingAnchor),
             border.trailingAnchor.constraint(equalTo: trailingAnchor),
             border.topAnchor.constraint(equalTo: topAnchor),
             border.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: round(14 * settings.detachedMenuBarScale)),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
             stack.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -10),
 
-            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -round(8 * settings.detachedMenuBarScale)),
             closeButton.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
     }
@@ -220,7 +223,8 @@ private final class DetachedMenuBarView: NSView {
     private func appIcon() -> NSImage? {
         let image = Bundle.main.url(forResource: "SolixBar", withExtension: "png")
             .flatMap { NSImage(contentsOf: $0) }
-        image?.size = NSSize(width: 24, height: 24)
+        let size = round(24 * settings.detachedMenuBarScale)
+        image?.size = NSSize(width: size, height: size)
         return image
     }
 
@@ -228,12 +232,11 @@ private final class DetachedMenuBarView: NSView {
         onClose()
     }
 
-    private var statusText: String? {
-        guard let status = snapshot?.status, !status.isEmpty else { return nil }
-        return status.localizedCaseInsensitiveContains("offline") ? "Offline" : "Online"
-    }
-
-    private var isOnline: Bool {
-        !(snapshot?.status?.localizedCaseInsensitiveContains("offline") ?? false)
+    private var readableBackground: NSColor {
+        NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(calibratedRed: 0.10, green: 0.12, blue: 0.13, alpha: 0.94)
+                : NSColor(calibratedRed: 0.96, green: 0.98, blue: 0.97, alpha: 0.92)
+        }
     }
 }
