@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.4 - 2026-07-09
+
+- Replaced the app icon with the approved brighter modern SolixBar icon.
+- Updated the bundled macOS `.icns`, in-app PNG icon, and project homepage icon.
+
 ## 0.3.3 - 2026-07-09
 
 - Added a one-time menu bar migration so Netzbezug/grid import appears in the selected menu bar values.
