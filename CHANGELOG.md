@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.3.11 - 2026-07-10
+
+- Made the refresh indicator more obvious by replacing the menu bar values with a blue `Aktualisiert ...` state while data is being fetched.
+
+## 0.3.10 - 2026-07-10
+
+- Added a visible animated refresh indicator in the macOS menu bar while data is being fetched.
+
+## 0.3.9 - 2026-07-10
+
+- Made the dashboard "updated" label count live instead of staying at the value calculated when the menu opened.
+
+## 0.3.8 - 2026-07-10
+
+- Added timeouts for command and URL data sources so a hanging SOLIX request cannot block manual or automatic refresh indefinitely.
+- Prevented overlapping refresh runs and made successful refreshes update the visible timestamp to the actual fetch time.
+
 ## 0.3.7 - 2026-07-10
 
 - Fixed automatic refresh scheduling by running the macOS refresh timer in common run loop modes, so updates continue reliably while menus or UI tracking are active.

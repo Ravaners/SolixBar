@@ -8,6 +8,7 @@ enum SolixProviderError: LocalizedError, Sendable {
     case missingCommand
     case missingURL
     case commandFailed(String)
+    case commandTimedOut(TimeInterval)
 
     var errorDescription: String? {
         switch self {
@@ -17,6 +18,8 @@ enum SolixProviderError: LocalizedError, Sendable {
             "Keine JSON-URL konfiguriert."
         case .commandFailed(let message):
             message
+        case .commandTimedOut(let seconds):
+            "JSON-Befehl nach \(Int(seconds)) Sekunden abgebrochen."
         }
     }
 }
@@ -36,6 +39,7 @@ final class DemoSolixDataProvider: SolixDataProvider {
 
 final class CommandSolixDataProvider: SolixDataProvider {
     private let command: String
+    private let timeout: TimeInterval = 45
 
     init(command: String) {
         self.command = command
@@ -47,6 +51,7 @@ final class CommandSolixDataProvider: SolixDataProvider {
         }
 
         let command = command
+        let timeout = timeout
         return try await Task.detached(priority: .utility) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
@@ -58,7 +63,16 @@ final class CommandSolixDataProvider: SolixDataProvider {
             process.standardError = error
 
             try process.run()
-            process.waitUntilExit()
+            let deadline = Date().addingTimeInterval(timeout)
+            while process.isRunning && Date() < deadline {
+                try await Task.sleep(nanoseconds: 100_000_000)
+            }
+
+            if process.isRunning {
+                process.terminate()
+                process.waitUntilExit()
+                throw SolixProviderError.commandTimedOut(timeout)
+            }
 
             let data = output.fileHandleForReading.readDataToEndOfFile()
             let errorData = error.fileHandleForReading.readDataToEndOfFile()
@@ -75,6 +89,7 @@ final class CommandSolixDataProvider: SolixDataProvider {
 
 final class URLSolixDataProvider: SolixDataProvider {
     private let urlString: String
+    private let timeout: TimeInterval = 45
 
     init(urlString: String) {
         self.urlString = urlString
@@ -85,7 +100,9 @@ final class URLSolixDataProvider: SolixDataProvider {
             throw SolixProviderError.missingURL
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = timeout
+        let (data, _) = try await URLSession.shared.data(for: request)
         return try SnapshotDecoder.decode(data)
     }
 }

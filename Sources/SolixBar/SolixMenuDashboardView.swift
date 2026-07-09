@@ -6,6 +6,8 @@ final class SolixMenuDashboardView: NSView {
     private let graphProvider: () -> [SolixHistorySample]
     private let onRangeChange: () -> Void
     private let onOpenLarge: () -> Void
+    private var updatedLabel: NSTextField?
+    private var updatedTimer: Timer?
 
     init(
         snapshot: SolixSnapshot,
@@ -24,6 +26,7 @@ final class SolixMenuDashboardView: NSView {
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
         buildView()
+        startUpdatedTimer()
     }
 
     required init?(coder: NSCoder) {
@@ -41,10 +44,11 @@ final class SolixMenuDashboardView: NSView {
         title.textColor = .labelColor
         title.toolTip = LocalizedText.text("Name deiner SOLIX-Anlage.", "Name of your SOLIX system.")
 
-        let updated = NSTextField(labelWithString: "\(LocalizedText.text("Aktualisiert", "Updated")) \(RelativeDateTimeFormatter().localizedString(for: snapshot.updatedAt, relativeTo: Date()))")
+        let updated = NSTextField(labelWithString: updatedText())
         updated.font = .systemFont(ofSize: 12, weight: .medium)
         updated.textColor = .secondaryLabelColor
         updated.toolTip = LocalizedText.text("Wann die Werte zuletzt aktualisiert wurden.", "When the values were last updated.")
+        updatedLabel = updated
 
         let status = badge(snapshot.status ?? "Online", color: statusColor)
 
@@ -112,6 +116,46 @@ final class SolixMenuDashboardView: NSView {
             graph.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -17),
             graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
         ])
+    }
+
+    override func viewWillMove(toSuperview newSuperview: NSView?) {
+        super.viewWillMove(toSuperview: newSuperview)
+        if newSuperview == nil {
+            updatedTimer?.invalidate()
+            updatedTimer = nil
+        }
+    }
+
+    private func startUpdatedTimer() {
+        updatedTimer?.invalidate()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updatedLabel?.stringValue = self?.updatedText() ?? ""
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        updatedTimer = timer
+    }
+
+    private func updatedText() -> String {
+        "\(LocalizedText.text("Aktualisiert", "Updated")) \(relativeUpdatedText())"
+    }
+
+    private func relativeUpdatedText() -> String {
+        let seconds = max(0, Int(Date().timeIntervalSince(snapshot.updatedAt)))
+        if seconds < 60 {
+            return LocalizedText.text("vor \(seconds) Sekunden", "\(seconds) seconds ago")
+        }
+        let minutes = seconds / 60
+        if minutes < 60 {
+            return LocalizedText.text("vor \(minutes) Minuten", "\(minutes) minutes ago")
+        }
+        let hours = minutes / 60
+        if hours < 24 {
+            return LocalizedText.text("vor \(hours) Stunden", "\(hours) hours ago")
+        }
+        let days = hours / 24
+        return LocalizedText.text("vor \(days) Tagen", "\(days) days ago")
     }
 
     private func primaryMetricPanel(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor) -> NSView {

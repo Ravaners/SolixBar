@@ -15,6 +15,10 @@ final class StatusController: NSObject {
     private var detachedMenuBarWindow: DetachedMenuBarWindowController?
     private var isMenuBarDetached = false
     private var isTerminating = false
+    private var isRefreshing = false
+    private var refreshAnimationTimer: Timer?
+    private var refreshAnimationFrame = 0
+    private let refreshFrames = ["↻", "↺"]
 
     func start() {
         settings.migrateMenuBarGridMetricIfNeeded()
@@ -50,15 +54,22 @@ final class StatusController: NSObject {
     }
 
     private func refresh() {
-        AppLogger.info("Refreshing data source: \(settings.dataSourceMode.rawValue).")
-        if isMenuBarDetached {
-            setStatusAttributedTitle(detachedMenuBarStatusAttributedTitle())
-        } else {
-            setStatusTitle("SOLIX ...")
+        guard !isRefreshing else {
+            AppLogger.info("Refresh skipped because a previous refresh is still running.")
+            return
         }
+        isRefreshing = true
+        startRefreshAnimation()
+        AppLogger.info("Refreshing data source: \(settings.dataSourceMode.rawValue).")
+        updateTitle()
         Task {
+            defer {
+                isRefreshing = false
+                stopRefreshAnimation()
+            }
             do {
-                let snapshot = try await provider().fetchSnapshot()
+                var snapshot = try await provider().fetchSnapshot()
+                snapshot.updatedAt = Date()
                 lastSnapshot = snapshot
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
@@ -78,6 +89,27 @@ final class StatusController: NSObject {
         }
     }
 
+    private func startRefreshAnimation() {
+        refreshAnimationFrame = 0
+        refreshAnimationTimer?.invalidate()
+        let timer = Timer(timeInterval: 0.16, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.refreshAnimationFrame = (self.refreshAnimationFrame + 1) % self.refreshFrames.count
+                self.updateTitle()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        refreshAnimationTimer = timer
+    }
+
+    private func stopRefreshAnimation() {
+        refreshAnimationTimer?.invalidate()
+        refreshAnimationTimer = nil
+        refreshAnimationFrame = 0
+        updateTitle()
+    }
+
     private func scheduleRefreshTimer() {
         timer?.invalidate()
         let interval = max(60, settings.refreshInterval)
@@ -93,13 +125,19 @@ final class StatusController: NSObject {
     }
 
     private func updateTitle() {
+        if isRefreshing {
+            setStatusAttributedTitle(refreshStatusAttributedTitle(scale: settings.menuBarScale))
+            return
+        }
+
         if isMenuBarDetached {
             setStatusAttributedTitle(detachedMenuBarStatusAttributedTitle())
             return
         }
 
         guard let snapshot = currentSnapshot() else {
-            setStatusTitle(lastError == nil ? "SOLIX" : "SOLIX !")
+            let title = lastError == nil ? "SOLIX" : "SOLIX !"
+            setStatusTitle(title)
             return
         }
 
@@ -110,7 +148,8 @@ final class StatusController: NSObject {
             let parts = visibleBarMetrics(for: snapshot).map { metric in
                 barText(for: metric, snapshot: snapshot)
             }
-            setStatusTitle(parts.isEmpty ? battery : parts.joined(separator: separator()))
+            let title = parts.isEmpty ? battery : parts.joined(separator: separator())
+            setStatusTitle(title)
         }
     }
 
@@ -312,6 +351,30 @@ final class StatusController: NSObject {
         }
         title.append(value)
         item.button?.attributedTitle = title
+    }
+
+    private func refreshIndicator() -> String {
+        refreshFrames[refreshAnimationFrame % refreshFrames.count]
+    }
+
+    private func refreshIndicatorAttributedText(scale: Double) -> NSAttributedString {
+        NSAttributedString(
+            string: refreshIndicator(),
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: round(14 * scale), weight: .bold),
+                .foregroundColor: NSColor.systemBlue
+            ]
+        )
+    }
+
+    private func refreshStatusAttributedTitle(scale: Double) -> NSAttributedString {
+        NSAttributedString(
+            string: "\(refreshIndicator()) \(LocalizedText.text("Aktualisiert ...", "Refreshing ..."))",
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * scale), weight: .bold),
+                .foregroundColor: NSColor.systemBlue
+            ]
+        )
     }
 
     private func separator(scale: Double? = nil) -> String {
@@ -794,10 +857,10 @@ final class StatusController: NSObject {
 
         let result = NSMutableAttributedString()
         result.append(NSAttributedString(
-            string: "● ",
+            string: isRefreshing ? "\(refreshIndicator()) " : "● ",
             attributes: [
                 .font: NSFont.systemFont(ofSize: round(12 * settings.menuBarScale), weight: .bold),
-                .foregroundColor: isOnline ? NSColor.systemGreen : NSColor.systemRed
+                .foregroundColor: isRefreshing ? NSColor.systemBlue : (isOnline ? NSColor.systemGreen : NSColor.systemRed)
             ]
         ))
         result.append(NSAttributedString(
