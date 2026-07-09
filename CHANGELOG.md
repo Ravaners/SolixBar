@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.3 - 2026-07-09
+
+- Added a one-time menu bar migration so Netzbezug/grid import appears in the selected menu bar values.
+- Improved menu bar text contrast, especially for PV values on light menu bars.
+- Fixed compact history graph spacing so labels, axes, and lines no longer overlap.
+- Centered custom day input values horizontally and vertically in dashboard and detached history windows.
+- Added more detailed log entries for user actions, graph changes, detached views, settings preview/save/reset, and manual refresh.
+
 ## 0.3.2 - 2026-07-09
 
 - Added a local Gesamtertrag/total-yield start value for SOLIX live mode when Anker does not expose the cumulative app value through the API.

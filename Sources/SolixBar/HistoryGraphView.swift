@@ -53,14 +53,19 @@ final class HistoryGraphView: NSView {
         super.draw(dirtyRect)
         drawBackground()
         drawHeader()
-        drawLegend()
+        let isCompact = bounds.height < 220
+        if !isCompact {
+            drawLegend()
+        }
 
-        let topInset: CGFloat = bounds.height < 180 ? 66 : 78
-        let bottomInset: CGFloat = bounds.height < 180 ? 34 : 44
+        let topInset: CGFloat = isCompact ? 58 : 78
+        let bottomInset: CGFloat = isCompact ? 42 : 48
+        let leftInset: CGFloat = isCompact ? 64 : 70
+        let rightInset: CGFloat = isCompact ? 70 : 82
         let plot = NSRect(
-            x: 48,
+            x: leftInset,
             y: bottomInset,
-            width: max(80, bounds.width - 104),
+            width: max(80, bounds.width - leftInset - rightInset),
             height: max(48, bounds.height - topInset - bottomInset)
         )
         let maxPower = maxPowerValue()
@@ -172,7 +177,7 @@ final class HistoryGraphView: NSView {
             let percent = index * 25
             drawText(
                 "\(percent)%",
-                at: NSPoint(x: 12, y: y - 7),
+                at: NSPoint(x: rect.minX - 50, y: y - 7),
                 font: .monospacedDigitSystemFont(ofSize: 10, weight: .medium),
                 color: .secondaryLabelColor
             )
@@ -180,7 +185,7 @@ final class HistoryGraphView: NSView {
             let watts = Int(round(Double(maxPower) * Double(index) / 4.0))
             drawText(
                 "\(watts)W",
-                at: NSPoint(x: rect.maxX + 7, y: y - 7),
+                at: NSPoint(x: rect.maxX + 10, y: y - 7),
                 font: .monospacedDigitSystemFont(ofSize: 10, weight: .medium),
                 color: .secondaryLabelColor
             )
@@ -215,7 +220,7 @@ final class HistoryGraphView: NSView {
             let width = (text as NSString).size(withAttributes: [.font: font]).width
             let x = rect.minX + rect.width * CGFloat(progress)
             let clampedX = min(rect.maxX - width, max(rect.minX, x - width / 2))
-            drawText(text, at: NSPoint(x: clampedX, y: 17), font: font, color: .secondaryLabelColor)
+            drawText(text, at: NSPoint(x: clampedX, y: max(13, rect.minY - 28)), font: font, color: .secondaryLabelColor)
 
             let tick = NSBezierPath()
             tick.move(to: NSPoint(x: x, y: rect.minY))

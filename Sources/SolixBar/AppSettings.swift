@@ -195,6 +195,7 @@ final class AppSettings {
     static let shared = AppSettings()
 
     private let defaults = UserDefaults.standard
+    private let defaultBarMetrics: [BarMetric] = [.battery, .solar, .grid]
 
     var dataSourceMode: DataSourceMode {
         get { DataSourceMode(rawValue: defaults.string(forKey: "dataSourceMode") ?? "") ?? .demo }
@@ -222,15 +223,24 @@ final class AppSettings {
     var barMetrics: [BarMetric] {
         get {
             guard let values = defaults.array(forKey: "barMetrics") as? [String] else {
-                return [.battery, .solar]
+                return defaultBarMetrics
             }
             let metrics = values.compactMap(BarMetric.init(rawValue:))
-            return metrics.isEmpty ? [.battery, .solar] : metrics
+            return metrics.isEmpty ? defaultBarMetrics : metrics
         }
         set {
-            let metrics = newValue.isEmpty ? [BarMetric.battery, .solar] : newValue
+            let metrics = newValue.isEmpty ? defaultBarMetrics : newValue
             defaults.set(metrics.map(\.rawValue), forKey: "barMetrics")
         }
+    }
+
+    func migrateMenuBarGridMetricIfNeeded() {
+        let key = "didMigrateGridMetric033"
+        guard defaults.bool(forKey: key) == false else { return }
+        if !barMetrics.contains(.grid) {
+            barMetrics.append(.grid)
+        }
+        defaults.set(true, forKey: key)
     }
 
     var showMenuBarIcon: Bool {

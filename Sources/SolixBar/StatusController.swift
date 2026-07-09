@@ -17,6 +17,7 @@ final class StatusController: NSObject {
     private var isTerminating = false
 
     func start() {
+        settings.migrateMenuBarGridMetricIfNeeded()
         applyAppearance()
         updateMenuBarIcon()
         setStatusTitle("SOLIX")
@@ -463,7 +464,7 @@ final class StatusController: NSObject {
 
     private func barAttributedText(for snapshot: SolixSnapshot, scale: Double) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar] : settings.barMetrics
+        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
         for (index, metric) in metrics.enumerated() {
             if index > 0 {
                 result.append(textAttachment(separator(scale: scale), scale: scale))
@@ -610,8 +611,16 @@ final class StatusController: NSObject {
 
     private func productionColor(_ watts: Int) -> NSColor {
         if watts <= 0 { return .secondaryLabelColor }
-        if watts < 250 { return NSColor(calibratedRed: 0.98, green: 0.64, blue: 0.02, alpha: 1) }
-        return storageColor(watts)
+        return readableSolarColor(watts)
+    }
+
+    private func readableSolarColor(_ watts: Int) -> NSColor {
+        let fraction = min(1, max(0, Double(watts) / 2000.0))
+        return interpolateColor(
+            from: NSColor(calibratedRed: 0.82, green: 0.45, blue: 0.00, alpha: 1),
+            to: NSColor(calibratedRed: 0.00, green: 0.54, blue: 0.25, alpha: 1),
+            fraction: fraction
+        )
     }
 
     private var highContrastGreen: NSColor {
@@ -655,10 +664,12 @@ final class StatusController: NSObject {
     }
 
     @objc private func refreshMenuAction() {
+        AppLogger.info("Manual refresh requested from menu.")
         refresh()
     }
 
     @objc private func toggleDetachedMenuBar() {
+        AppLogger.info(isMenuBarDetached ? "Dock slim menu bar requested." : "Detach slim menu bar requested.")
         if isMenuBarDetached {
             dockDetachedMenuBar()
         } else {
@@ -667,15 +678,19 @@ final class StatusController: NSObject {
     }
 
     @objc private func openSettings() {
+        AppLogger.info("Settings window requested.")
         if settingsWindow == nil {
             settingsWindow = SettingsWindowController(
                 onPreview: { [weak self] in
+                    AppLogger.info("Settings preview applied.")
                     self?.applyCurrentSettings(refreshNow: false)
                 },
                 onSave: { [weak self] in
+                    AppLogger.info("Settings saved.")
                     self?.applyCurrentSettings(refreshNow: true)
                 },
                 onReset: { [weak self] in
+                    AppLogger.info("Settings reset or cancelled.")
                     self?.applyCurrentSettings(refreshNow: true)
                 }
             )
@@ -685,6 +700,7 @@ final class StatusController: NSObject {
     }
 
     private func openLargeGraph() {
+        AppLogger.info("Large graph window requested.")
         if largeGraphWindow == nil {
             largeGraphWindow = LargeGraphWindowController(graphProvider: { [weak self] in self?.graphSamples() ?? [] })
         }
@@ -694,6 +710,7 @@ final class StatusController: NSObject {
     }
 
     @objc private func openDetachedDashboard() {
+        AppLogger.info("Detached dashboard requested.")
         if detachedDashboardWindow == nil {
             detachedDashboardWindow = DetachedDashboardWindowController(
                 snapshotProvider: { [weak self] in self?.currentSnapshot() },

@@ -75,7 +75,8 @@ final class LargeGraphWindowController: NSWindowController {
         customDaysField.placeholderString = "Tage"
         customDaysField.target = self
         customDaysField.action = #selector(changeCustomDays)
-        customDaysField.alignment = .right
+        customDaysField.cell = CenteredTextFieldCell(textCell: "")
+        customDaysField.alignment = .center
         customDaysField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
         customDaysField.toolTip = "Anzahl der Tage für den individuellen Zeitraum."
 
@@ -131,17 +132,21 @@ final class LargeGraphWindowController: NSWindowController {
 
     @objc private func changeRange() {
         settings.historyRange = historyRange(at: segmented.selectedSegment) ?? .day
+        AppLogger.info("Large graph range changed to \(settings.historyRange.rawValue).")
         rebuild()
     }
 
     @objc private func changeCustomDays() {
         settings.customHistoryDays = Double(max(1, customDaysField.integerValue))
+        AppLogger.info("Large graph custom days changed to \(Int(settings.customHistoryDays)).")
         rebuild()
     }
 
     @objc private func changeGraphMetrics() {
         let selected = GraphMetric.allCases.filter { graphMetricButtons[$0]?.state == .on }
         settings.graphMetrics = selected.isEmpty ? GraphMetric.allCases : selected
+        let metricNames = settings.graphMetrics.map(\.rawValue).joined(separator: ",")
+        AppLogger.info("Large graph metrics changed to \(metricNames).")
         rebuild()
     }
 

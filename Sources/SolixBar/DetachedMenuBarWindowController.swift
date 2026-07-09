@@ -355,7 +355,7 @@ private final class DetachedMenuBarView: NSView {
     }
 
     private var accentColors: [NSColor] {
-        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar] : settings.barMetrics
+        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
         let colors = metrics.map(accentColor)
         return Array(colors.prefix(5))
     }

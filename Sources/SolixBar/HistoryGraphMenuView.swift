@@ -45,7 +45,8 @@ final class HistoryGraphMenuView: NSView {
         customDaysField.placeholderString = "Tage"
         customDaysField.target = self
         customDaysField.action = #selector(changeCustomDays)
-        customDaysField.alignment = .right
+        customDaysField.cell = CenteredTextFieldCell(textCell: "")
+        customDaysField.alignment = .center
         customDaysField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
         customDaysField.backgroundColor = fieldBackground
         customDaysField.textColor = .labelColor
@@ -133,12 +134,14 @@ final class HistoryGraphMenuView: NSView {
 
     @objc private func changeRange() {
         settings.historyRange = HistoryRange.allCases[safe: segmented.selectedSegment] ?? .day
+        AppLogger.info("Dashboard graph range changed to \(settings.historyRange.rawValue).")
         reload()
         onRangeChange()
     }
 
     @objc private func changeCustomDays() {
         settings.customHistoryDays = Double(max(1, customDaysField.integerValue))
+        AppLogger.info("Dashboard graph custom days changed to \(Int(settings.customHistoryDays)).")
         reload()
         onRangeChange()
     }
@@ -146,6 +149,8 @@ final class HistoryGraphMenuView: NSView {
     @objc private func changeGraphMetrics() {
         let selected = GraphMetric.allCases.filter { graphMetricButtons[$0]?.state == .on }
         settings.graphMetrics = selected.isEmpty ? GraphMetric.allCases : selected
+        let metricNames = settings.graphMetrics.map(\.rawValue).joined(separator: ",")
+        AppLogger.info("Dashboard graph metrics changed to \(metricNames).")
         reload()
         onRangeChange()
     }
