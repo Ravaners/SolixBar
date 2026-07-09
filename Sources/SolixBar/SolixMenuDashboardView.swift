@@ -39,16 +39,16 @@ final class SolixMenuDashboardView: NSView {
         let title = NSTextField(labelWithString: snapshot.siteName)
         title.font = .boldSystemFont(ofSize: 18)
         title.textColor = .labelColor
-        title.toolTip = "Name deiner SOLIX-Anlage."
+        title.toolTip = LocalizedText.text("Name deiner SOLIX-Anlage.", "Name of your SOLIX system.")
 
-        let updated = NSTextField(labelWithString: "Aktualisiert \(RelativeDateTimeFormatter().localizedString(for: snapshot.updatedAt, relativeTo: Date()))")
+        let updated = NSTextField(labelWithString: "\(LocalizedText.text("Aktualisiert", "Updated")) \(RelativeDateTimeFormatter().localizedString(for: snapshot.updatedAt, relativeTo: Date()))")
         updated.font = .systemFont(ofSize: 12, weight: .medium)
         updated.textColor = .secondaryLabelColor
-        updated.toolTip = "Wann die Werte zuletzt aktualisiert wurden."
+        updated.toolTip = LocalizedText.text("Wann die Werte zuletzt aktualisiert wurden.", "When the values were last updated.")
 
         let status = badge(snapshot.status ?? "Online", color: statusColor)
 
-        let battery = primaryMetricPanel("Akku", snapshot.batteryPercent.map { "\($0) %" }, "battery.100percent", batteryColor)
+        let battery = primaryMetricPanel(LocalizedText.text("Akku", "Battery"), snapshot.batteryPercent.map { "\($0) %" }, "battery.100percent", batteryColor)
         let solar = primaryMetricPanel("Solar", snapshot.solarWatts.map { "\($0) W" }, "sun.max.fill", solarColor)
 
         let primaryRow = NSStackView(views: [battery, solar])
@@ -57,11 +57,11 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.distribution = .fillEqually
 
         let details = NSStackView(views: [
-            compactMetricRow("Hausverbrauch", snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
-            compactMetricRow("Netzbezug", signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
-            compactMetricRow("Akku-Fluss", signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
-            compactMetricRow("Heutiger Ertrag", snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple),
-            compactMetricRow("Gesamtertrag", snapshot.totalKWh.map { String(format: "%.1f kWh", $0) }, "sum", .systemIndigo)
+            compactMetricRow(LocalizedText.text("Hausverbrauch", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
+            compactMetricRow(LocalizedText.text("Netzbezug", "Grid Import"), signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
+            compactMetricRow(LocalizedText.text("Akku-Fluss", "Battery Flow"), signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
+            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple),
+            compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), snapshot.totalKWh.map { String(format: "%.1f kWh", $0) }, "sum", .systemIndigo)
         ])
         details.orientation = .vertical
         details.spacing = 8
@@ -195,7 +195,7 @@ final class SolixMenuDashboardView: NSView {
 
     private func badge(_ text: String, color: NSColor) -> NSView {
         let view = AnimatedPanelView()
-        view.toolTip = "Zeigt, ob die Datenquelle online ist."
+        view.toolTip = LocalizedText.text("Zeigt, ob die Datenquelle online ist.", "Shows whether the data source is online.")
         view.wantsLayer = true
         view.layer?.cornerRadius = 12
         view.baseColor = color.withAlphaComponent(0.18)
@@ -269,6 +269,26 @@ final class SolixMenuDashboardView: NSView {
 
     private func tooltip(for title: String, value: String?) -> String {
         let current = value ?? "-"
+        if AppSettings.shared.appLanguage == .english {
+            switch title {
+            case "Battery":
+                return "Shows the current battery charge level: \(current)."
+            case "Solar":
+                return "Shows how much power the solar panels are producing right now: \(current)."
+            case "Home Load":
+                return "Shows how much power your home is currently using: \(current)."
+            case "Grid Import":
+                return "Shows how much power is imported from the grid. Negative values mean export: \(current)."
+            case "Battery Flow":
+                return "Shows whether and how strongly the battery is charging or discharging: \(current)."
+            case "Today's Yield":
+                return "Shows how much solar energy was generated today: \(current)."
+            case "Total Yield":
+                return "Shows the total solar energy recorded so far: \(current)."
+            default:
+                return "\(title): \(current)."
+            }
+        }
         switch title {
         case "Akku":
             return "Hier wird angezeigt, wie voll der Speicher aktuell geladen ist: \(current)."

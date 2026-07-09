@@ -23,7 +23,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         )
         window.title = "SOLIX Leiste"
         window.level = Self.desktopAccessoryLevel
-        window.isMovableByWindowBackground = true
+        window.isMovableByWindowBackground = !settings.lockDetachedMenuBar
         window.collectionBehavior = [.canJoinAllSpaces]
         window.hasShadow = true
         window.backgroundColor = .clear
@@ -55,6 +55,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
 
     func rebuild() {
         guard let window else { return }
+        window.isMovableByWindowBackground = !settings.lockDetachedMenuBar
         let attributedText = attributedBarProvider()
         let oldFrame = window.frame
         let targetSize = targetSize(for: attributedText, screen: window.screen)
@@ -84,6 +85,10 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
 
     func windowDidResize(_ notification: Notification) {
         saveCurrentPosition()
+    }
+
+    func closeFromOwner() {
+        closeFromButton()
     }
 
     private func closeFromButton() {

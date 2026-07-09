@@ -6,6 +6,17 @@ enum DataSourceMode: String {
     case url
 }
 
+enum AppAppearanceMode: String {
+    case system
+    case light
+    case dark
+}
+
+enum AppLanguage: String {
+    case german
+    case english
+}
+
 enum BarMetric: String, CaseIterable {
     case battery
     case solar
@@ -169,6 +180,9 @@ struct AppSettingsSnapshot {
     var showEnergyFlowArrows: Bool
     var menuBarScale: Double
     var detachedMenuBarScale: Double
+    var lockDetachedMenuBar: Bool
+    var appearanceMode: AppAppearanceMode
+    var appLanguage: AppLanguage
     var historyRange: HistoryRange
     var customHistoryDays: Double
     var graphMetrics: [GraphMetric]
@@ -267,6 +281,21 @@ final class AppSettings {
         set { defaults.set(min(1.9, max(0.75, newValue)), forKey: "detachedMenuBarScale") }
     }
 
+    var lockDetachedMenuBar: Bool {
+        get { defaults.bool(forKey: "lockDetachedMenuBar") }
+        set { defaults.set(newValue, forKey: "lockDetachedMenuBar") }
+    }
+
+    var appearanceMode: AppAppearanceMode {
+        get { AppAppearanceMode(rawValue: defaults.string(forKey: "appearanceMode") ?? "") ?? .system }
+        set { defaults.set(newValue.rawValue, forKey: "appearanceMode") }
+    }
+
+    var appLanguage: AppLanguage {
+        get { AppLanguage(rawValue: defaults.string(forKey: "appLanguage") ?? "") ?? .german }
+        set { defaults.set(newValue.rawValue, forKey: "appLanguage") }
+    }
+
     var historyRange: HistoryRange {
         get { HistoryRange(rawValue: defaults.string(forKey: "historyRange") ?? "") ?? .day }
         set { defaults.set(newValue.rawValue, forKey: "historyRange") }
@@ -321,6 +350,9 @@ final class AppSettings {
             showEnergyFlowArrows: showEnergyFlowArrows,
             menuBarScale: menuBarScale,
             detachedMenuBarScale: detachedMenuBarScale,
+            lockDetachedMenuBar: lockDetachedMenuBar,
+            appearanceMode: appearanceMode,
+            appLanguage: appLanguage,
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
             graphMetrics: graphMetrics,
@@ -341,6 +373,9 @@ final class AppSettings {
         showEnergyFlowArrows = snapshot.showEnergyFlowArrows
         menuBarScale = snapshot.menuBarScale
         detachedMenuBarScale = snapshot.detachedMenuBarScale
+        lockDetachedMenuBar = snapshot.lockDetachedMenuBar
+        appearanceMode = snapshot.appearanceMode
+        appLanguage = snapshot.appLanguage
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
         graphMetrics = snapshot.graphMetrics

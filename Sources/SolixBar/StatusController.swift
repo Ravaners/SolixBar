@@ -11,13 +11,13 @@ final class StatusController: NSObject {
     private var lastError: String?
     private var settingsWindow: SettingsWindowController?
     private var largeGraphWindow: LargeGraphWindowController?
-    private var desktopWidgetWindow: DesktopWidgetWindowController?
     private var detachedDashboardWindow: DetachedDashboardWindowController?
     private var detachedMenuBarWindow: DetachedMenuBarWindowController?
     private var isMenuBarDetached = false
     private var isTerminating = false
 
     func start() {
+        applyAppearance()
         updateMenuBarIcon()
         setStatusTitle("SOLIX")
         rebuildMenu()
@@ -73,7 +73,6 @@ final class StatusController: NSObject {
             }
             updateTitle()
             rebuildMenu()
-            desktopWidgetWindow?.rebuild()
             detachedDashboardWindow?.rebuild()
             detachedMenuBarWindow?.rebuild()
             largeGraphWindow?.rebuild()
@@ -109,24 +108,29 @@ final class StatusController: NSObject {
             menu.addItem(dashboardItem(snapshot))
         } else {
             menu.addItem(header("Anker SOLIX"))
-            menu.addItem(value("Status", lastError ?? "Warte auf Daten ...", symbol: "hourglass", color: .systemGray))
+            menu.addItem(value(LocalizedText.text("Status", "Status"), lastError ?? LocalizedText.text("Warte auf Daten ...", "Waiting for data ..."), symbol: "hourglass", color: .systemGray))
         }
 
         if let lastError {
             menu.addItem(NSMenuItem.separator())
-            menu.addItem(value("Fehler", lastError, symbol: "exclamationmark.triangle.fill", color: .systemRed))
+            menu.addItem(value(LocalizedText.text("Fehler", "Error"), lastError, symbol: "exclamationmark.triangle.fill", color: .systemRed))
         }
 
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(action("Aktualisieren", #selector(refreshMenuAction), "arrow.clockwise"))
-        menu.addItem(action("Menüleiste abdocken", #selector(openDetachedMenuBar), "menubar.rectangle"))
-        menu.addItem(action("Dashboard abdocken", #selector(openDetachedDashboard), "macwindow.on.rectangle"))
-        menu.addItem(action("Widget anzeigen", #selector(openDesktopWidget), "rectangle.inset.filled"))
-        menu.addItem(action("Einstellungen ...", #selector(openSettings), "gearshape"))
-        menu.addItem(action("Logdatei anzeigen", #selector(showLogFile), "doc.text.magnifyingglass"))
+        menu.addItem(action(LocalizedText.text("Aktualisieren", "Refresh"), #selector(refreshMenuAction), "arrow.clockwise"))
+        menu.addItem(action(
+            isMenuBarDetached
+                ? LocalizedText.text("Menüleiste andocken", "Dock menu bar")
+                : LocalizedText.text("Menüleiste abdocken", "Detach menu bar"),
+            #selector(toggleDetachedMenuBar),
+            "menubar.rectangle"
+        ))
+        menu.addItem(action(LocalizedText.text("Dashboard abdocken", "Detach dashboard"), #selector(openDetachedDashboard), "macwindow.on.rectangle"))
+        menu.addItem(action(LocalizedText.text("Einstellungen ...", "Settings ..."), #selector(openSettings), "gearshape"))
+        menu.addItem(action(LocalizedText.text("Logdatei anzeigen", "Show log file"), #selector(showLogFile), "doc.text.magnifyingglass"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(versionItem())
-        menu.addItem(action("Beenden", #selector(quit), "power"))
+        menu.addItem(action(LocalizedText.text("Beenden", "Quit"), #selector(quit), "power"))
         item.menu = menu
     }
 
@@ -136,7 +140,6 @@ final class StatusController: NSObject {
             snapshot: snapshot,
             graphProvider: { [weak self] in self?.graphSamples() ?? [] },
             onRangeChange: { [weak self] in
-                self?.desktopWidgetWindow?.rebuild()
                 self?.largeGraphWindow?.rebuild()
             },
             onOpenLarge: { [weak self] in
@@ -151,7 +154,6 @@ final class StatusController: NSObject {
         item.view = HistoryGraphMenuView(
             graphProvider: { [weak self] in self?.graphSamples() ?? [] },
             onRangeChange: { [weak self] in
-                self?.desktopWidgetWindow?.rebuild()
                 self?.largeGraphWindow?.rebuild()
             },
             onOpenLarge: { [weak self] in
@@ -212,7 +214,7 @@ final class StatusController: NSObject {
     }
 
     private func metricValue(_ metric: BarMetric, _ text: String?, snapshot: SolixSnapshot, label: String? = nil) -> NSMenuItem {
-        value(label ?? metric.title, text, symbol: symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot))
+        value(label ?? metricTitle(metric), text, symbol: symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot))
     }
 
     private func action(_ title: String, _ selector: Selector, _ symbol: String) -> NSMenuItem {
@@ -252,7 +254,7 @@ final class StatusController: NSObject {
     }
 
     private func updateMenuBarIcon() {
-        guard settings.showMenuBarIcon else {
+        guard shouldShowMenuBarIcon else {
             item.button?.image = nil
             item.button?.imagePosition = .noImage
             return
@@ -260,6 +262,10 @@ final class StatusController: NSObject {
 
         item.button?.image = menuBarIcon()
         item.button?.imagePosition = .imageLeading
+    }
+
+    private var shouldShowMenuBarIcon: Bool {
+        settings.showMenuBarIcon || isMenuBarDetached
     }
 
     private func menuBarIcon() -> NSImage? {
@@ -278,7 +284,7 @@ final class StatusController: NSObject {
     }
 
     private func setStatusTitle(_ title: String) {
-        let prefix = settings.showMenuBarIcon ? " " : ""
+        let prefix = shouldShowMenuBarIcon ? " " : ""
         let fontSize = round(13 * settings.menuBarScale)
         item.button?.attributedTitle = NSAttributedString(
             string: prefix + title,
@@ -291,7 +297,7 @@ final class StatusController: NSObject {
 
     private func setStatusAttributedTitle(_ value: NSAttributedString) {
         let title = NSMutableAttributedString()
-        if settings.showMenuBarIcon {
+        if shouldShowMenuBarIcon {
             title.append(NSAttributedString(string: " "))
         }
         title.append(value)
@@ -393,7 +399,7 @@ final class StatusController: NSObject {
         case .batteryFlow:
             formatBarMetric(metric, value: formatSignedWatts(snapshot.batteryWatts) ?? "--W")
         case .flow:
-            settings.showMetricLabels ? "\(metric.shortTitle)" : "Flow"
+            settings.showMetricLabels ? "\(metricShortTitle(metric))" : "Flow"
         case .today:
             formatBarMetric(metric, value: snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh")
         case .total:
@@ -404,7 +410,55 @@ final class StatusController: NSObject {
     }
 
     private func formatBarMetric(_ metric: BarMetric, value: String) -> String {
-        settings.showMetricLabels ? "\(metric.shortTitle) \(value)" : value
+        settings.showMetricLabels ? "\(metricShortTitle(metric)) \(value)" : value
+    }
+
+    private func metricTitle(_ metric: BarMetric) -> String {
+        guard settings.appLanguage == .english else { return metric.title }
+        switch metric {
+        case .battery:
+            return "Battery"
+        case .solar:
+            return "PV"
+        case .home:
+            return "Home"
+        case .grid:
+            return "Grid Import"
+        case .batteryFlow:
+            return "Battery Flow"
+        case .flow:
+            return "Energy Flow"
+        case .today:
+            return "Today's Yield"
+        case .total:
+            return "Total Yield"
+        case .status:
+            return "Status"
+        }
+    }
+
+    private func metricShortTitle(_ metric: BarMetric) -> String {
+        guard settings.appLanguage == .english else { return metric.shortTitle }
+        switch metric {
+        case .battery:
+            return "Batt"
+        case .solar:
+            return "PV"
+        case .home:
+            return "Home"
+        case .grid:
+            return "Grid"
+        case .batteryFlow:
+            return "Flow"
+        case .flow:
+            return "Flow"
+        case .today:
+            return "Yield"
+        case .total:
+            return "Total"
+        case .status:
+            return "Status"
+        }
     }
 
     private func barAttributedText(for snapshot: SolixSnapshot, scale: Double) -> NSAttributedString {
@@ -424,7 +478,7 @@ final class StatusController: NSObject {
                 result.append(textAttachment(" ", scale: scale))
             }
             if settings.showMenuBarMetricSymbols,
-               let image = coloredSymbol(symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot), accessibilityDescription: metric.title) {
+                let image = coloredSymbol(symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot), accessibilityDescription: metricTitle(metric)) {
                 result.append(imageAttachment(image, scale: scale))
                 result.append(textAttachment(" ", scale: scale))
             }
@@ -435,7 +489,7 @@ final class StatusController: NSObject {
 
     private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot, scale: Double) {
         if settings.showMetricLabels {
-            result.append(textAttachment("Flow ", color: .secondaryLabelColor, scale: scale))
+            result.append(textAttachment("\(metricShortTitle(.flow)) ", color: .secondaryLabelColor, scale: scale))
         }
 
         guard settings.showEnergyFlowArrows else {
@@ -604,6 +658,14 @@ final class StatusController: NSObject {
         refresh()
     }
 
+    @objc private func toggleDetachedMenuBar() {
+        if isMenuBarDetached {
+            dockDetachedMenuBar()
+        } else {
+            openDetachedMenuBar()
+        }
+    }
+
     @objc private func openSettings() {
         if settingsWindow == nil {
             settingsWindow = SettingsWindowController(
@@ -631,25 +693,12 @@ final class StatusController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func openDesktopWidget() {
-        if desktopWidgetWindow == nil {
-            desktopWidgetWindow = DesktopWidgetWindowController(
-                snapshotProvider: { [weak self] in self?.currentSnapshot() },
-                graphProvider: { [weak self] in self?.graphSamples() ?? [] }
-            )
-        }
-        desktopWidgetWindow?.rebuild()
-        desktopWidgetWindow?.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
     @objc private func openDetachedDashboard() {
         if detachedDashboardWindow == nil {
             detachedDashboardWindow = DetachedDashboardWindowController(
                 snapshotProvider: { [weak self] in self?.currentSnapshot() },
                 graphProvider: { [weak self] in self?.graphSamples() ?? [] },
                 onRangeChange: { [weak self] in
-                    self?.desktopWidgetWindow?.rebuild()
                     self?.detachedDashboardWindow?.rebuild()
                     self?.largeGraphWindow?.rebuild()
                 },
@@ -675,15 +724,31 @@ final class StatusController: NSObject {
                         AppLogger.info("Detached slim bar closed by user.")
                     }
                     self?.detachedMenuBarWindow = nil
+                    self?.updateMenuBarIcon()
                     self?.updateTitle()
+                    self?.rebuildMenu()
                 }
             )
         }
         isMenuBarDetached = true
         settings.isDetachedMenuBarActive = true
         AppLogger.info("Detached slim bar opened.")
+        updateMenuBarIcon()
         updateTitle()
+        rebuildMenu()
         detachedMenuBarWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
+    }
+
+    private func dockDetachedMenuBar() {
+        if let detachedMenuBarWindow {
+            detachedMenuBarWindow.closeFromOwner()
+            return
+        }
+        isMenuBarDetached = false
+        settings.isDetachedMenuBarActive = false
+        updateMenuBarIcon()
+        updateTitle()
+        rebuildMenu()
     }
 
     private func detachedMenuBarStatusAttributedTitle() -> NSAttributedString {
@@ -722,6 +787,7 @@ final class StatusController: NSObject {
         timer = Timer.scheduledTimer(withTimeInterval: settings.refreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
+        applyAppearance()
         updateMenuBarIcon()
         clearStaleSnapshotIfNeeded()
         updateTitle()
@@ -729,6 +795,17 @@ final class StatusController: NSObject {
         detachedMenuBarWindow?.rebuild()
         if refreshNow {
             refresh()
+        }
+    }
+
+    private func applyAppearance() {
+        switch settings.appearanceMode {
+        case .system:
+            NSApp.appearance = nil
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
         }
     }
 

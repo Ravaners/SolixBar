@@ -34,7 +34,10 @@ final class HistoryGraphView: NSView {
         layer?.backgroundColor = graphBackground.cgColor
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
-        toolTip = "Zeigt die aktivierten Werte im gewählten Zeitraum. Klick öffnet die große Ansicht."
+        toolTip = LocalizedText.text(
+            "Zeigt die aktivierten Werte im gewählten Zeitraum. Klick öffnet die große Ansicht.",
+            "Shows the enabled values for the selected period. Click to open the large view."
+        )
         startLineAnimation()
     }
 
@@ -125,7 +128,7 @@ final class HistoryGraphView: NSView {
 
     private func drawHeader() {
         drawText(
-            "Verlauf \(rangeTitle)",
+            "\(LocalizedText.text("Verlauf", "History")) \(localizedRangeTitle(rangeTitle))",
             at: NSPoint(x: 16, y: bounds.maxY - 25),
             font: .boldSystemFont(ofSize: bounds.height < 180 ? 12 : 13),
             color: .labelColor
@@ -134,11 +137,29 @@ final class HistoryGraphView: NSView {
 
     private func drawEmptyState() {
         drawText(
-            "Noch nicht genug Messpunkte",
+            LocalizedText.text("Noch nicht genug Messpunkte", "Not enough measurements yet"),
             at: NSPoint(x: 18, y: bounds.midY - 6),
             font: .systemFont(ofSize: 13, weight: .medium),
             color: .secondaryLabelColor
         )
+    }
+
+    private func localizedRangeTitle(_ title: String) -> String {
+        guard AppSettings.shared.appLanguage == .english else { return title }
+        switch title {
+        case "Aktuell":
+            return "Current"
+        case "24 Stunden":
+            return "24 Hours"
+        case "7 Tage":
+            return "7 Days"
+        case "30 Tage":
+            return "30 Days"
+        case "Individuell":
+            return "Custom"
+        default:
+            return title
+        }
     }
 
     private func drawGrid(in rect: NSRect, maxPower: Int) {

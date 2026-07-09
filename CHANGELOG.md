@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-07-09
+
+- Removed the desktop widget from the app and project homepage.
+- Added visible question-mark help controls next to settings, with short explanations on hover.
+- Added a setting to lock or unlock the detached slim menu bar so it cannot be moved accidentally.
+- Added app appearance settings for automatic system mode, light mode, and dark mode.
+- Added an app language setting for German or English visible UI text.
+- Changed the detached slim menu bar menu action so it switches between detach and dock.
+- Forced the app icon to appear in the macOS menu bar while the slim bar is detached, even when the icon is normally hidden.
+
 ## 0.2.0 - 2026-07-09
 
 - Updated the project homepage with a new rendered screenshot of the detached slim menu bar.
