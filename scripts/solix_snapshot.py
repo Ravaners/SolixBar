@@ -126,10 +126,16 @@ def _local_energy_totals(solar_watts, now):
     if state.get("today") != today_key:
         current_today = 0
 
+    manual_total = _first_number(os.environ.get("SOLIXBAR_TOTAL_KWH_BASE"))
+    has_manual_total = manual_total is not None
+    if has_manual_total and manual_total > current_total:
+        current_total = manual_total
+
     base_date = os.environ.get("SOLIXBAR_TODAY_KWH_DATE") or today_key
     manual_base = _first_number(os.environ.get("SOLIXBAR_TODAY_KWH_BASE"))
     if base_date == today_key and manual_base is not None and manual_base > current_today:
-        current_total += manual_base - current_today
+        if not has_manual_total:
+            current_total += manual_base - current_today
         current_today = manual_base
 
     last_time_text = state.get("lastUpdatedAt")

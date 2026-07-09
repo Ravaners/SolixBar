@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.2 - 2026-07-09
+
+- Added a local Gesamtertrag/total-yield start value for SOLIX live mode when Anker does not expose the cumulative app value through the API.
+- SolixBar now continues counting total yield from the entered Anker app value instead of showing only the local runtime counter.
+
 ## 0.3.1 - 2026-07-09
 
 - Renamed the home metric from Haus/Hausverbrauch to Hauslast.
