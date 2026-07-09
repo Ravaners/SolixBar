@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.21 - 2026-07-09
+
+- Added fullscreen-space detection for the detached slim menu bar: it remains available on normal desktops but hides automatically on fullscreen app spaces.
+- Restored the detached slim menu bar automatically when returning from a fullscreen space to a normal desktop.
+
 ## 0.1.20 - 2026-07-09
 
 - Kept the detached slim menu bar at normal window level while making it visible on all macOS desktops again.

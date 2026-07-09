@@ -6,6 +6,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     private let attributedBarProvider: () -> NSAttributedString?
     private let onClose: () -> Void
     private var didNotifyClose = false
+    private var wantsVisible = false
 
     init(
         attributedBarProvider: @escaping () -> NSAttributedString?,
@@ -28,6 +29,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         window.isOpaque = false
         super.init(window: window)
         window.delegate = self
+        observeSpaceChanges()
         rebuild()
     }
 
@@ -35,14 +37,19 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
     func showBelowMenuBar(anchor: NSRect?) {
+        wantsVisible = true
         rebuild()
         if let window, !window.isVisible {
             if !restoreSavedPosition() {
                 positionBelowMenuBar(anchor: anchor)
             }
         }
-        showWindow(nil)
+        updateVisibilityForCurrentSpace()
     }
 
     func rebuild() {
@@ -79,6 +86,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     }
 
     private func closeFromButton() {
+        wantsVisible = false
         notifyCloseIfNeeded()
         close()
     }
@@ -134,6 +142,67 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         frame.origin.x = min(visible.maxX - frame.width - 8, max(visible.minX + 8, frame.origin.x))
         frame.origin.y = visible.maxY - frame.height - 6
         window.setFrame(frame, display: true)
+    }
+
+    private func observeSpaceChanges() {
+        let center = NSWorkspace.shared.notificationCenter
+        center.addObserver(
+            self,
+            selector: #selector(workspaceVisibilityChanged),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil
+        )
+        center.addObserver(
+            self,
+            selector: #selector(workspaceVisibilityChanged),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+
+    @objc private func workspaceVisibilityChanged() {
+        updateVisibilityForCurrentSpace()
+    }
+
+    private func updateVisibilityForCurrentSpace() {
+        guard wantsVisible, let window else { return }
+
+        if activeSpaceLooksFullscreen() {
+            if window.isVisible {
+                AppLogger.info("Detached slim bar hidden on fullscreen space.")
+                window.orderOut(nil)
+            }
+            return
+        }
+
+        if !window.isVisible {
+            AppLogger.info("Detached slim bar restored on normal desktop.")
+            window.orderFront(nil)
+        }
+    }
+
+    private func activeSpaceLooksFullscreen() -> Bool {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return false }
+        guard frontmost.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return false }
+        guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+
+        let screenSizes = NSScreen.screens.map(\.frame.size)
+        for window in windows {
+            guard (window[kCGWindowOwnerPID as String] as? pid_t) == frontmost.processIdentifier,
+                  (window[kCGWindowLayer as String] as? Int) == 0,
+                  let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                  let width = bounds["Width"] as? CGFloat,
+                  let height = bounds["Height"] as? CGFloat else {
+                continue
+            }
+
+            if screenSizes.contains(where: { abs($0.width - width) < 3 && abs($0.height - height) < 3 }) {
+                return true
+            }
+        }
+        return false
     }
 }
 
