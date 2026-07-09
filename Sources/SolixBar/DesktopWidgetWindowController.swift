@@ -47,6 +47,7 @@ final class DesktopWidgetWindowController: NSWindowController {
 final class DesktopWidgetView: NSView {
     private let snapshot: SolixSnapshot?
     private let samples: [SolixHistorySample]
+    private var resizeDrag: ResizeDrag?
 
     init(snapshot: SolixSnapshot?, samples: [SolixHistorySample]) {
         self.snapshot = snapshot
@@ -62,6 +63,58 @@ final class DesktopWidgetView: NSView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        addCursorRect(NSRect(x: bounds.maxX - 12, y: 0, width: 12, height: bounds.height), cursor: .resizeLeftRight)
+        addCursorRect(NSRect(x: 0, y: 0, width: bounds.width, height: 12), cursor: .resizeUpDown)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let edge = resizeEdge(at: convert(event.locationInWindow, from: nil))
+        guard edge != [] else {
+            super.mouseDown(with: event)
+            return
+        }
+        resizeDrag = ResizeDrag(edge: edge, startPoint: event.locationInWindow, startFrame: window?.frame ?? .zero)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let window, let drag = resizeDrag else {
+            super.mouseDragged(with: event)
+            return
+        }
+
+        let dx = event.locationInWindow.x - drag.startPoint.x
+        let dy = event.locationInWindow.y - drag.startPoint.y
+        var frame = drag.startFrame
+        let minSize = window.minSize
+        let maxSize = window.maxSize
+
+        if drag.edge.contains(.right) {
+            frame.size.width = min(maxSize.width, max(minSize.width, drag.startFrame.width + dx))
+        }
+        if drag.edge.contains(.left) {
+            let width = min(maxSize.width, max(minSize.width, drag.startFrame.width - dx))
+            frame.origin.x = drag.startFrame.maxX - width
+            frame.size.width = width
+        }
+        if drag.edge.contains(.bottom) {
+            let height = min(maxSize.height, max(minSize.height, drag.startFrame.height - dy))
+            frame.origin.y = drag.startFrame.maxY - height
+            frame.size.height = height
+        }
+        if drag.edge.contains(.top) {
+            frame.size.height = min(maxSize.height, max(minSize.height, drag.startFrame.height + dy))
+        }
+
+        window.setFrame(frame, display: true)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        resizeDrag = nil
+        super.mouseUp(with: event)
     }
 
     private func buildView() {
@@ -147,6 +200,22 @@ final class DesktopWidgetView: NSView {
             graph.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
             graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -28)
         ])
+    }
+
+    private func resizeEdge(at point: NSPoint) -> ResizeEdge {
+        let margin: CGFloat = 14
+        var edge: ResizeEdge = []
+        if point.x <= margin {
+            edge.insert(.left)
+        } else if point.x >= bounds.maxX - margin {
+            edge.insert(.right)
+        }
+        if point.y <= margin {
+            edge.insert(.bottom)
+        } else if point.y >= bounds.maxY - margin {
+            edge.insert(.top)
+        }
+        return edge
     }
 
     private func bigMetric(title: String, value: String, symbol: String, color: NSColor) -> NSView {
@@ -323,4 +392,19 @@ final class DesktopWidgetView: NSView {
         return color.withAlphaComponent(adjustedStrength)
             .blended(withFraction: isDarkMode ? 0.72 : 0.80, of: panelBackground) ?? panelBackground
     }
+}
+
+private struct ResizeEdge: OptionSet {
+    let rawValue: Int
+
+    static let left = ResizeEdge(rawValue: 1 << 0)
+    static let right = ResizeEdge(rawValue: 1 << 1)
+    static let top = ResizeEdge(rawValue: 1 << 2)
+    static let bottom = ResizeEdge(rawValue: 1 << 3)
+}
+
+private struct ResizeDrag {
+    let edge: ResizeEdge
+    let startPoint: NSPoint
+    let startFrame: NSRect
 }

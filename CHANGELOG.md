@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.18 - 2026-07-09
+
+- Added reliable edge-drag resizing to the desktop widget so width and height can be changed directly at the window border.
+- Improved the history graph with a modern gradient background, clearer plot area, stronger line colors, soft line shadows, and subtle area fills.
+- Saved the detached slim menu-bar position and restored it after app restart.
+- Changed the detached slim bar behavior so it no longer stays above fullscreen apps.
+
 ## 0.1.17 - 2026-07-09
 
 - Added a local app log file at `~/Library/Application Support/SolixBar/SolixBar.log` plus a menu action to reveal it.

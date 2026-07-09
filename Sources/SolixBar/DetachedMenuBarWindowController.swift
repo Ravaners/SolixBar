@@ -2,6 +2,7 @@ import AppKit
 
 @MainActor
 final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegate {
+    private let settings = AppSettings.shared
     private let attributedBarProvider: () -> NSAttributedString?
     private let onClose: () -> Void
     private var didNotifyClose = false
@@ -21,7 +22,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         window.title = "SOLIX Leiste"
         window.level = .floating
         window.isMovableByWindowBackground = true
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.collectionBehavior = [.canJoinAllSpaces]
         window.hasShadow = true
         window.backgroundColor = .clear
         window.isOpaque = false
@@ -37,7 +38,9 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     func showBelowMenuBar(anchor: NSRect?) {
         rebuild()
         if let window, !window.isVisible {
-            positionBelowMenuBar(anchor: anchor)
+            if !restoreSavedPosition() {
+                positionBelowMenuBar(anchor: anchor)
+            }
         }
         showWindow(nil)
     }
@@ -63,7 +66,16 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     }
 
     func windowWillClose(_ notification: Notification) {
+        saveCurrentPosition()
         notifyCloseIfNeeded()
+    }
+
+    func windowDidMove(_ notification: Notification) {
+        saveCurrentPosition()
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        saveCurrentPosition()
     }
 
     private func closeFromButton() {
@@ -75,6 +87,24 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         guard !didNotifyClose else { return }
         didNotifyClose = true
         onClose()
+    }
+
+    private func saveCurrentPosition() {
+        guard let window else { return }
+        settings.detachedMenuBarFrame = NSStringFromRect(window.frame)
+    }
+
+    private func restoreSavedPosition() -> Bool {
+        guard let window, !settings.detachedMenuBarFrame.isEmpty else { return false }
+        let saved = NSRectFromString(settings.detachedMenuBarFrame)
+        guard saved.width > 0, saved.height > 0 else { return false }
+        guard let screen = NSScreen.screens.first(where: { $0.visibleFrame.intersects(saved) }) ?? NSScreen.main else { return false }
+        var frame = saved
+        frame.size = targetSize(for: attributedBarProvider(), screen: screen)
+        frame.origin.x = min(screen.visibleFrame.maxX - frame.width - 8, max(screen.visibleFrame.minX + 8, frame.origin.x))
+        frame.origin.y = min(screen.visibleFrame.maxY - frame.height - 6, max(screen.visibleFrame.minY + 8, frame.origin.y))
+        window.setFrame(frame, display: true)
+        return true
     }
 
     private func targetSize(for attributedText: NSAttributedString?, screen: NSScreen?) -> NSSize {

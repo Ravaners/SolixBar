@@ -11,9 +11,9 @@ final class HistoryGraphView: NSView {
     private let animationStart = Date()
     var onClick: (() -> Void)?
 
-    private let batteryColor = NSColor(calibratedRed: 0.20, green: 0.78, blue: 0.46, alpha: 1)
-    private let solarColor = NSColor(calibratedRed: 0.96, green: 0.67, blue: 0.16, alpha: 1)
-    private let gridColor = NSColor(calibratedRed: 0.25, green: 0.58, blue: 0.95, alpha: 1)
+    private let batteryColor = NSColor(calibratedRed: 0.05, green: 0.70, blue: 0.35, alpha: 1)
+    private let solarColor = NSColor(calibratedRed: 1.00, green: 0.62, blue: 0.03, alpha: 1)
+    private let gridColor = NSColor(calibratedRed: 0.92, green: 0.10, blue: 0.16, alpha: 1)
 
     init(
         samples: [SolixHistorySample],
@@ -61,6 +61,7 @@ final class HistoryGraphView: NSView {
             height: max(48, bounds.height - topInset - bottomInset)
         )
         let maxPower = maxPowerValue()
+        drawPlotSurface(in: plot)
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
         drawTimeLabels(in: plot)
@@ -71,13 +72,13 @@ final class HistoryGraphView: NSView {
         }
 
         if visibleMetrics.contains(.battery) {
-            drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 2.8)
+            drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 3.1, baseline: plot.minY)
         }
         if visibleMetrics.contains(.solar) {
-            drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 2.8)
+            drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 3.1, baseline: plot.minY)
         }
         if visibleMetrics.contains(.grid) {
-            drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 2.8)
+            drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 3.1, baseline: plot.minY)
         }
     }
 
@@ -103,8 +104,23 @@ final class HistoryGraphView: NSView {
     }
 
     private func drawBackground() {
-        graphBackground.setFill()
-        bounds.fill()
+        let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 12, yRadius: 12)
+        if let gradient = NSGradient(colors: [graphBackgroundTop, graphBackground]) {
+            gradient.draw(in: path, angle: -90)
+        } else {
+            graphBackground.setFill()
+            path.fill()
+        }
+    }
+
+    private func drawPlotSurface(in rect: NSRect) {
+        let plot = NSBezierPath(roundedRect: rect.insetBy(dx: -5, dy: -5), xRadius: 10, yRadius: 10)
+        plotSurfaceColor.setFill()
+        plot.fill()
+
+        NSColor.separatorColor.withAlphaComponent(0.30).setStroke()
+        plot.lineWidth = 1
+        plot.stroke()
     }
 
     private func drawHeader() {
@@ -272,22 +288,44 @@ final class HistoryGraphView: NSView {
         return formatter.string(from: date)
     }
 
-    private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat) {
+    private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat, baseline: CGFloat) {
         guard points.count >= 2 else { return }
+        let fillPath = NSBezierPath()
+        fillPath.move(to: NSPoint(x: points[0].x, y: baseline))
+        for point in points {
+            fillPath.line(to: point)
+        }
+        if let last = points.last {
+            fillPath.line(to: NSPoint(x: last.x, y: baseline))
+        }
+        fillPath.close()
+        color.withAlphaComponent(0.10).setFill()
+        fillPath.fill()
+
         let path = NSBezierPath()
         path.move(to: points[0])
         for point in points.dropFirst() {
             path.line(to: point)
         }
+        let shadow = NSShadow()
+        shadow.shadowColor = color.withAlphaComponent(0.24)
+        shadow.shadowBlurRadius = 5
+        shadow.shadowOffset = NSSize(width: 0, height: -1)
+
+        NSGraphicsContext.saveGraphicsState()
+        shadow.set()
         color.setStroke()
         path.lineWidth = width
         path.lineJoinStyle = .round
         path.lineCapStyle = .round
         path.stroke()
+        NSGraphicsContext.restoreGraphicsState()
 
         if let point = points.last {
             color.setFill()
-            NSBezierPath(ovalIn: NSRect(x: point.x - 3.5, y: point.y - 3.5, width: 7, height: 7)).fill()
+            NSBezierPath(ovalIn: NSRect(x: point.x - 4.5, y: point.y - 4.5, width: 9, height: 9)).fill()
+            graphBackground.setFill()
+            NSBezierPath(ovalIn: NSRect(x: point.x - 2.0, y: point.y - 2.0, width: 4, height: 4)).fill()
         }
     }
 
@@ -368,6 +406,22 @@ final class HistoryGraphView: NSView {
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
                 ? NSColor(calibratedRed: 0.105, green: 0.115, blue: 0.125, alpha: 1)
                 : NSColor(calibratedRed: 1, green: 1, blue: 1, alpha: 1)
+        }
+    }
+
+    private var graphBackgroundTop: NSColor {
+        NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(calibratedRed: 0.13, green: 0.15, blue: 0.16, alpha: 1)
+                : NSColor(calibratedRed: 0.96, green: 0.985, blue: 0.98, alpha: 1)
+        }
+    }
+
+    private var plotSurfaceColor: NSColor {
+        NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(calibratedRed: 0.07, green: 0.08, blue: 0.09, alpha: 0.72)
+                : NSColor(calibratedRed: 0.985, green: 0.995, blue: 1.0, alpha: 0.92)
         }
     }
 
