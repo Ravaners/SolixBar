@@ -10,8 +10,9 @@ RESOURCES="$CONTENTS/Resources"
 rm -rf "$APP"
 mkdir -p "$MACOS"
 mkdir -p "$RESOURCES"
+BIN="${SOLIXBAR_BIN:-$ROOT/.build/debug/SolixBar}"
 cp "$ROOT/Bundle/Info.plist" "$CONTENTS/Info.plist"
-cp "$ROOT/.build/debug/SolixBar" "$MACOS/SolixBar"
+cp "$BIN" "$MACOS/SolixBar"
 if [ -f "$ROOT/Assets/SolixBar.icns" ]; then
   cp "$ROOT/Assets/SolixBar.icns" "$RESOURCES/SolixBar.icns"
 fi
