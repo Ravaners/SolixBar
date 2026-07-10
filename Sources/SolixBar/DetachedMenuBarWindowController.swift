@@ -125,7 +125,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         let textWidth = ceil(attributedText?.size().width ?? 152)
         let scale = AppSettings.shared.detachedMenuBarScale
         let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? round(34 * scale) : 0
-        let closeWidth: CGFloat = round(44 * scale)
+        let closeWidth: CGFloat = AppSettings.shared.lockDetachedMenuBar ? 0 : round(44 * scale)
         let horizontalPadding: CGFloat = round(34 * scale)
         let width = textWidth + iconWidth + closeWidth + horizontalPadding
         let visibleWidth = screen?.visibleFrame.width ?? 900
@@ -290,19 +290,8 @@ private final class DetachedMenuBarView: NSView {
             stack.addArrangedSubview(label)
         }
 
-        let closeButton = NSButton(title: "×", target: self, action: #selector(close))
-        closeButton.isBordered = false
-        closeButton.font = .systemFont(ofSize: round(18 * settings.detachedMenuBarScale), weight: .bold)
-        closeButton.contentTintColor = .white
-        closeButton.toolTip = "Abgedockte Leiste schließen."
-        let closeSize = round(28 * settings.detachedMenuBarScale)
-        closeButton.widthAnchor.constraint(equalToConstant: closeSize).isActive = true
-        closeButton.heightAnchor.constraint(equalToConstant: closeSize).isActive = true
-
-        for view in [stack, closeButton] {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(view)
-        }
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
 
         NSLayoutConstraint.activate([
             glass.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -326,12 +315,35 @@ private final class DetachedMenuBarView: NSView {
             border.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: round(14 * settings.detachedMenuBarScale)),
-            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -10),
-
-            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -round(8 * settings.detachedMenuBarScale)),
-            closeButton.centerYAnchor.constraint(equalTo: centerYAnchor)
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
+
+        if settings.lockDetachedMenuBar {
+            stack.trailingAnchor.constraint(
+                lessThanOrEqualTo: trailingAnchor,
+                constant: -round(14 * settings.detachedMenuBarScale)
+            ).isActive = true
+        } else {
+            let closeButton = NSButton(title: "×", target: self, action: #selector(close))
+            closeButton.isBordered = false
+            closeButton.font = .systemFont(ofSize: round(18 * settings.detachedMenuBarScale), weight: .bold)
+            closeButton.contentTintColor = .white
+            closeButton.toolTip = LocalizedText.text(
+                "Abgedockte Leiste schließen.",
+                "Close detached slim bar."
+            )
+            closeButton.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(closeButton)
+
+            let closeSize = round(28 * settings.detachedMenuBarScale)
+            NSLayoutConstraint.activate([
+                closeButton.widthAnchor.constraint(equalToConstant: closeSize),
+                closeButton.heightAnchor.constraint(equalToConstant: closeSize),
+                stack.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -10),
+                closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -round(8 * settings.detachedMenuBarScale)),
+                closeButton.centerYAnchor.constraint(equalTo: centerYAnchor)
+            ])
+        }
     }
 
     private func appIcon() -> NSImage? {

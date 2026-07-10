@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.20 - 2026-07-10
+
+- DE: Das Schliesskreuz der abgedockten Leiste wird ausgeblendet, sobald die Leiste fixiert ist. Beim Entfixieren erscheint es sofort wieder; die Leistenbreite passt sich jeweils automatisch an.
+- EN: The detached slim bar's close button is hidden while the bar is locked. It returns immediately when the bar is unlocked, and the bar width adjusts automatically in both states.
+
 ## 0.3.19 - 2026-07-10
 
 - DE: Die Farbe der SF-Symbole in der abgedockten Leiste wird jetzt aus dem unmittelbar folgenden Messwert (`Akku`, `PV`, `Last`, `Netz` oder `Fluss`) bestimmt. Dadurch bleiben Sonne, Haus, Netzstecker und Fluss-Punkt auch dann farbig, wenn AppKit keine Symbolbeschreibung weitergibt.
