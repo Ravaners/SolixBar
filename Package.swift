@@ -10,9 +10,19 @@ let package = Package(
         .executable(name: "SolixBar", targets: ["SolixBar"])
     ],
     targets: [
+        .target(
+            name: "SolixBarKit",
+            path: "Sources/SolixBarKit"
+        ),
         .executableTarget(
             name: "SolixBar",
+            dependencies: ["SolixBarKit"],
             path: "Sources/SolixBar"
+        ),
+        .testTarget(
+            name: "SolixBarTests",
+            dependencies: ["SolixBarKit"],
+            path: "Tests/SolixBarTests"
         )
     ]
 )

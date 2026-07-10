@@ -17,7 +17,11 @@ private struct SolixEnergyAccumulator: Codable {
 final class SolixHistoryStore {
     static let shared = SolixHistoryStore()
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
     private let key = "solixHistorySamples"
     private let accumulatorKey = "solixEnergyAccumulators"
     private let maxAge: TimeInterval = 31 * 24 * 60 * 60
