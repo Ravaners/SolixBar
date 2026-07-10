@@ -37,7 +37,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.3.20`
+Aktuelle Version / Current version: `0.4.0`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -113,31 +113,25 @@ Felder an, die fuer den gewaehlten Modus notwendig sind.
 English: You can still switch back to `Demo` or `JSON-URL`; SolixBar only shows
 the fields needed for the selected mode.
 
-SolixBar schreibt diese lokale Datei. / SolixBar writes this local file:
+Das Passwort liegt im macOS-Schluesselbund. SolixBar schreibt zusaetzlich diese lokale Datei (`~/Library/Application Support/SolixBar/solixbar.env`, Rechte 0600, ohne Secrets) und uebergibt das Passwort dem Befehl nur als Umgebungsvariable. / The password lives in the macOS Keychain. SolixBar additionally writes this local file (mode 0600, no secrets) and passes the password to the command only as an environment variable:
 
 ```bash
 ANKER_SOLIX_USER='you@example.com'
-ANKER_SOLIX_PASSWORD='your-password'
 ANKER_SOLIX_COUNTRY='DE'
 ```
 
-Manueller Beispielbefehl nach Ersetzen der Zugangsdaten. / Manual example command after replacing credentials:
+Manueller Beispielbefehl (Passwort dann selbst als Umgebungsvariable setzen). / Manual example command (set the password env var yourself):
 
 ```bash
 ANKER_SOLIX_USER="you@example.com" \
 ANKER_SOLIX_PASSWORD="..." \
 ANKER_SOLIX_COUNTRY="DE" \
-/path/to/python \
-scripts/solix_snapshot.py
+scripts/run_solix_snapshot.sh
 ```
 
 Trage den Befehl nur dann unter `Lokaler JSON-Befehl` ein, wenn du die eingebauten SOLIX-Login-Felder nicht nutzt.
 
 English: Put the command into SolixBar settings under `Lokaler JSON-Befehl` only if you do not use the built-in SOLIX login fields.
-
-Aus Sicherheitsgruenden keine Zugangsdaten committen. Eine spaetere Verbesserung sollte Zugangsdaten im macOS-Schluesselbund speichern.
-
-English: For security, avoid committing credentials. A future improvement should store credentials in the macOS Keychain.
 
 ## Repository-Hinweise / Repository Notes
 

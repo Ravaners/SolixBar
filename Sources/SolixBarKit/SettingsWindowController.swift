@@ -43,6 +43,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private var originalAutostart = false
     private var isSaving = false
     private var isLoading = false
+    private var previewDebounce: Timer?
 
     init(onPreview: @escaping () -> Void, onSave: @escaping () -> Void, onReset: @escaping () -> Void) {
         self.onPreview = onPreview
@@ -134,7 +135,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         tabs.addTabViewItem(tab(title: LocalizedText.text("Menüleiste", "Menu Bar"), view: menuBarPane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("Datenquelle", "Data Source"), view: dataSourcePane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("App", "App"), view: appPane()))
-        tabs.addTabViewItem(tab(title: LocalizedText.text("Start", "Startup"), view: startupPane()))
 
         let cancel = NSButton(title: LocalizedText.text("Abbrechen", "Cancel"), target: self, action: #selector(cancelSettings))
         cancel.bezelStyle = .rounded
@@ -177,6 +177,22 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private func applyLocalizedControlTitles() {
+        let modeIndex = modePopup.indexOfSelectedItem
+        modePopup.removeAllItems()
+        modePopup.addItems(withTitles: [
+            "Demo",
+            LocalizedText.text("Lokaler JSON-Befehl", "Local JSON command"),
+            "JSON-URL"
+        ])
+        if modeIndex >= 0 { modePopup.selectItem(at: modeIndex) }
+        let appearanceIndex = appearancePopup.indexOfSelectedItem
+        appearancePopup.removeAllItems()
+        appearancePopup.addItems(withTitles: [
+            LocalizedText.text("Automatisch", "Automatic"),
+            LocalizedText.text("Hell", "Light"),
+            LocalizedText.text("Dunkel", "Dark")
+        ])
+        if appearanceIndex >= 0 { appearancePopup.selectItem(at: appearanceIndex) }
         showIconButton.title = LocalizedText.text("App-Symbol in der Menüleiste anzeigen", "Show app icon in the menu bar")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
@@ -304,18 +320,22 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         return container
     }
 
+    /// Darstellung, Sprache und Startverhalten in einem Tab — der fruehere
+    /// eigene "Start"-Tab enthielt nur eine einzige Checkbox.
     private func appPane() -> NSView {
         let container = NSView()
         let title = sectionTitle(LocalizedText.text("App-Darstellung", "App Appearance"))
         let appearanceRow = formRow(labelText: LocalizedText.text("Design", "Theme"), control: appearancePopup)
         let languageRow = formRow(labelText: LocalizedText.text("Sprache", "Language"), control: languagePopup)
+        let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
+        let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
             "Aenderungen wirken sofort als Vorschau. Erst Speichern macht sie dauerhaft.",
             "Changes apply immediately as a preview. Press Save to keep them."
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [title, appearanceRow, languageRow, hint] {
+        for view in [title, appearanceRow, languageRow, startTitle, autostartRow, autostartStatus, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -330,7 +350,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             languageRow.topAnchor.constraint(equalTo: appearanceRow.bottomAnchor, constant: 12),
             languageRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            hint.topAnchor.constraint(equalTo: languageRow.bottomAnchor, constant: 18),
+            startTitle.topAnchor.constraint(equalTo: languageRow.bottomAnchor, constant: 24),
+            startTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            autostartRow.topAnchor.constraint(equalTo: startTitle.bottomAnchor, constant: 12),
+            autostartRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            autostartStatus.topAnchor.constraint(equalTo: autostartRow.bottomAnchor, constant: 8),
+            autostartStatus.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            autostartStatus.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
+
+            hint.topAnchor.constraint(equalTo: autostartStatus.bottomAnchor, constant: 18),
             hint.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             hint.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
@@ -363,32 +393,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ])
     }
 
-    private func startupPane() -> NSView {
-        let container = NSView()
-        let title = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
-
-        let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
-
-        for view in [title, autostartRow, autostartStatus] {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            container.addSubview(view)
-        }
-
-        NSLayoutConstraint.activate([
-            title.topAnchor.constraint(equalTo: container.topAnchor, constant: 22),
-            title.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-
-            autostartRow.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 16),
-            autostartRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            autostartRow.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
-
-            autostartStatus.topAnchor.constraint(equalTo: autostartRow.bottomAnchor, constant: 8),
-            autostartStatus.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            autostartStatus.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
-        ])
-
-        return container
-    }
 
     private func buildMetricGrid() -> NSGridView {
         let rows = [
@@ -713,8 +717,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         window?.close()
     }
 
+    /// Textaenderungen entprellen: Vorher schrieb jeder einzelne Tastendruck
+    /// halbfertige URLs/Befehle live in die Settings (und stoerte laufende
+    /// Refreshes).
     func controlTextDidChange(_ obj: Notification) {
-        applyPreview()
+        previewDebounce?.invalidate()
+        previewDebounce = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.applyPreview()
+            }
+        }
     }
 
     func windowWillClose(_ notification: Notification) {

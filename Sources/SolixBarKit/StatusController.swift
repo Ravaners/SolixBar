@@ -98,7 +98,7 @@ final class StatusController: NSObject {
                 // Letzten gueltigen Snapshot behalten: ein transienter Fehler
                 // soll die Anzeige nicht leeren, nur als veraltet markieren.
                 lastError = error.localizedDescription
-                AppLogger.error("Refresh failed (keeping last snapshot): \(error.localizedDescription)")
+                AppLogger.error("Refresh failed (keeping last snapshot): \(Self.describeError(error))")
             }
             updateTitle()
             rebuildMenu()
@@ -106,6 +106,19 @@ final class StatusController: NSObject {
             detachedMenuBarWindow?.rebuild()
             largeGraphWindow?.rebuild()
         }
+    }
+
+    /// DecodingError & Co. mit vollem Kontext ins Log — die blosse
+    /// localizedDescription ("Die Daten konnten nicht gelesen werden") ist
+    /// fuer die Fehlersuche wertlos.
+    private static func describeError(_ error: Error) -> String {
+        if let decoding = error as? DecodingError {
+            return "DecodingError: \(decoding)"
+        }
+        if let urlError = error as? URLError {
+            return "URLError \(urlError.code.rawValue): \(urlError.localizedDescription)"
+        }
+        return error.localizedDescription
     }
 
     private func startRefreshAnimation() {

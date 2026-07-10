@@ -1,69 +1,70 @@
 # SolixBar — Implementierungsplan (Review-Fixes & Design)
 
 Basis: Code-Review + Live-UI-Review vom 2026-07-11 (Fork `itsab1989/SolixBar`, Branch `review-fixes`).
-Jede Phase endet mit: `swift build` grün, Tests grün, Offscreen-Renders aktualisiert, Commit.
+Jede Phase endet mit: `swift build` gruen, Tests gruen, Offscreen-Renders aktualisiert, Commit.
 
-## Phase 0 — Infrastruktur (Voraussetzung für "verified by tests")
+Stand: Phasen 0–4 umgesetzt (25 Tests gruen, CI gruen). Offen: Phase 5 nach
+visueller Abnahme.
 
-- [ ] **Package-Umbau:** Code in Library-Target `SolixBarKit` + dünnes Executable `SolixBar` splitten, damit ein Test-Target möglich ist (SwiftPM kann Executables nicht direkt testen).
-- [ ] **Test-Target** `SolixBarTests` (swift-testing) anlegen.
-- [ ] **Render-Harness einchecken** (`Tools/render/`): rendert Dashboard, Graph, Slim-Bar, Settings-Tabs offscreen als PNG (hell/dunkel) — Grundlage für visuelle Verifikation ohne Screen-Recording-Berechtigung. Baseline-Renders unter `Tools/render/baseline/` versionieren.
-- [ ] `.gitignore`: `outputs/`, `.build/`, `.claude/`, Render-Ausgaben.
+## Phase 0 — Infrastruktur ✅
 
-## Phase 1 — P0: App auf dem Zielrechner funktionsfähig
+- [x] Package-Umbau: Library `SolixBarKit` + duennes Executable (Tests brauchen ein Library-Target).
+- [x] Test-Target `SolixBarTests` (swift-testing; laeuft mit reinen Command Line Tools).
+- [x] Render-Snapshots als Tests: Dashboard, Graph, Slim-Bar, alle Settings-Tabs als PNG (hell/dunkel) nach `.build/renders` bzw. `$SOLIXBAR_RENDER_DIR` — visuelle Verifikation ohne Screen-Recording-Berechtigung.
+- [x] `.gitignore`.
 
-1. **Notch-Breitenbudget** (Hauptbug: Statusitem wird auf Notch-MacBooks unsichtbar)
-   - Verfügbare Breite messen (`NSScreen.safeAreaInsets` / `auxiliaryTopRightArea`, Position des Items).
-   - Anzeige degradiert kontrolliert: volle Darstellung → ohne Labels → ohne Symbole → nur Kernwerte, bis das Budget passt; nie breiter als der Platz rechts der Notch.
-   - Beim Start Diagnose loggen (Itembreite, Safe-Area) — hätte den Bug sofort sichtbar gemacht.
-   - Tests: Budget-Rechner pur (Breite×Optionen→gewählte Stufe); On-Screen-AX-Test: Item existiert, `position.x + width` kollidiert nicht mit Notch-Zone.
-2. **Hartkodierte `/Users/holger`-Pfade entfernen** (`SettingsWindowController`)
-   - Credentials/Env nach `~/Library/Application Support/SolixBar/solixbar.env` (0600).
-   - Helper-Script aus dem Repo bündeln bzw. relativ zur App auflösen; `SOLIXBAR_ENV_FILE` ans Script durchreichen (wird dort bereits unterstützt).
-   - README-Beispielpfad korrigieren.
-   - Tests: Env-Datei Roundtrip (schreiben/lesen/quoting), Pfadauflösung.
-3. **Letzten Snapshot bei Fehlern behalten** (`StatusController.refresh`)
-   - Fehler setzt `lastError`, löscht aber nicht `lastSnapshot`; UI zeigt Werte als "veraltet" (Zeitstempel + Warnsymbol).
-   - Tests: Provider-Fake, der einmal wirft → Anzeige-Modell behält Werte.
+## Phase 1 — P0 ✅
 
-## Phase 2 — P1: Robustheit der Datenpfade
+1. [x] **Notch-Ausweichen:** Anzeige verdichtet sich stufenweise (ohne Labels → ohne Symbole → 2 Metriken → minimal), bis das Item nicht mehr mit der Notch-Zone kollidiert; Messung ueber Button→Screen-Konvertierung nach Layout-Delay; Start-Diagnose im Log. Live verifiziert (Level 0→3, landet rechts der Notch).
+2. [x] **Pfade:** Env-Datei unter `~/Library/Application Support/SolixBar/` (0600); Helper-Script aus Repo/Bundle mit `SOLIXBAR_ENV_FILE`; README korrigiert.
+3. [x] **Snapshot bei Fehlern behalten** + ⚠-Indikator.
 
-- [ ] **Keychain statt Klartext-Env** für Mail/Passwort (Env-Datei bleibt als Fallback fürs Script, enthält dann nur noch Referenz/Non-Secrets).
-- [ ] **HTTP-Status prüfen** in `URLSolixDataProvider` (Fehlertext: Status + URL).
-- [ ] **`siteName` optional** im Decoder (+ Default "Anker SOLIX").
-- [ ] **CommandProvider:** stdout/stderr asynchron lesen (kein 64-KB-Pipe-Deadlock), Timeout mit SIGTERM→SIGKILL-Eskalation, kein Busy-Poll.
-- [ ] **History:** Samples pro Datenquelle trennen (Demo verschmutzt Live-Graf nicht mehr); Speicherung als JSON-Datei in App Support statt UserDefaults-Blob; Sample-Cap an Intervall × längste Range koppeln (30-Tage-Ansicht muss mit Standardintervall füllbar sein).
-- [ ] Tests: Decoder-Fälle (minimal/voll/kaputt), History-Mathematik (kWh-Akkumulation, Pruning, Quellentrennung), Provider mit Fake-Befehlen (`/bin/echo`, Endlosschleife, 100-KB-Ausgabe).
+## Phase 2 — P1 ✅
 
-## Phase 3 — Design-Pass (laufend, Theme-Fundament committet)
+- [x] Passwort im Schluesselbund, Injektion als Env-Variable (Env-Datei ohne Secrets).
+- [x] HTTP-Statuspruefung (Integrationstests gegen lokalen HTTP-Server, inkl. 404).
+- [x] Decoder tolerant (`siteName`/`updatedAt` optional mit Defaults).
+- [x] Pipe-Drain-Threads (kein 64-KB-Deadlock, per Test mit 200-KB-Ausgabe belegt), SIGTERM→SIGKILL-Eskalation (Test mit `trap '' TERM`).
+- [x] History pro Datenquelle als Datei; Cap folgt dem Intervall (30-Tage-Ansicht fuellbar); Migration des alten UserDefaults-Blobs.
 
-- [x] `Theme.swift`: semantische Farbrollen (hell/dunkel adaptiv inkl. Menüleisten-Luminanz), Radius-Token, `.solixRole`-Attribut. **Bewusste Änderung: Netzbezug rot (Kosten) statt blau — der Graph nutzte bereits rot.**
-- [ ] **Slim-Bar:** Farb-Remapping per Textsuche (~150 Zeilen Keyword-Parsing) ersetzen durch `.solixRole`-Attribut → `Theme.bright(role)`; Akzent-Gradient entschlammen (ein dezenter Zwei-Stopp-Akzent statt 5 Farben à 0,18 Alpha).
-- [ ] **Graph:** Header-Kollision mit Plotfläche beheben (Zeichenreihenfolge/Insets); doppelten "Verlauf"-Titel im Dropdown entfernen; runde Stunden-Ticks statt :33-Zeiten; nur Solar als Fläche füllen (kein Oliv-Matsch); Achsenzuordnung kennzeichnen (%-Labels in Akku-Farbe); "Jetzt"/Legende lokalisieren; Farben aus Theme.
-- [ ] **Dashboard:** Radius-Skala vereinheitlichen (16/12/8); Tage-Feld nur bei "Eig." zeigen; Metrik-Checkboxen mit Farbpunkten (ersetzen die fehlende Legende); Grid-Farbe folgt Theme (rot bei Bezug).
-- [ ] **CALayer-Farben:** dynamische `NSColor.cgColor`-Snapshots bei `viewDidChangeEffectiveAppearance` aktualisieren (Theme-Wechsel-Bug).
-- [ ] **Menüleisten-Icon:** vereinfachtes Template-Glyph (Sonne/Blitz) für 18 px statt des 1,5-MB-PNG-Downscales; PNG nur noch für Dock/Abbildungen; Bundle-Load cachen.
-- [ ] Verifikation: Vorher/Nachher-Renders (hell/dunkel), On-Screen-Check des Statusitems.
+## Phase 3 — Design ✅
 
-## Phase 4 — P2: Wartbarkeit & Feinschliff
+- [x] `Theme.swift` (semantische Rollen, hell/dunkel inkl. Menueleisten-Luminanz; Netzbezug rot = Kosten, Einspeisung violett).
+- [x] Slim-Bar: Farben ueber `.solixRole`-Attribut statt ~180 Zeilen Text-Parsing; Zwei-Stopp-Akzent.
+- [x] Graph: Header ueber Plotflaeche, runde Zeitticks mit Overlap-Schutz vor "Jetzt", nur Solar gefuellt, %-Achse in Akku-Farbe, Legende/Ticks lokalisiert.
+- [x] Dashboard: Radius-Skala 16/12/8, Demo-Badge, Tage-Feld nur bei "Eig.", Checkboxen als farbige Legende, kein unbelegtes "Online" mehr.
+- [x] Dark-Mode-Fix: dynamische Panel-Farben + Layer-Refresh bei Appearance-Wechsel.
+- [x] Menueleiste: Template-Glyph statt 1,5-MB-PNG-Downscale.
 
-- [ ] **Logging-Überarbeitung:** `os.Logger` (Subsystem `local.codex.SolixBar`, Kategorien refresh/ui/settings/window) mit Datei-Spiegel; Fehlerkontext (DecodingError-Details, HTTP-Status, Exit-Code + redigiertes stderr); DEBUG-Level per `defaults`-Schalter; `#function`/`#line`; FileHandle offen halten, Formatter cachen; Start-Diagnose (Itembreite, Safe-Area, Version, Settings-Digest); Secrets-Redaktion.
-- [ ] **Settings-Dialog:** Tabs "App" + "Start" zusammenlegen; "?"-Buttons einheitlich ausrichten (oder als Popover klickbar machen); Eingabevalidierung mit Feedback (Intervall, Zahlenfelder); Modus-Popup lokalisieren; Live-Preview nicht mehr bei jedem Tastendruck in Settings schreiben (debouncen).
-- [ ] **Lokalisierung:** String-Katalog statt `LocalizedText.text(de,en)`-Paare; Sprachwechsel aktualisiert offene Fenster vollständig.
-- [ ] **`SMAppService`** statt LaunchAgent-Plist für Autostart.
-- [ ] `StatusController` entflechten (Formatter/MenuBuilder/WindowCoordinator) — mechanisch, nach Tests.
-- [ ] CHANGELOG + VERSION pflegen.
+## Phase 4 — Wartbarkeit ✅ (Teilumfang)
 
-## Phase 5 — Abschluss
+- [x] Logging: os.Logger (Subsystem `local.codex.SolixBar`) + Datei-Spiegel, offenes FileHandle, gecachter Formatter, `#function`-Kontext, DecodingError/URLError-Details, DEBUG via `defaults write local.codex.SolixBar verboseLogging -bool true`.
+- [x] Settings: Tabs "App"+"Start" zusammengelegt; Text-Preview entprellt (0,4 s); Popups lokalisiert.
+- [x] `SMAppService` statt LaunchAgent-Plist (inkl. Aufraeumen des Alt-Plists).
+- [x] CI: GitHub Actions (macos-15) — Tests, Universal-Build, ad-hoc-signiertes App-Bundle als Artifact, Release-Upload bei `v*`-Tags, Render-PNGs als Artifact.
+- [x] CHANGELOG/VERSION → 0.4.0.
+- [ ] Offen (bewusst verschoben): String-Katalog statt `LocalizedText`-Paare; Zerlegung des `StatusController` (~1200 Zeilen) in Formatter/MenuBuilder/WindowCoordinator; klickbare "?"-Popovers; Eingabevalidierung mit Feedback.
 
-- [ ] Alle Phasen: Renders aktualisiert, Tests grün, `sh scripts/package_app.sh` verifiziert.
-- [ ] Branch pushen, PR im Fork (Doku der Änderungen mit Vorher/Nachher-Bildern).
-- [ ] **Upstream-Issue bei `Ravaners/SolixBar`** mit den Review-Befunden und Verbesserungsvorschlägen (DE + EN-TL;DR), nur Demo-Daten-Renders als Bilder, keinerlei private Daten/Pfade.
+## Unterwegs gefunden (Selbst-Checks)
+
+- Graph-Container im Dropdown hatte keine Hoehen-Constraint → Layout kollabierte, Plot ueberdeckte den eigenen Header (Ursache der "Header-Kollision"; gefixt).
+- Erste Notch-Messung ueber `window.frame` war stale → Button→Screen-Konvertierung + 100 ms Layout-Delay (gefixt, live belegt).
+- Zeittick konnte mit "Jetzt"-Label ueberlappen → 60%-Schrittweiten-Puffer (gefixt).
+- Demo-Daten waren nicht als Demo erkennbar → Demo-Badge (gefixt).
+- `swift test` funktioniert mit reinen CLT (kein Xcode noetig) — gut fuer Contributor.
+- Schema-Vertrag `solix_snapshot.py` ↔ Decoder verifiziert (alle 10 Felder). End-to-End mit echter Anker-Cloud bleibt ohne Geraet unverifizierbar → Bitte an Maintainer.
+
+## Phase 5 — Abschluss (wartet auf visuelle Abnahme)
+
+- [ ] Nutzer prueft App + Renders visuell.
+- [ ] PR im Fork (Vorher/Nachher-Bilder).
+- [ ] Upstream-Issue bei `Ravaners/SolixBar`: KI-freundlich strukturiert (Datei:Zeile, Repro, Akzeptanzkriterien je Paket), freundlich und ausfuehrlich; verweist auf Branch/Commits im Fork, damit der Maintainer je Befund waehlen kann: uebernehmen / selbst anders umsetzen / verwerfen; Demo-Render-Screenshots (auch Design-Varianten, falls vorhanden); Bitte um Live-Test mit echtem Geraet; keinerlei private Daten.
 
 ## Teststrategie (Querschnitt)
 
 | Ebene | Werkzeug | Deckt ab |
 |---|---|---|
-| Unit | swift-testing im `SolixBarTests`-Target | Decoder, History-Mathematik, Breitenbudget, Env-Roundtrip, Theme-Rollen |
-| Visuell | Offscreen-Render-Harness (PNG, hell/dunkel) | Dashboard, Graph, Slim-Bar, Settings — Vorher/Nachher-Vergleich |
-| On-Screen | AX/AppleScript (Berechtigung erteilt) | Statusitem sichtbar & notch-frei, Menü öffnet, Settings-Roundtrip |
+| Unit | swift-testing | Decoder, History (Energie, Cap, Migration, Quellentrennung), Env-Datei (Quoting, 0600), Display-Stufen, Notch-Praedikat |
+| Integration | Provider gegen echte Prozesse/lokalen HTTP-Server | Pipe-Deadlock, SIGKILL, stderr, Env-Injektion, HTTP 2xx/404 |
+| Visuell | Offscreen-Render-PNGs (hell/dunkel) | Dashboard, Graph, Slim-Bar, Settings |
+| On-Screen | AX/AppleScript (Freigabe erteilt) | Statusitem sichtbar & notch-frei, Menue oeffnet |
