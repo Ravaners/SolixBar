@@ -229,7 +229,7 @@ async def main():
             site.get("photovoltaic_power"),
             site.get("pv_power"),
         )
-        local_today_kwh, local_total_kwh, has_manual_total = _local_energy_totals(solar_watts, now)
+        local_today_kwh, local_total_kwh, _ = _local_energy_totals(solar_watts, now)
         api_today_kwh = _first_positive_number(today_kwh, site.get("today_energy"), site.get("energy_today"))
         api_total_kwh = _first_positive_number(
             site.get("total_energy"),
@@ -267,7 +267,7 @@ async def main():
             "gridWatts": _signed_grid_watts(site),
             "batteryWatts": battery_watts,
             "todayKWh": max(api_today_kwh or 0, local_today_kwh),
-            "totalKWh": api_total_kwh if api_total_kwh is not None else (local_total_kwh if has_manual_total else None),
+            "totalKWh": api_total_kwh if api_total_kwh is not None else local_total_kwh,
             "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",
             "updatedAt": now.isoformat(),
         }

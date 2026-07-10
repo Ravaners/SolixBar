@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.14 - 2026-07-10
+
+- DE: Der Gesamtertrag wird jetzt dauerhaft aus allen fortlaufenden Solarmessungen kumuliert und getrennt je Datenquelle gespeichert. Echte Gesamtwerte der Datenquelle bleiben vorrangig; ohne Gesamtwert beginnt die lokale Messung bei 0 kWh und laeuft ueber Tageswechsel und App-Neustarts weiter.
+- EN: Total yield is now persistently accumulated from all continuous solar measurements and stored separately per data source. Real totals from the provider remain authoritative; without one, local measurement starts at 0 kWh and continues across day changes and app restarts.
+- DE: Aktualisierung, Netzbezug und Hauslast verwenden ein kraeftigeres Royalblau auf hellen und ein helles Cyanblau auf dunklen Hintergruenden.
+- EN: Refresh, grid import, and home load now use a stronger royal blue on light backgrounds and a bright cyan blue on dark backgrounds.
+
 ## 0.3.13 - 2026-07-10
 
 - DE: Die Farben fuer Aktualisierung, Laden, Entladen, Netzbezug, Einspeisung, Solar und Hauslast sind auf hellen und dunklen Menueleisten deutlich kontrastreicher. Ein adaptiver dezenter Rand verbessert die Lesbarkeit auch auf wechselnden oder transparenten Hintergruenden.

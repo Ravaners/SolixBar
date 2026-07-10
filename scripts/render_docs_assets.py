@@ -203,10 +203,10 @@ def render_menubar():
     menu_bar(base, 90, 430, 1420, 120, dark=True)
     rounded(d, (90, 620, 770, 730), 24, (241, 246, 241))
     paste_icon(base, (120, 648, 172, 700))
-    text(d, (205, 660), "↻ Aktualisiert ...", (0, 61, 140), F["menu"])
+    text(d, (205, 660), "↻ Aktualisiert ...", (0, 51, 204), F["menu"])
     rounded(d, (830, 620, 1510, 730), 24, (22, 29, 25))
     paste_icon(base, (860, 648, 912, 700))
-    text(d, (945, 660), "↻ Aktualisiert ...", (140, 217, 255), F["menu"])
+    text(d, (945, 660), "↻ Aktualisiert ...", (102, 224, 255), F["menu"])
     text(d, (128, 775), "Hell und Dunkel · Light and dark", MUTED, F["small"])
     save(base, "menubar-shot.png")
 

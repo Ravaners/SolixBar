@@ -7,13 +7,45 @@ struct SolixHistorySample: Codable, Sendable {
     var gridWatts: Int?
 }
 
+private struct SolixEnergyAccumulator: Codable {
+    var totalKWh: Double = 0
+    var lastDate: Date?
+    var lastSolarWatts: Int?
+}
+
 @MainActor
 final class SolixHistoryStore {
     static let shared = SolixHistoryStore()
 
     private let defaults = UserDefaults.standard
     private let key = "solixHistorySamples"
+    private let accumulatorKey = "solixEnergyAccumulators"
     private let maxAge: TimeInterval = 31 * 24 * 60 * 60
+
+    func cumulativeSolarKWh(recording snapshot: SolixSnapshot, sourceKey: String) -> Double {
+        var accumulators = loadAccumulators()
+        var accumulator = accumulators[sourceKey] ?? SolixEnergyAccumulator()
+
+        if let lastDate = accumulator.lastDate,
+           let lastSolarWatts = accumulator.lastSolarWatts,
+           let solarWatts = snapshot.solarWatts {
+            let seconds = snapshot.updatedAt.timeIntervalSince(lastDate)
+            if seconds > 0, seconds <= 30 * 60 {
+                let measuredKWh = Double(lastSolarWatts + solarWatts) / 2 * seconds / 3_600_000
+                accumulator.totalKWh += max(0, measuredKWh)
+            }
+        }
+
+        if let providerTotal = snapshot.totalKWh, providerTotal > accumulator.totalKWh {
+            accumulator.totalKWh = providerTotal
+        }
+
+        accumulator.lastDate = snapshot.updatedAt
+        accumulator.lastSolarWatts = snapshot.solarWatts
+        accumulators[sourceKey] = accumulator
+        saveAccumulators(accumulators)
+        return accumulator.totalKWh
+    }
 
     func record(_ snapshot: SolixSnapshot) {
         var values = allSamples()
@@ -60,6 +92,16 @@ final class SolixHistoryStore {
     private func save(_ samples: [SolixHistorySample]) {
         guard let data = try? JSONEncoder().encode(samples) else { return }
         defaults.set(data, forKey: key)
+    }
+
+    private func loadAccumulators() -> [String: SolixEnergyAccumulator] {
+        guard let data = defaults.data(forKey: accumulatorKey) else { return [:] }
+        return (try? JSONDecoder().decode([String: SolixEnergyAccumulator].self, from: data)) ?? [:]
+    }
+
+    private func saveAccumulators(_ accumulators: [String: SolixEnergyAccumulator]) {
+        guard let data = try? JSONEncoder().encode(accumulators) else { return }
+        defaults.set(data, forKey: accumulatorKey)
     }
 
     private func pruned(_ samples: [SolixHistorySample], from date: Date) -> [SolixHistorySample] {

@@ -70,6 +70,10 @@ final class StatusController: NSObject {
             do {
                 var snapshot = try await provider().fetchSnapshot()
                 snapshot.updatedAt = Date()
+                snapshot.totalKWh = historyStore.cumulativeSolarKWh(
+                    recording: snapshot,
+                    sourceKey: settings.dataSourceMode.rawValue
+                )
                 lastSnapshot = snapshot
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
@@ -734,8 +738,8 @@ final class StatusController: NSObject {
 
     private var homeConsumptionColor: NSColor {
         adaptiveFlowColor(
-            light: (0.00, 0.27, 0.55),
-            dark: (0.50, 0.82, 1.00)
+            light: (0.00, 0.20, 0.80),
+            dark: (0.40, 0.88, 1.00)
         )
     }
 
@@ -755,8 +759,8 @@ final class StatusController: NSObject {
 
     private var gridImportColor: NSColor {
         adaptiveFlowColor(
-            light: (0.00, 0.25, 0.50),
-            dark: (0.48, 0.80, 1.00)
+            light: (0.00, 0.20, 0.80),
+            dark: (0.40, 0.88, 1.00)
         )
     }
 
@@ -769,8 +773,8 @@ final class StatusController: NSObject {
 
     private var refreshColor: NSColor {
         adaptiveFlowColor(
-            light: (0.00, 0.24, 0.55),
-            dark: (0.55, 0.85, 1.00)
+            light: (0.00, 0.20, 0.80),
+            dark: (0.40, 0.88, 1.00)
         )
     }
 
