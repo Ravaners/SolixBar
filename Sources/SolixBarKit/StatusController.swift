@@ -47,11 +47,20 @@ final class StatusController: NSObject {
     private func provider() -> SolixDataProvider {
         switch settings.dataSourceMode {
         case .demo:
-            DemoSolixDataProvider()
+            return DemoSolixDataProvider()
         case .command:
-            CommandSolixDataProvider(command: settings.command)
+            // Passwort kommt aus dem Schluesselbund und wird nur als
+            // Umgebungsvariable an den Befehl uebergeben, nie auf Platte.
+            var environment: [String: String] = [:]
+            let stored = SolixEnvFile.read(from: SolixPaths.envFileURL)
+            if let user = stored["ANKER_SOLIX_USER"],
+               let password = KeychainStore.password(account: user),
+               !password.isEmpty {
+                environment["ANKER_SOLIX_PASSWORD"] = password
+            }
+            return CommandSolixDataProvider(command: settings.command, extraEnvironment: environment)
         case .url:
-            URLSolixDataProvider(urlString: settings.urlString)
+            return URLSolixDataProvider(urlString: settings.urlString)
         }
     }
 
@@ -79,7 +88,11 @@ final class StatusController: NSObject {
                 lastSnapshot = snapshot
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
-                historyStore.record(snapshot)
+                historyStore.record(
+                    snapshot,
+                    sourceKey: settings.dataSourceMode.rawValue,
+                    refreshInterval: settings.refreshInterval
+                )
                 AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
             } catch {
                 // Letzten gueltigen Snapshot behalten: ein transienter Fehler
@@ -290,7 +303,10 @@ final class StatusController: NSObject {
     }
 
     private func graphSamples() -> [SolixHistorySample] {
-        let samples = historyStore.samples(duration: settings.historyDuration)
+        let samples = historyStore.samples(
+            duration: settings.historyDuration,
+            sourceKey: settings.dataSourceMode.rawValue
+        )
         guard samples.count < 3, settings.dataSourceMode == .demo else { return samples }
         return demoGraphSamples(duration: settings.historyDuration)
     }

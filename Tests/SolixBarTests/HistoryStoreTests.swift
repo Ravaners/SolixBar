@@ -9,7 +9,9 @@ struct HistoryStoreTests {
         let suite = "solixbar-tests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
-        return (SolixHistoryStore(defaults: defaults), defaults)
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("solixbar-history-\(UUID().uuidString).json")
+        return (SolixHistoryStore(defaults: defaults, fileURL: fileURL), defaults)
     }
 
     private func snapshot(solar: Int?, at date: Date, totalKWh: Double? = nil) -> SolixSnapshot {
@@ -51,28 +53,53 @@ struct HistoryStoreTests {
         #expect(total == 427.8)
     }
 
-    @Test("accumulators are separated per source")
-    func accumulatorsPerSource() {
-        let (store, _) = makeStore()
-        _ = store.cumulativeSolarKWh(
-            recording: snapshot(solar: 0, at: Date(), totalKWh: 100),
-            sourceKey: "demo"
-        )
-        let urlTotal = store.cumulativeSolarKWh(
-            recording: snapshot(solar: 0, at: Date()),
-            sourceKey: "url"
-        )
-        #expect(urlTotal == 0)
-    }
-
-    @Test("record and samples roundtrip with duration filter")
-    func recordRoundtrip() {
+    @Test("samples are separated per data source")
+    func samplesPerSource() {
         let (store, _) = makeStore()
         let now = Date()
-        store.record(snapshot(solar: 500, at: now.addingTimeInterval(-7200)))
-        store.record(snapshot(solar: 600, at: now.addingTimeInterval(-60)))
-        let recent = store.samples(duration: 3600)
-        #expect(recent.count == 1)
-        #expect(recent.first?.solarWatts == 600)
+        store.record(snapshot(solar: 500, at: now), sourceKey: "demo", refreshInterval: 300)
+        store.record(snapshot(solar: 999, at: now), sourceKey: "url", refreshInterval: 300)
+        let demo = store.samples(duration: 3600, sourceKey: "demo")
+        let url = store.samples(duration: 3600, sourceKey: "url")
+        #expect(demo.count == 1 && demo.first?.solarWatts == 500)
+        #expect(url.count == 1 && url.first?.solarWatts == 999)
+    }
+
+    @Test("cap covers the 30 day view at the configured interval")
+    func capMath() {
+        // 300 s Intervall: 30 Tage = 8640 Samples -> Cap muss darueber liegen
+        #expect(SolixHistoryStore.maxSamples(refreshInterval: 300) >= 8640)
+        // 60 s Intervall: 43200 Samples
+        #expect(SolixHistoryStore.maxSamples(refreshInterval: 60) >= 43200)
+        // nie unter dem alten Limit
+        #expect(SolixHistoryStore.maxSamples(refreshInterval: 100_000) >= 2000)
+    }
+
+    @Test("migrates legacy UserDefaults blob to the demo source")
+    func legacyMigration() throws {
+        let suite = "solixbar-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let legacy = [SolixHistorySample(date: Date(), batteryPercent: 50, solarWatts: 123, gridWatts: 0)]
+        defaults.set(try JSONEncoder().encode(legacy), forKey: "solixHistorySamples")
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("solixbar-history-\(UUID().uuidString).json")
+        let store = SolixHistoryStore(defaults: defaults, fileURL: fileURL)
+        let migrated = store.samples(duration: 3600, sourceKey: "demo")
+        #expect(migrated.count == 1)
+        #expect(migrated.first?.solarWatts == 123)
+        #expect(defaults.data(forKey: "solixHistorySamples") == nil)
+    }
+
+    @Test("persists across store instances")
+    func persistence() {
+        let suite = "solixbar-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("solixbar-history-\(UUID().uuidString).json")
+        let store = SolixHistoryStore(defaults: defaults, fileURL: fileURL)
+        store.record(snapshot(solar: 321, at: Date()), sourceKey: "url", refreshInterval: 300)
+        let second = SolixHistoryStore(defaults: defaults, fileURL: fileURL)
+        #expect(second.samples(duration: 3600, sourceKey: "url").first?.solarWatts == 321)
     }
 }

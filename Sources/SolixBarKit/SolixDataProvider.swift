@@ -9,6 +9,7 @@ enum SolixProviderError: LocalizedError, Sendable {
     case missingURL
     case commandFailed(String)
     case commandTimedOut(TimeInterval)
+    case httpError(Int)
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +21,8 @@ enum SolixProviderError: LocalizedError, Sendable {
             message
         case .commandTimedOut(let seconds):
             "JSON-Befehl nach \(Int(seconds)) Sekunden abgebrochen."
+        case .httpError(let status):
+            "Server antwortete mit HTTP \(status)."
         }
     }
 }
@@ -37,12 +40,34 @@ final class DemoSolixDataProvider: SolixDataProvider {
     }
 }
 
+/// Liest eine Pipe auf einem eigenen Thread leer, damit der Kindprozess bei
+/// grosser Ausgabe (>64 KB Pipe-Puffer) nicht blockiert.
+private final class PipeDrain: @unchecked Sendable {
+    private let semaphore = DispatchSemaphore(value: 0)
+    private var collected = Data()
+
+    init(_ handle: FileHandle) {
+        Thread.detachNewThread { [self] in
+            collected = (try? handle.readToEnd()) ?? Data()
+            semaphore.signal()
+        }
+    }
+
+    func data() -> Data {
+        semaphore.wait()
+        return collected
+    }
+}
+
 final class CommandSolixDataProvider: SolixDataProvider {
     private let command: String
-    private let timeout: TimeInterval = 45
+    private let extraEnvironment: [String: String]
+    private let timeout: TimeInterval
 
-    init(command: String) {
+    init(command: String, extraEnvironment: [String: String] = [:], timeout: TimeInterval = 45) {
         self.command = command
+        self.extraEnvironment = extraEnvironment
+        self.timeout = timeout
     }
 
     func fetchSnapshot() async throws -> SolixSnapshot {
@@ -51,11 +76,16 @@ final class CommandSolixDataProvider: SolixDataProvider {
         }
 
         let command = command
+        let extraEnvironment = extraEnvironment
         let timeout = timeout
         return try await Task.detached(priority: .utility) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
             process.arguments = ["-lc", command]
+            if !extraEnvironment.isEmpty {
+                process.environment = ProcessInfo.processInfo.environment
+                    .merging(extraEnvironment) { _, new in new }
+            }
 
             let output = Pipe()
             let error = Pipe()
@@ -63,27 +93,39 @@ final class CommandSolixDataProvider: SolixDataProvider {
             process.standardError = error
 
             try process.run()
-            let deadline = Date().addingTimeInterval(timeout)
-            while process.isRunning && Date() < deadline {
-                try await Task.sleep(nanoseconds: 100_000_000)
-            }
+            let outputDrain = PipeDrain(output.fileHandleForReading)
+            let errorDrain = PipeDrain(error.fileHandleForReading)
 
-            if process.isRunning {
+            if await !Self.waitForExit(process, timeout: timeout) {
                 process.terminate()
-                process.waitUntilExit()
+                if await !Self.waitForExit(process, timeout: 2) {
+                    kill(process.processIdentifier, SIGKILL)
+                    _ = await Self.waitForExit(process, timeout: 2)
+                }
                 throw SolixProviderError.commandTimedOut(timeout)
             }
 
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            let errorData = error.fileHandleForReading.readDataToEndOfFile()
+            let data = outputDrain.data()
+            let errorData = errorDrain.data()
 
             guard process.terminationStatus == 0 else {
-                let message = String(data: errorData, encoding: .utf8) ?? "Befehl fehlgeschlagen."
-                throw SolixProviderError.commandFailed(message.trimmingCharacters(in: .whitespacesAndNewlines))
+                let message = String(data: errorData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                throw SolixProviderError.commandFailed(
+                    message.isEmpty ? "Befehl fehlgeschlagen (Exit-Code \(process.terminationStatus))." : message
+                )
             }
 
             return try SnapshotDecoder.decode(data)
         }.value
+    }
+
+    private static func waitForExit(_ process: Process, timeout: TimeInterval) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while process.isRunning && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        return !process.isRunning
     }
 }
 
@@ -102,7 +144,10 @@ final class URLSolixDataProvider: SolixDataProvider {
 
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw SolixProviderError.httpError(http.statusCode)
+        }
         return try SnapshotDecoder.decode(data)
     }
 }

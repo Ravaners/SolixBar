@@ -734,8 +734,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func loadSolixCredentials() {
         let values = SolixEnvFile.read(from: SolixPaths.envFileURL)
-        solixEmailField.stringValue = values["ANKER_SOLIX_USER"] ?? ""
-        solixPasswordField.stringValue = values["ANKER_SOLIX_PASSWORD"] ?? ""
+        let email = values["ANKER_SOLIX_USER"] ?? ""
+        solixEmailField.stringValue = email
+        // Passwort bevorzugt aus dem Schluesselbund; Env-Eintrag ist Altbestand.
+        if !email.isEmpty, let stored = KeychainStore.password(account: email) {
+            solixPasswordField.stringValue = stored
+        } else {
+            solixPasswordField.stringValue = values["ANKER_SOLIX_PASSWORD"] ?? ""
+        }
         solixCountryField.stringValue = values["ANKER_SOLIX_COUNTRY"] ?? "DE"
         solixTodayBaseField.stringValue = values["SOLIXBAR_TODAY_KWH_BASE"] ?? ""
         solixTotalBaseField.stringValue = values["SOLIXBAR_TOTAL_KWH_BASE"] ?? ""
@@ -751,9 +757,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let todayBase = solixTodayBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let totalBase = solixTotalBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Passwort in den Schluesselbund; die Env-Datei enthaelt keine Secrets.
         var values: [(key: String, value: String)] = [
             ("ANKER_SOLIX_USER", email),
-            ("ANKER_SOLIX_PASSWORD", password),
             ("ANKER_SOLIX_COUNTRY", country)
         ]
         if !todayBase.isEmpty {
@@ -765,6 +771,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
 
         do {
+            if !email.isEmpty, !password.isEmpty {
+                try KeychainStore.setPassword(password, account: email)
+            }
             try SolixEnvFile.write(values, to: SolixPaths.envFileURL)
         } catch {
             NSAlert(error: error).runModal()
