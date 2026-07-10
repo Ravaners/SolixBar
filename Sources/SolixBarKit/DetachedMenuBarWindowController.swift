@@ -353,10 +353,10 @@ private final class DetachedMenuBarView: NSView {
         return image.map { roundedIconImage($0, size: size) }
     }
 
-    /// Loest Farben ueber das semantische Rollen-Attribut (.solixRole) auf,
-    /// das die Menueleisten-Formatierung an jeden Lauf haengt — frueher wurde
-    /// hier der gerenderte Text nach Schluesselwoertern durchsucht, was bei
-    /// jeder Textaenderung brach.
+    /// Löst Farben über das semantische Rollen-Attribut (.solixRole) auf,
+    /// das die Menüleisten-Formatierung an jeden Lauf hängt — früher wurde
+    /// hier der gerenderte Text nach Schlüsselwörtern durchsucht, was bei
+    /// jeder Textänderung brach.
     private func readableDetachedText(_ attributedText: NSAttributedString) -> NSAttributedString {
         let result = NSMutableAttributedString(attributedString: attributedText)
         let fullRange = NSRange(location: 0, length: result.length)
@@ -415,7 +415,7 @@ private final class DetachedMenuBarView: NSView {
     }
 
     /// Dezenter Zwei-Stopp-Akzent aus den ersten beiden Metrikfarben — die
-    /// fruehere Ueberlagerung von bis zu fuenf Farben ergab ein schlammiges Braun.
+    /// frühere Überlagerung von bis zu fünf Farben ergab ein schlammiges Braun.
     private var accentColors: [NSColor] {
         let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
         return metrics.prefix(2).map { Theme.accent(accentRole(for: $0)) }

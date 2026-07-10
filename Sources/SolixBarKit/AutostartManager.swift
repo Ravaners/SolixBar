@@ -1,7 +1,7 @@
 import Foundation
 import ServiceManagement
 
-/// Autostart ueber die moderne SMAppService-API. Ein frueher installiertes
+/// Autostart über die moderne SMAppService-API. Ein früher installiertes
 /// LaunchAgent-Plist wird beim Umschalten entfernt (Migration).
 enum AutostartManager {
     private static let label = "local.codex.SolixBar"
@@ -17,7 +17,7 @@ enum AutostartManager {
     }
 
     static func setEnabled(_ enabled: Bool) throws {
-        // Altes LaunchAgent-Plist immer aufraeumen, sonst startet die App doppelt.
+        // Altes LaunchAgent-Plist immer aufräumen, sonst startet die App doppelt.
         if FileManager.default.fileExists(atPath: legacyLaunchAgentURL.path) {
             try? FileManager.default.removeItem(at: legacyLaunchAgentURL)
         }

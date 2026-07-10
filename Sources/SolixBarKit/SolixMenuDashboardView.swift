@@ -51,8 +51,8 @@ final class SolixMenuDashboardView: NSView {
         updated.toolTip = LocalizedText.text("Wann die Werte zuletzt aktualisiert wurden.", "When the values were last updated.")
         updatedLabel = updated
 
-        // Demo-Modus deutlich kennzeichnen, damit niemand Beispieldaten fuer
-        // echte Anlagenwerte haelt.
+        // Demo-Modus deutlich kennzeichnen, damit niemand Beispieldaten für
+        // echte Anlagenwerte hält.
         let isDemo = AppSettings.shared.dataSourceMode == .demo
         let status = badge(
             isDemo ? "Demo" : (snapshot.status ?? LocalizedText.text("Unbekannt", "Unknown")),
@@ -418,9 +418,9 @@ final class SolixMenuDashboardView: NSView {
         return Theme.accent(Theme.batteryFlow(watts: snapshot.batteryWatts))
     }
 
-    /// Dynamische Panel-Farbe: loest sich pro Appearance auf, statt den
+    /// Dynamische Panel-Farbe: löst sich pro Appearance auf, statt den
     /// Build-Zeit-Zustand einzufrieren (sonst helle Pastellreihen im Dark Mode,
-    /// wenn die View vor dem Einhaengen ins dunkle Fenster gebaut wird).
+    /// wenn die View vor dem Einhängen ins dunkle Fenster gebaut wird).
     private func panelBackground(for color: NSColor, strength: CGFloat) -> NSColor {
         NSColor(name: nil) { appearance in
             let dark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua

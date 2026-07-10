@@ -29,7 +29,7 @@ final class AnimatedPanelView: NSView {
     }
 
     /// Dynamische NSColor werden beim Setzen als cgColor eingefroren; bei einem
-    /// Theme-Wechsel muessen Layer-Farben deshalb neu aufgeloest werden.
+    /// Theme-Wechsel müssen Layer-Farben deshalb neu aufgelöst werden.
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
         applyLayerColor()

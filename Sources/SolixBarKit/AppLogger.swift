@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Loggt doppelt: ins Unified Logging (Console.app, Filterung per Subsystem)
-/// und in eine Datei fuer Support-Faelle. DEBUG-Zeilen erscheinen nur, wenn
+/// und in eine Datei für Support-Fälle. DEBUG-Zeilen erscheinen nur, wenn
 /// `defaults write local.codex.SolixBar verboseLogging -bool true` gesetzt ist.
 enum AppLogger {
     private static let subsystem = "local.codex.SolixBar"
@@ -50,7 +50,7 @@ enum AppLogger {
         }
     }
 
-    /// Haelt die Datei offen statt sie pro Zeile neu zu oeffnen; rotiert bei 512 KB.
+    /// Hält die Datei offen statt sie pro Zeile neu zu öffnen; rotiert bei 512 KB.
     private static func ensureHandle() throws {
         if let size = try? FileManager.default.attributesOfItem(atPath: logURL.path)[.size] as? NSNumber,
            size.intValue > maxLogSize {

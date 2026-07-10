@@ -67,7 +67,7 @@ struct HistoryStoreTests {
 
     @Test("cap covers the 30 day view at the configured interval")
     func capMath() {
-        // 300 s Intervall: 30 Tage = 8640 Samples -> Cap muss darueber liegen
+        // 300 s Intervall: 30 Tage = 8640 Samples -> Cap muss darüber liegen
         #expect(SolixHistoryStore.maxSamples(refreshInterval: 300) >= 8640)
         // 60 s Intervall: 43200 Samples
         #expect(SolixHistoryStore.maxSamples(refreshInterval: 60) >= 43200)

@@ -1,14 +1,14 @@
 import AppKit
 
-/// Stufenweise Verdichtung der Menueleisten-Anzeige, damit das Statusitem auf
+/// Stufenweise Verdichtung der Menüleisten-Anzeige, damit das Statusitem auf
 /// MacBooks mit Notch nie in die Notch-Zone ragt (macOS blendet solche Items
-/// komplett aus — das Item waere unsichtbar).
+/// komplett aus — das Item wäre unsichtbar).
 enum MenuBarDisplayLevel: Int, CaseIterable, Sendable {
-    /// Alle vom Nutzer gewaehlten Optionen.
+    /// Alle vom Nutzer gewählten Optionen.
     case full = 0
     /// Ohne Text-Bezeichnungen ("Akku", "PV", ...).
     case noLabels = 1
-    /// Zusaetzlich ohne Symbole und Flusspfeile — nur Werte.
+    /// Zusätzlich ohne Symbole und Flusspfeile — nur Werte.
     case valuesOnly = 2
     /// Nur die ersten zwei Metriken als Werte.
     case compact = 3
@@ -20,7 +20,7 @@ enum MenuBarDisplayLevel: Int, CaseIterable, Sendable {
     }
 }
 
-/// Anzeigeoptionen der Menueleiste, abgeleitet aus den Settings und pro
+/// Anzeigeoptionen der Menüleiste, abgeleitet aus den Settings und pro
 /// Verdichtungsstufe reduziert. Reine Wertstruktur -> unit-testbar.
 struct MenuBarDisplayOptions: Sendable {
     var metrics: [BarMetric]

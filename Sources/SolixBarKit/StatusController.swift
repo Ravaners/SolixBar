@@ -49,8 +49,8 @@ final class StatusController: NSObject {
         case .demo:
             return DemoSolixDataProvider()
         case .command:
-            // Passwort kommt aus dem Schluesselbund und wird nur als
-            // Umgebungsvariable an den Befehl uebergeben, nie auf Platte.
+            // Passwort kommt aus dem Schlüsselbund und wird nur als
+            // Umgebungsvariable an den Befehl übergeben, nie auf Platte.
             var environment: [String: String] = [:]
             let stored = SolixEnvFile.read(from: SolixPaths.envFileURL)
             if let user = stored["ANKER_SOLIX_USER"],
@@ -95,7 +95,7 @@ final class StatusController: NSObject {
                 )
                 AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
             } catch {
-                // Letzten gueltigen Snapshot behalten: ein transienter Fehler
+                // Letzten gültigen Snapshot behalten: ein transienter Fehler
                 // soll die Anzeige nicht leeren, nur als veraltet markieren.
                 lastError = error.localizedDescription
                 AppLogger.error("Refresh failed (keeping last snapshot): \(Self.describeError(error))")
@@ -110,7 +110,7 @@ final class StatusController: NSObject {
 
     /// DecodingError & Co. mit vollem Kontext ins Log — die blosse
     /// localizedDescription ("Die Daten konnten nicht gelesen werden") ist
-    /// fuer die Fehlersuche wertlos.
+    /// für die Fehlersuche wertlos.
     private static func describeError(_ error: Error) -> String {
         if let decoding = error as? DecodingError {
             return "DecodingError: \(decoding)"
@@ -214,12 +214,12 @@ final class StatusController: NSObject {
         }
     }
 
-    /// Prueft nach dem Layout, ob das Item in die Notch-Zone ragt, und
-    /// verdichtet die Anzeige stufenweise, bis es passt. macOS wuerde ein
-    /// ueberlappendes Item sonst komplett ausblenden.
+    /// Prüft nach dem Layout, ob das Item in die Notch-Zone ragt, und
+    /// verdichtet die Anzeige stufenweise, bis es passt. macOS würde ein
+    /// überlappendes Item sonst komplett ausblenden.
     private func enforceNotchFit(with snapshot: SolixSnapshot) {
-        // Kurze Verzoegerung: die Menueleiste positioniert das Item erst nach
-        // dem Setzen des Titels neu; ein sofortiger Check saehe veraltete Frames.
+        // Kurze Verzögerung: die Menüleiste positioniert das Item erst nach
+        // dem Setzen des Titels neu; ein sofortiger Check sähe veraltete Frames.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { [weak self] in
             guard let self else { return }
             guard let frame = self.statusButtonFrameOnScreen() else { return }
@@ -425,7 +425,7 @@ final class StatusController: NSObject {
 
     /// Template-Glyph statt herunterskaliertem App-Icon: Das 1,5-MB-PNG war bei
     /// 18 px nur noch ein Farbfleck, wurde bei jedem Menu-Rebuild neu von Platte
-    /// geladen und verstiess als Vollfarbbild an der HIG fuer Statusitems.
+    /// geladen und verstiess als Vollfarbbild an der HIG für Statusitems.
     private func menuBarIcon() -> NSImage? {
         guard let image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "SOLIX") else {
             return nil

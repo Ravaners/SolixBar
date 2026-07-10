@@ -69,8 +69,8 @@ final class HistoryGraphView: NSView {
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
         drawTimeLabels(in: plot)
-        // Header/Legende nach der Plotflaeche zeichnen, damit sie bei knapper
-        // Hoehe niemals unter der Flaeche verschwinden.
+        // Header/Legende nach der Plotfläche zeichnen, damit sie bei knapper
+        // Höhe niemals unter der Fläche verschwinden.
         drawHeader()
         if !isCompact {
             drawLegend()
@@ -81,8 +81,8 @@ final class HistoryGraphView: NSView {
             return
         }
 
-        // Nur Solar bekommt eine Flaechenfuellung — mehrere ueberlagerte
-        // Fuellungen mischten sich zu einem undefinierbaren Oliv.
+        // Nur Solar bekommt eine Flächenfüllung — mehrere überlagerte
+        // Füllungen mischten sich zu einem undefinierbaren Oliv.
         if visibleMetrics.contains(.battery) {
             drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 3.1, baseline: plot.minY, filled: false)
         }
@@ -178,7 +178,7 @@ final class HistoryGraphView: NSView {
             gridPath.move(to: NSPoint(x: rect.minX, y: y))
             gridPath.line(to: NSPoint(x: rect.maxX, y: y))
 
-            // %-Achse gehoert zur Akku-Linie: gleiche Farbe stellt die Zuordnung
+            // %-Achse gehört zur Akku-Linie: gleiche Farbe stellt die Zuordnung
             // der beiden Y-Achsen klar (links %, rechts Watt).
             let percent = index * 25
             drawText(
@@ -284,7 +284,7 @@ final class HistoryGraphView: NSView {
     }
 
     /// Ticks an runden Uhrzeit-/Tagesgrenzen statt an krummen Bruchteilen der
-    /// Domaene (frueher: 00:33, 06:33 ...). Der letzte Tick ist immer "Jetzt".
+    /// Domäne (früher: 00:33, 06:33 ...). Der letzte Tick ist immer "Jetzt".
     private func timeTicks(for domain: (start: Date, end: Date)) -> [(date: Date, label: String?, isLast: Bool)] {
         let duration = domain.end.timeIntervalSince(domain.start)
         let step: TimeInterval
@@ -317,7 +317,7 @@ final class HistoryGraphView: NSView {
             boundary = calendar.startOfDay(for: domain.start.addingTimeInterval(24 * 3600))
         }
         // Puffer von 60% der Schrittweite vor "Jetzt", damit sich das letzte
-        // Zeitlabel nie mit dem Jetzt-Label ueberlagert.
+        // Zeitlabel nie mit dem Jetzt-Label überlagert.
         while boundary < domain.end.addingTimeInterval(-step * 0.6) {
             ticks.append((date: boundary, label: nil, isLast: false))
             boundary.addTimeInterval(step)

@@ -1,7 +1,7 @@
 import AppKit
 
 /// Semantische Farbrolle eines dargestellten Werts. Jede Stelle, die Energiewerte
-/// einfaerbt, waehlt eine Rolle statt einer konkreten Farbe.
+/// einfärbt, wählt eine Rolle statt einer konkreten Farbe.
 enum ColorRole: String {
     case solar
     case load
@@ -22,12 +22,12 @@ enum ColorRole: String {
 extension NSAttributedString.Key {
     /// Markiert einen Textlauf mit seiner Farbrolle (rawValue von ColorRole),
     /// damit abgeleitete Darstellungen (z. B. die abgedockte Leiste) die Farbe
-    /// semantisch neu aufloesen koennen statt Text zu parsen.
+    /// semantisch neu auflösen können statt Text zu parsen.
     static let solixRole = NSAttributedString.Key("solixColorRole")
 }
 
-/// Zentrale Design-Token: Farben, Radien, Abstaende.
-/// Menueleiste/Dashboard nutzen `color(_:)` (hell/dunkel adaptiv),
+/// Zentrale Design-Token: Farben, Radien, Abstände.
+/// Menüleiste/Dashboard nutzen `color(_:)` (hell/dunkel adaptiv),
 /// die dunkle abgedockte Leiste `bright(_:)`, Legenden/Akzente `accent(_:)`.
 @MainActor
 enum Theme {
@@ -70,7 +70,7 @@ enum Theme {
         }
     }
 
-    // MARK: Helle Varianten fuer die dunkle abgedockte Leiste
+    // MARK: Helle Varianten für die dunkle abgedockte Leiste
     static func bright(_ role: ColorRole) -> NSColor {
         switch role {
         case .solar:
@@ -100,7 +100,7 @@ enum Theme {
         }
     }
 
-    // MARK: Gesaettigte Akzente fuer Legenden, Plates und Gradienten
+    // MARK: Gesättigte Akzente für Legenden, Plates und Gradienten
     static func accent(_ role: ColorRole) -> NSColor {
         switch role {
         case .solar:
@@ -155,7 +155,7 @@ enum Theme {
         }
     }
 
-    /// Erkennt dunkle Hintergruende auch im Menueleisten-Kontext, wo die
+    /// Erkennt dunkle Hintergründe auch im Menüleisten-Kontext, wo die
     /// Appearance nicht dem Systemthema folgt (dunkles Wallpaper -> helle Schrift).
     static func usesDarkBackground(_ appearance: NSAppearance) -> Bool {
         var label: NSColor?

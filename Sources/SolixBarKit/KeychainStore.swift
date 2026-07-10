@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Speichert das SOLIX-Passwort im macOS-Schluesselbund statt im Klartext.
+/// Speichert das SOLIX-Passwort im macOS-Schlüsselbund statt im Klartext.
 enum KeychainStore {
     private static let service = "local.codex.SolixBar"
 
@@ -56,7 +56,7 @@ enum KeychainStore {
         var errorDescription: String? {
             switch self {
             case .status(let code):
-                "Schluesselbund-Fehler \(code)."
+                "Schlüsselbund-Fehler \(code)."
             }
         }
     }

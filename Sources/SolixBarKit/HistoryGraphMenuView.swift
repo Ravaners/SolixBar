@@ -83,8 +83,8 @@ final class HistoryGraphMenuView: NSView {
             graphContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 13),
             graphContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -13),
             graphContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
-            // Ohne explizite Hoehe kollabiert der Container (der Graph hat keine
-            // intrinsische Groesse) und der Plot quetscht seinen eigenen Header.
+            // Ohne explizite Höhe kollabiert der Container (der Graph hat keine
+            // intrinsische Größe) und der Plot quetscht seinen eigenen Header.
             graphContainer.heightAnchor.constraint(greaterThanOrEqualToConstant: 190)
         ])
     }

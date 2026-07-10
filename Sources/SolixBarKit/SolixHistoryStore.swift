@@ -14,7 +14,7 @@ private struct SolixEnergyAccumulator: Codable {
 }
 
 /// Verlaufsdatei: Samples getrennt pro Datenquelle, damit Demo-Daten den
-/// Live-Graphen nicht verfaelschen. Persistenz als JSON-Datei in Application
+/// Live-Graphen nicht verfälschen. Persistenz als JSON-Datei in Application
 /// Support statt als UserDefaults-Blob.
 private struct HistoryFile: Codable {
     var version = 1
@@ -84,8 +84,8 @@ final class SolixHistoryStore {
             .sorted { $0.date < $1.date }
     }
 
-    /// Cap so, dass die laengste angebotene Ansicht (30 Tage) beim konfigurierten
-    /// Intervall vollstaendig gefuellt werden kann (frueher: hart 2000 Samples
+    /// Cap so, dass die längste angebotene Ansicht (30 Tage) beim konfigurierten
+    /// Intervall vollständig gefüllt werden kann (früher: hart 2000 Samples
     /// == ~7 Tage bei 300 s Intervall, obwohl die UI 30 Tage anbietet).
     static func maxSamples(refreshInterval: TimeInterval) -> Int {
         let interval = max(60, refreshInterval)
@@ -113,7 +113,7 @@ final class SolixHistoryStore {
             return file
         }
         // Migration: alter UserDefaults-Blob (Quelle unbekannt, stammt praktisch
-        // immer aus dem Demo-Modus) wandert unter den Demo-Schluessel.
+        // immer aus dem Demo-Modus) wandert unter den Demo-Schlüssel.
         var file = HistoryFile()
         if let legacyData = defaults.data(forKey: legacyKey),
            let legacy = try? JSONDecoder().decode([SolixHistorySample].self, from: legacyData) {

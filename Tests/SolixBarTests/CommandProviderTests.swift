@@ -6,8 +6,8 @@ import Testing
 struct CommandProviderTests {
     @Test("output larger than the 64KB pipe buffer does not deadlock")
     func largeOutput() async throws {
-        // 200 KB Statusfeld: haette den alten readDataToEndOfFile-nach-Exit-Code
-        // blockiert (Pipe-Puffer voll -> Prozess haengt -> falscher Timeout).
+        // 200 KB Statusfeld: hätte den alten readDataToEndOfFile-nach-Exit-Code
+        // blockiert (Pipe-Puffer voll -> Prozess hängt -> falscher Timeout).
         let provider = CommandSolixDataProvider(
             command: #"printf '{"status":"%s","updatedAt":"2026-01-01T00:00:00Z"}' "$(head -c 200000 /dev/zero | tr '\0' 'x')""#,
             timeout: 15
@@ -47,11 +47,11 @@ struct CommandProviderTests {
     func environmentInjection() async throws {
         let provider = CommandSolixDataProvider(
             command: #"printf '{"status":"%s","updatedAt":"2026-01-01T00:00:00Z"}' "$SOLIX_TEST_VALUE""#,
-            extraEnvironment: ["SOLIX_TEST_VALUE": "aus-dem-schluesselbund"],
+            extraEnvironment: ["SOLIX_TEST_VALUE": "aus-dem-schlüsselbund"],
             timeout: 10
         )
         let snapshot = try await provider.fetchSnapshot()
-        #expect(snapshot.status == "aus-dem-schluesselbund")
+        #expect(snapshot.status == "aus-dem-schlüsselbund")
     }
 
     @Test("empty command reports missing configuration")

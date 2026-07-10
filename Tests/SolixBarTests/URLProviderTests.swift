@@ -3,7 +3,7 @@ import Testing
 @testable import SolixBarKit
 
 /// Testet den JSON-URL-Modus gegen einen lokalen HTTP-Server — deckt den
-/// kompletten App-seitigen Datenweg ab (Request, Statuspruefung, Decoding).
+/// kompletten App-seitigen Datenweg ab (Request, Statusprüfung, Decoding).
 @Suite("URLSolixDataProvider", .serialized)
 struct URLProviderTests {
     private static func startServer(directory: URL, port: Int) throws -> Process {

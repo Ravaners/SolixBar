@@ -19,7 +19,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
     private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
-    private let solixHint = NSTextField(wrappingLabelWithString: "Nur fuer den vorbereiteten SOLIX-Befehl. Mail und Passwort werden lokal gespeichert.")
+    private let solixHint = NSTextField(wrappingLabelWithString: "Nur für den vorbereiteten SOLIX-Befehl. Mail und Passwort werden lokal gespeichert.")
     private let solixEmailRow = NSStackView()
     private let solixPasswordRow = NSStackView()
     private let solixCountryRow = NSStackView()
@@ -82,8 +82,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         languagePopup.addItems(withTitles: ["Deutsch", "English"])
         applyLocalizedControlTitles()
         modePopup.toolTip = "Legt fest, woher SolixBar die Werte lädt."
-        appearancePopup.toolTip = "Waehlt helle Darstellung, dunkle Darstellung oder automatisch passend zum macOS-System."
-        languagePopup.toolTip = "Waehlt die Sprache fuer sichtbare App-Texte."
+        appearancePopup.toolTip = "Wählt helle Darstellung, dunkle Darstellung oder automatisch passend zum macOS-System."
+        languagePopup.toolTip = "Wählt die Sprache für sichtbare App-Texte."
         commandField.placeholderString = solixHelperCommand
         commandField.toolTip = "Führt einen lokalen Befehl aus und liest dessen JSON-Ausgabe."
         urlField.placeholderString = "http://127.0.0.1:8787/solix.json"
@@ -97,10 +97,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixCountryField.placeholderString = "DE"
         solixCountryField.toolTip = "Land deines Anker-Kontos, normalerweise DE."
         solixTodayBaseField.placeholderString = "z.B. 7.2"
-        solixTodayBaseField.toolTip = "Optionaler Korrekturwert fuer den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zaehlt ab diesem Wert weiter."
+        solixTodayBaseField.toolTip = "Optionaler Korrekturwert für den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zählt ab diesem Wert weiter."
         solixTotalBaseField.placeholderString = "z.B. 427.8"
         solixTotalBaseField.toolTip = LocalizedText.text(
-            "Optionaler Startwert fuer den Gesamtertrag. Ohne API-Gesamtwert kumuliert SolixBar alle fortlaufenden Solarmessungen lokal.",
+            "Optionaler Startwert für den Gesamtertrag. Ohne API-Gesamtwert kumuliert SolixBar alle fortlaufenden Solarmessungen lokal.",
             "Optional starting value for total yield. Without an API total, SolixBar locally accumulates all continuous solar measurements."
         )
 
@@ -320,7 +320,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         return container
     }
 
-    /// Darstellung, Sprache und Startverhalten in einem Tab — der fruehere
+    /// Darstellung, Sprache und Startverhalten in einem Tab — der frühere
     /// eigene "Start"-Tab enthielt nur eine einzige Checkbox.
     private func appPane() -> NSView {
         let container = NSView()
@@ -330,7 +330,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
         let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
-            "Aenderungen wirken sofort als Vorschau. Erst Speichern macht sie dauerhaft.",
+            "Änderungen wirken sofort als Vorschau. Erst Speichern macht sie dauerhaft.",
             "Changes apply immediately as a preview. Press Save to keep them."
         ))
         hint.textColor = .secondaryLabelColor
@@ -532,10 +532,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case "Land", "Country":
             return "Land des Anker-Kontos, meistens DE."
         case "Ertrag heute", "Yield today":
-            return "Korrigiert den heutigen Ertrag in kWh, wenn Anker fuer heute 0 kWh liefert."
+            return "Korrigiert den heutigen Ertrag in kWh, wenn Anker für heute 0 kWh liefert."
         case "Gesamtertrag", "Total yield":
             return LocalizedText.text(
-                "Setzt optional den Gesamtertrag aus der Anker-App als Startwert. Ohne API-Gesamtwert zaehlt SolixBar alle fortlaufenden Messungen zusammen.",
+                "Setzt optional den Gesamtertrag aus der Anker-App als Startwert. Ohne API-Gesamtwert zählt SolixBar alle fortlaufenden Messungen zusammen.",
                 "Optionally sets the Anker app total as a starting value. Without an API total, SolixBar adds up all continuous measurements."
             )
         case "Befehl", "Command":
@@ -545,9 +545,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case "Intervall", "Interval":
             return "Legt fest, wie oft neue Daten geholt werden."
         case "Design", "Theme":
-            return "Waehlt Hell, Dunkel oder Automatisch passend zum System."
+            return "Wählt Hell, Dunkel oder Automatisch passend zum System."
         case "Sprache", "Language":
-            return "Waehlt Deutsch oder Englisch fuer sichtbare App-Texte."
+            return "Wählt Deutsch oder Englisch für sichtbare App-Texte."
         default:
             return text
         }
@@ -717,8 +717,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         window?.close()
     }
 
-    /// Textaenderungen entprellen: Vorher schrieb jeder einzelne Tastendruck
-    /// halbfertige URLs/Befehle live in die Settings (und stoerte laufende
+    /// Textänderungen entprellen: Vorher schrieb jeder einzelne Tastendruck
+    /// halbfertige URLs/Befehle live in die Settings (und störte laufende
     /// Refreshes).
     func controlTextDidChange(_ obj: Notification) {
         previewDebounce?.invalidate()
@@ -748,7 +748,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let values = SolixEnvFile.read(from: SolixPaths.envFileURL)
         let email = values["ANKER_SOLIX_USER"] ?? ""
         solixEmailField.stringValue = email
-        // Passwort bevorzugt aus dem Schluesselbund; Env-Eintrag ist Altbestand.
+        // Passwort bevorzugt aus dem Schlüsselbund; Env-Eintrag ist Altbestand.
         if !email.isEmpty, let stored = KeychainStore.password(account: email) {
             solixPasswordField.stringValue = stored
         } else {
@@ -769,7 +769,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let todayBase = solixTodayBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let totalBase = solixTotalBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Passwort in den Schluesselbund; die Env-Datei enthaelt keine Secrets.
+        // Passwort in den Schlüsselbund; die Env-Datei enthält keine Secrets.
         var values: [(key: String, value: String)] = [
             ("ANKER_SOLIX_USER", email),
             ("ANKER_SOLIX_COUNTRY", country)

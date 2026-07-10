@@ -1,7 +1,7 @@
 import Foundation
 
-/// Pfade der App fuer lokale Daten und den SOLIX-Hilfsbefehl.
-/// Ersetzt die frueher hartkodierten Pfade ins Home des Originalautors.
+/// Pfade der App für lokale Daten und den SOLIX-Hilfsbefehl.
+/// Ersetzt die früher hartkodierten Pfade ins Home des Originalautors.
 enum SolixPaths {
     static var appSupportDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -28,7 +28,7 @@ enum SolixPaths {
         return FileManager.default.fileExists(atPath: dev.path) ? dev : nil
     }
 
-    /// Vollstaendiger Befehl fuer den Modus "Lokaler JSON-Befehl": Script mit
+    /// Vollständiger Befehl für den Modus "Lokaler JSON-Befehl": Script mit
     /// explizitem Verweis auf die Env-Datei in Application Support.
     static func helperCommand() -> String? {
         guard let script = helperScriptURL() else { return nil }
