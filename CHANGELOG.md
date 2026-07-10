@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.19 - 2026-07-10
+
+- DE: Die Farbe der SF-Symbole in der abgedockten Leiste wird jetzt aus dem unmittelbar folgenden Messwert (`Akku`, `PV`, `Last`, `Netz` oder `Fluss`) bestimmt. Dadurch bleiben Sonne, Haus, Netzstecker und Fluss-Punkt auch dann farbig, wenn AppKit keine Symbolbeschreibung weitergibt.
+- EN: SF Symbol colors in the detached bar are now derived from the immediately following metric (`Battery`, `PV`, `Load`, `Grid`, or `Flow`). Solar, home, grid-plug, and flow symbols therefore remain colored even when AppKit does not preserve symbol descriptions.
+
 ## 0.3.18 - 2026-07-10
 
 - DE: Sonne, Haus, Akku, Netz und Fluss-Symbol in der abgedockten Leiste sind wieder farbig. Sie verwenden jetzt dieselben festen hellen Semantikfarben wie die zugehoerigen Texte und bleiben dadurch auf dem dunklen Glas-Hintergrund lesbar.

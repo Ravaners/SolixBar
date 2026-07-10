@@ -435,13 +435,16 @@ private final class DetachedMenuBarView: NSView {
             guard let attachment = value as? NSTextAttachment, let image = attachment.image else { return }
             let readableImage = image.copy() as? NSImage ?? image
             readableImage.isTemplate = false
-            let contextStart = max(0, range.location - 36)
-            let contextEnd = min(text.length, NSMaxRange(range) + 36)
-            let contextRange = NSRange(location: contextStart, length: contextEnd - contextStart)
-            let context = (text.string as NSString).substring(with: contextRange)
+            let beforeStart = max(0, range.location - 32)
+            let beforeRange = NSRange(location: beforeStart, length: range.location - beforeStart)
+            let afterEnd = min(text.length, NSMaxRange(range) + 32)
+            let afterRange = NSRange(location: NSMaxRange(range), length: afterEnd - NSMaxRange(range))
+            let before = (text.string as NSString).substring(with: beforeRange)
+            let after = (text.string as NSString).substring(with: afterRange)
             let tint = brightAttachmentColor(
                 description: image.accessibilityDescription ?? "",
-                context: context
+                before: before,
+                after: after
             )
             readableImage.lockFocus()
             tint.set()
@@ -457,9 +460,41 @@ private final class DetachedMenuBarView: NSView {
         }
     }
 
-    private func brightAttachmentColor(description: String, context: String) -> NSColor {
+    private func brightAttachmentColor(description: String, before: String, after: String) -> NSColor {
         let description = description.lowercased()
-        let context = context.lowercased()
+        let before = before.lowercased()
+        let after = after.lowercased()
+        let context = before + " " + after
+        if after.contains("akku") || after.contains("battery") || after.contains("batt") {
+            if let percent = percentage(in: after) {
+                if percent <= 20 {
+                    return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
+                }
+                if percent <= 60 {
+                    return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+                }
+            }
+            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        }
+        if after.contains("pv") || after.contains("solar") {
+            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+        }
+        if after.contains("last") || after.contains("home") || after.contains("haus") {
+            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
+        }
+        if after.contains("netz") || after.contains("grid") {
+            return before.contains("einspeis") || before.contains("export")
+                ? NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
+                : NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
+        }
+        if after.contains("fluss") || after.contains("flow") {
+            return before.contains("entladen") || before.contains("discharging")
+                ? NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
+                : NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        }
+        if after.contains("ertrag") || after.contains("yield") || after.contains("gesamt") || after.contains("total") {
+            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
+        }
         if description.contains("battery") || description.contains("batterie") || description.contains("akku") {
             if description.contains("flow") || description.contains("fluss") {
                 return context.contains("entladen") || context.contains("discharging")
