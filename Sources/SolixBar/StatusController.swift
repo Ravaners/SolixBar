@@ -459,6 +459,11 @@ final class StatusController: NSObject {
         return value > 0 ? "+\(value) W" : "\(value) W"
     }
 
+    private func formatFlowWatts(_ value: Int?) -> String? {
+        guard let value else { return nil }
+        return settings.showEnergyFlowArrows ? "\(abs(value)) W" : formatSignedWatts(value)
+    }
+
     private func barText(for metric: BarMetric, snapshot: SolixSnapshot) -> String {
         switch metric {
         case .battery:
@@ -468,9 +473,9 @@ final class StatusController: NSObject {
         case .home:
             formatBarMetric(metric, value: snapshot.homeWatts.map { "\($0)W" } ?? "--W")
         case .grid:
-            formatBarMetric(metric, value: formatSignedWatts(snapshot.gridWatts) ?? "--W")
+            formatBarMetric(metric, value: formatFlowWatts(snapshot.gridWatts) ?? "--W")
         case .batteryFlow:
-            formatBarMetric(metric, value: formatSignedWatts(snapshot.batteryWatts) ?? "--W")
+            formatBarMetric(metric, value: formatFlowWatts(snapshot.batteryWatts) ?? "--W")
         case .flow:
             settings.showMetricLabels ? "\(metricShortTitle(metric))" : "Flow"
         case .today:
@@ -551,7 +556,11 @@ final class StatusController: NSObject {
                 result.append(textAttachment(" ", scale: scale))
             }
             if settings.showMenuBarMetricSymbols,
-                let image = coloredSymbol(symbol(for: metric, snapshot: snapshot), color: color(for: metric, snapshot: snapshot), accessibilityDescription: metricTitle(metric)) {
+                let image = coloredSymbol(
+                    symbol(for: metric, snapshot: snapshot),
+                    color: settings.showEnergyFlowArrows ? color(for: metric, snapshot: snapshot) : .labelColor,
+                    accessibilityDescription: metricTitle(metric)
+                ) {
                 result.append(imageAttachment(image, scale: scale))
                 result.append(textAttachment(" ", scale: scale))
             }
@@ -599,16 +608,26 @@ final class StatusController: NSObject {
         switch metric {
         case .solar:
             guard let watts = snapshot.solarWatts else { return nil }
-            return watts > 0 ? ("⬇", highContrastGreen) : ("•", .systemGray)
+            return watts > 0
+                ? (LocalizedText.text("↓ Erzeugt", "↓ Producing"), solarFlowColor)
+                : ("•", .systemGray)
         case .grid:
             guard let watts = snapshot.gridWatts else { return nil }
-            if watts > 0 { return ("⬆", highContrastRed) }
-            if watts < 0 { return ("⬇", highContrastGreen) }
+            if watts > 0 {
+                return (LocalizedText.text("← Bezug", "← Import"), gridImportColor)
+            }
+            if watts < 0 {
+                return (LocalizedText.text("→ Einspeisen", "→ Export"), gridExportColor)
+            }
             return ("•", .systemGray)
         case .batteryFlow:
             guard let watts = snapshot.batteryWatts else { return nil }
-            if watts > 0 { return ("⬇", highContrastGreen) }
-            if watts < 0 { return ("⬆", highContrastRed) }
+            if watts > 0 {
+                return (LocalizedText.text("↓ Laden", "↓ Charging"), batteryChargingColor)
+            }
+            if watts < 0 {
+                return (LocalizedText.text("↑ Entladen", "↑ Discharging"), batteryDischargingColor)
+            }
             return ("•", .systemGray)
         default:
             return nil
@@ -659,7 +678,7 @@ final class StatusController: NSObject {
             string: string,
             attributes: [
                 .font: NSFont.monospacedDigitSystemFont(
-                    ofSize: round((string.contains("⬇") || string.contains("⬆")) ? 15 * scale : 13 * scale),
+                    ofSize: round((string.contains("↓") || string.contains("↑") || string.contains("←") || string.contains("→")) ? 13.5 * scale : 13 * scale),
                     weight: weight
                 ),
                 .foregroundColor: color
@@ -668,20 +687,21 @@ final class StatusController: NSObject {
     }
 
     private func valueColor(for metric: BarMetric, snapshot: SolixSnapshot) -> NSColor {
+        guard settings.showEnergyFlowArrows else { return .labelColor }
         switch metric {
         case .solar:
-            return snapshot.solarWatts.map(productionColor) ?? .secondaryLabelColor
+            return snapshot.solarWatts == nil ? .secondaryLabelColor : solarFlowColor
         case .home:
-            return snapshot.homeWatts.map(consumptionColor) ?? .secondaryLabelColor
+            return snapshot.homeWatts == nil ? .secondaryLabelColor : homeConsumptionColor
         case .grid:
             guard let watts = snapshot.gridWatts else { return .secondaryLabelColor }
-            if watts > 0 { return consumptionColor(watts) }
-            if watts < 0 { return storageColor(abs(watts)) }
+            if watts > 0 { return gridImportColor }
+            if watts < 0 { return gridExportColor }
             return .secondaryLabelColor
         case .batteryFlow:
             guard let watts = snapshot.batteryWatts else { return .secondaryLabelColor }
-            if watts > 0 { return storageColor(watts) }
-            if watts < 0 { return consumptionColor(abs(watts)) }
+            if watts > 0 { return batteryChargingColor }
+            if watts < 0 { return batteryDischargingColor }
             return .secondaryLabelColor
         default:
             return .labelColor
@@ -702,12 +722,59 @@ final class StatusController: NSObject {
         )
     }
 
-    private var highContrastGreen: NSColor {
-        NSColor(calibratedRed: 0.00, green: 0.58, blue: 0.22, alpha: 1)
+    private var solarFlowColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.72, 0.36, 0.00),
+            dark: (1.00, 0.72, 0.20)
+        )
     }
 
-    private var highContrastRed: NSColor {
-        NSColor(calibratedRed: 0.88, green: 0.08, blue: 0.12, alpha: 1)
+    private var homeConsumptionColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.00, 0.36, 0.72),
+            dark: (0.28, 0.72, 1.00)
+        )
+    }
+
+    private var batteryChargingColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.00, 0.46, 0.18),
+            dark: (0.25, 1.00, 0.48)
+        )
+    }
+
+    private var batteryDischargingColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.82, 0.28, 0.00),
+            dark: (1.00, 0.55, 0.18)
+        )
+    }
+
+    private var gridImportColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.00, 0.32, 0.78),
+            dark: (0.28, 0.68, 1.00)
+        )
+    }
+
+    private var gridExportColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.46, 0.22, 0.78),
+            dark: (0.76, 0.56, 1.00)
+        )
+    }
+
+    private func adaptiveFlowColor(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> NSColor {
+        NSColor(name: nil) { appearance in
+            let bestMatch = appearance.bestMatch(from: [.darkAqua, .aqua])
+            let components = bestMatch == .darkAqua ? dark : light
+            return NSColor(
+                calibratedRed: components.0,
+                green: components.1,
+                blue: components.2,
+                alpha: 1
+            )
+        }
     }
 
     private func storageColor(_ watts: Int) -> NSColor {

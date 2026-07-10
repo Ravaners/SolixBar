@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.12 - 2026-07-10
+
+- Made battery charging, battery discharging, grid import, and grid export immediately recognizable in the menu bar with modern direction labels and high-contrast colors for light and dark appearances.
+- Kept flow colors and direction labels optional: disabling the existing flow display option restores neutral colors and signed values.
+
 ## 0.3.11 - 2026-07-10
 
 - Made the refresh indicator more obvious by replacing the menu bar values with a blue `Aktualisiert ...` state while data is being fetched.

@@ -100,18 +100,17 @@ def menu_bar(base, x, y, w, h, dark=False):
     draw = ImageDraw.Draw(base)
     fill = (22, 29, 25) if dark else (241, 246, 241)
     rounded(draw, (x, y, x + w, y + h), 24, fill)
+    compact = w < 1100
     if dark:
         text(draw, (x + 110, y + 50), "Akku 88%", (238, 255, 244), F["menu"])
-        text(draw, (x + 302, y + 50), "↓", GREEN_BRIGHT, F["menu"])
-        text(draw, (x + 350, y + 50), "☀ PV 496 W", (222, 139, 0), F["menu"])
-        text(draw, (x + 590, y + 50), "Netz -86 W", GREEN, F["menu"])
-        text(draw, (x + 830, y + 50), "Flow ↓ ↑", (238, 255, 244), F["menu"])
+        text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (64, 255, 122), F["menu"])
+        text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (255, 184, 51), F["menu"])
+        text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (194, 143, 255), F["menu"])
     else:
         text(draw, (x + 110, y + 50), "Akku 88%", INK, F["menu"])
-        text(draw, (x + 302, y + 50), "↓", GREEN_BRIGHT, F["menu"])
-        text(draw, (x + 350, y + 50), "☀ PV 496 W", (168, 101, 0), F["menu"])
-        text(draw, (x + 590, y + 50), "Netz -86 W", GREEN, F["menu"])
-        text(draw, (x + 830, y + 50), "Flow ↓ ↑", INK, F["menu"])
+        text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (0, 117, 46), F["menu"])
+        text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (184, 92, 0), F["menu"])
+        text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (117, 56, 199), F["menu"])
     paste_icon(base, (x + 28, y + 14, x + 78, y + 64))
 
 

@@ -116,7 +116,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
-        showEnergyFlowArrowsButton.toolTip = "Schaltet die farbigen Richtungspfeile für das Energiefluss-Feld und einzelne Energie-Werte ein oder aus."
+        showEnergyFlowArrowsButton.toolTip = "Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus."
         lockDetachedMenuBarButton.toolTip = "Fixiert die abgedockte Leiste, damit sie nicht versehentlich verschoben wird."
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
@@ -177,7 +177,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.title = LocalizedText.text("App-Symbol in der Menüleiste anzeigen", "Show app icon in the menu bar")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
-        showEnergyFlowArrowsButton.title = LocalizedText.text("Farbige Pfeile beim Energiefluss anzeigen", "Show colored energy-flow arrows")
+        showEnergyFlowArrowsButton.title = LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction")
         lockDetachedMenuBarButton.title = LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar")
         autostartButton.title = LocalizedText.text("Beim Login automatisch starten", "Start automatically at login")
     }
