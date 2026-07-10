@@ -192,11 +192,12 @@ final class StatusController: NSObject {
     /// verdichtet die Anzeige stufenweise, bis es passt. macOS wuerde ein
     /// ueberlappendes Item sonst komplett ausblenden.
     private func enforceNotchFit(with snapshot: SolixSnapshot) {
-        DispatchQueue.main.async { [weak self] in
+        // Kurze Verzoegerung: die Menueleiste positioniert das Item erst nach
+        // dem Setzen des Titels neu; ein sofortiger Check saehe veraltete Frames.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { [weak self] in
             guard let self else { return }
-            guard let button = self.item.button, let window = button.window else { return }
-            guard let notch = NotchGeometry.notchRect(on: window.screen) else { return }
-            let frame = window.frame
+            guard let frame = self.statusButtonFrameOnScreen() else { return }
+            guard let notch = NotchGeometry.notchRect(on: self.item.button?.window?.screen) else { return }
             guard NotchGeometry.overlaps(
                 itemMinX: frame.minX,
                 itemMaxX: frame.maxX,
@@ -214,10 +215,9 @@ final class StatusController: NSObject {
     }
 
     private func logMenuBarDiagnostics() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self, let window = self.item.button?.window else { return }
-            let frame = window.frame
-            if let notch = NotchGeometry.notchRect(on: window.screen) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self, let frame = self.statusButtonFrameOnScreen() else { return }
+            if let notch = NotchGeometry.notchRect(on: self.item.button?.window?.screen) {
                 AppLogger.info(
                     "Menu bar item at x=\(Int(frame.minX))-\(Int(frame.maxX)) (width \(Int(frame.width))), notch zone \(Int(notch.minX))-\(Int(notch.maxX))."
                 )
