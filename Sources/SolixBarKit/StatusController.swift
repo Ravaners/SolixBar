@@ -410,16 +410,20 @@ final class StatusController: NSObject {
         settings.showMenuBarIcon || isMenuBarDetached
     }
 
+    /// Template-Glyph statt herunterskaliertem App-Icon: Das 1,5-MB-PNG war bei
+    /// 18 px nur noch ein Farbfleck, wurde bei jedem Menu-Rebuild neu von Platte
+    /// geladen und verstiess als Vollfarbbild an der HIG fuer Statusitems.
     private func menuBarIcon() -> NSImage? {
-        let appIcon = Bundle.main.url(forResource: "SolixBar", withExtension: "png")
-            .flatMap { NSImage(contentsOf: $0) }
-
-        guard let image = appIcon ?? coloredSymbol("bolt.fill", color: .systemYellow, accessibilityDescription: "SOLIX") else {
+        guard let image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "SOLIX") else {
             return nil
         }
-
-        let size = round(18 * settings.menuBarScale)
-        return roundedIconImage(image, size: size)
+        let configuration = NSImage.SymbolConfiguration(
+            pointSize: round(13 * settings.menuBarScale),
+            weight: .semibold
+        )
+        let configured = image.withSymbolConfiguration(configuration) ?? image
+        configured.isTemplate = true
+        return configured
     }
 
     private func setStatusTitle(_ title: String) {

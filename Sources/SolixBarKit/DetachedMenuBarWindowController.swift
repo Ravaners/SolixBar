@@ -414,28 +414,29 @@ private final class DetachedMenuBarView: NSView {
         }
     }
 
+    /// Dezenter Zwei-Stopp-Akzent aus den ersten beiden Metrikfarben — die
+    /// fruehere Ueberlagerung von bis zu fuenf Farben ergab ein schlammiges Braun.
     private var accentColors: [NSColor] {
         let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
-        let colors = metrics.map(accentColor)
-        return Array(colors.prefix(5))
+        return metrics.prefix(2).map { Theme.accent(accentRole(for: $0)) }
     }
 
-    private func accentColor(for metric: BarMetric) -> NSColor {
+    private func accentRole(for metric: BarMetric) -> ColorRole {
         switch metric {
         case .battery:
-            return NSColor(calibratedRed: 0.17, green: 0.78, blue: 0.36, alpha: 1)
+            .batteryHigh
         case .solar, .today:
-            return NSColor(calibratedRed: 1.00, green: 0.68, blue: 0.03, alpha: 1)
+            .solar
         case .home:
-            return NSColor(calibratedRed: 0.16, green: 0.50, blue: 0.96, alpha: 1)
+            .load
         case .grid:
-            return NSColor(calibratedRed: 0.95, green: 0.18, blue: 0.22, alpha: 1)
+            .gridImport
         case .batteryFlow, .flow:
-            return NSColor(calibratedRed: 0.00, green: 0.70, blue: 0.46, alpha: 1)
+            .batteryCharging
         case .total:
-            return NSColor(calibratedRed: 0.48, green: 0.35, blue: 0.95, alpha: 1)
+            .yieldTotal
         case .status:
-            return NSColor(calibratedRed: 0.12, green: 0.72, blue: 0.38, alpha: 1)
+            .status
         }
     }
 }
@@ -467,24 +468,17 @@ private final class AccentGradientView: NSView {
     }
 
     private var gradientColors: [CGColor] {
-        let base = colors.isEmpty
-            ? [
+        let base = colors.count >= 2
+            ? colors
+            : [
                 NSColor(calibratedRed: 0.17, green: 0.78, blue: 0.36, alpha: 1),
                 NSColor(calibratedRed: 1.00, green: 0.68, blue: 0.03, alpha: 1)
             ]
-            : colors
-        return base.map { $0.withAlphaComponent(0.18).cgColor }
+        return base.map { $0.withAlphaComponent(0.12).cgColor }
     }
 
     private var gradientLocations: [NSNumber] {
         guard gradientColors.count > 1 else { return [0, 1] }
         return (0..<gradientColors.count).map { NSNumber(value: Double($0) / Double(gradientColors.count - 1)) }
-    }
-}
-
-private extension NSColor {
-    var isNearlyWhite: Bool {
-        guard let rgb = usingColorSpace(.deviceRGB) else { return false }
-        return rgb.redComponent > 0.82 && rgb.greenComponent > 0.82 && rgb.blueComponent > 0.82
     }
 }

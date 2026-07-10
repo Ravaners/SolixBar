@@ -121,9 +121,12 @@ final class LargeGraphWindowController: NSWindowController {
         stack.spacing = 12
 
         for metric in GraphMetric.allCases {
-            let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(changeGraphMetrics))
-            button.font = .systemFont(ofSize: 12, weight: .semibold)
-            button.toolTip = "Blendet \(metric.title) im Graphen ein oder aus."
+            let button = NSButton(checkboxWithTitle: "", target: self, action: #selector(changeGraphMetrics))
+            button.attributedTitle = HistoryGraphMenuView.legendTitle(for: metric, fontSize: 12)
+            button.toolTip = LocalizedText.text(
+                "Blendet \(metric.title) im Graphen ein oder aus.",
+                "Shows or hides \(metric.title) in the graph."
+            )
             graphMetricButtons[metric] = button
             stack.addArrangedSubview(button)
         }

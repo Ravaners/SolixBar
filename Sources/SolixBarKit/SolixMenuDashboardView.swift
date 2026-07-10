@@ -8,6 +8,7 @@ final class SolixMenuDashboardView: NSView {
     private let onOpenLarge: () -> Void
     private var updatedLabel: NSTextField?
     private var updatedTimer: Timer?
+    private weak var detailsContainer: NSStackView?
 
     init(
         snapshot: SolixSnapshot,
@@ -22,7 +23,7 @@ final class SolixMenuDashboardView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 430, height: 622))
         wantsLayer = true
         layer?.backgroundColor = backgroundColor.cgColor
-        layer?.cornerRadius = 16
+        layer?.cornerRadius = Theme.radiusPanel
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
         buildView()
@@ -50,7 +51,13 @@ final class SolixMenuDashboardView: NSView {
         updated.toolTip = LocalizedText.text("Wann die Werte zuletzt aktualisiert wurden.", "When the values were last updated.")
         updatedLabel = updated
 
-        let status = badge(snapshot.status ?? "Online", color: statusColor)
+        // Demo-Modus deutlich kennzeichnen, damit niemand Beispieldaten fuer
+        // echte Anlagenwerte haelt.
+        let isDemo = AppSettings.shared.dataSourceMode == .demo
+        let status = badge(
+            isDemo ? "Demo" : (snapshot.status ?? LocalizedText.text("Unbekannt", "Unknown")),
+            color: isDemo ? .systemBlue : statusColor
+        )
 
         let battery = primaryMetricPanel(LocalizedText.text("Akku", "Battery"), snapshot.batteryPercent.map { "\($0) %" }, "battery.100percent", batteryColor)
         let solar = primaryMetricPanel("Solar", snapshot.solarWatts.map { "\($0) W" }, "sun.max.fill", solarColor)
@@ -61,22 +68,23 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.distribution = .fillEqually
 
         var detailRows = [
-            compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
+            compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", Theme.accent(.load)),
             compactMetricRow(LocalizedText.text("Netzbezug", "Grid Import"), signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
             compactMetricRow(LocalizedText.text("Akku-Fluss", "Battery Flow"), signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
-            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple)
+            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", Theme.accent(.yieldToday))
         ]
         if let totalKWh = snapshot.totalKWh {
-            detailRows.append(compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), String(format: "%.1f kWh", totalKWh), "sum", .systemIndigo))
+            detailRows.append(compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), String(format: "%.1f kWh", totalKWh), "sum", Theme.accent(.yieldTotal)))
         }
         let details = NSStackView(views: detailRows)
         details.orientation = .vertical
         details.spacing = 8
         details.wantsLayer = true
-        details.layer?.cornerRadius = 13
+        details.layer?.cornerRadius = Theme.radiusCard
         details.layer?.backgroundColor = panelColor.cgColor
         details.layer?.borderWidth = 1
         details.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
+        detailsContainer = details
 
         let graph = HistoryGraphMenuView(
             graphProvider: graphProvider,
@@ -116,6 +124,17 @@ final class SolixMenuDashboardView: NSView {
             graph.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -17),
             graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
         ])
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
+            layer?.backgroundColor = backgroundColor.cgColor
+            layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
+            detailsContainer?.layer?.backgroundColor = panelColor.cgColor
+            detailsContainer?.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
+        }
+        needsDisplay = true
     }
 
     override func viewWillMove(toSuperview newSuperview: NSView?) {
@@ -162,7 +181,7 @@ final class SolixMenuDashboardView: NSView {
         let panel = AnimatedPanelView()
         panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
-        panel.layer?.cornerRadius = 14
+        panel.layer?.cornerRadius = Theme.radiusCard
         panel.baseColor = panelBackground(for: color, strength: 0.18)
         panel.highlightColor = panelBackground(for: color, strength: 0.28)
         panel.layer?.borderWidth = 1
@@ -206,7 +225,7 @@ final class SolixMenuDashboardView: NSView {
         row.toolTip = tooltip(for: title, value: value)
         row.baseColor = panelBackground(for: color, strength: 0.14)
         row.highlightColor = panelBackground(for: color, strength: 0.22)
-        row.layer?.cornerRadius = 10
+        row.layer?.cornerRadius = Theme.radiusChip
         let icon = iconPlate(symbol: symbol, color: color, size: 30, pointSize: 17)
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
@@ -244,7 +263,7 @@ final class SolixMenuDashboardView: NSView {
         let view = AnimatedPanelView()
         view.toolTip = LocalizedText.text("Zeigt, ob die Datenquelle online ist.", "Shows whether the data source is online.")
         view.wantsLayer = true
-        view.layer?.cornerRadius = 12
+        view.layer?.cornerRadius = Theme.radiusChip
         view.baseColor = color.withAlphaComponent(0.18)
         view.highlightColor = color.withAlphaComponent(0.28)
         view.layer?.borderWidth = 1
@@ -381,39 +400,40 @@ final class SolixMenuDashboardView: NSView {
     }
 
     private var batteryColor: NSColor {
-        guard let percent = snapshot.batteryPercent else { return .systemGray }
-        if percent <= 20 {
-            return isDarkMode
-                ? NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
-                : NSColor(calibratedRed: 0.69, green: 0.00, blue: 0.13, alpha: 1)
-        }
-        if percent <= 60 {
-            return isDarkMode
-                ? NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-                : NSColor(calibratedRed: 0.54, green: 0.35, blue: 0.00, alpha: 1)
-        }
-        return isDarkMode
-            ? NSColor(calibratedRed: 0.42, green: 1.00, blue: 0.58, alpha: 1)
-            : NSColor(calibratedRed: 0.00, green: 0.36, blue: 0.12, alpha: 1)
+        guard snapshot.batteryPercent != nil else { return .systemGray }
+        return Theme.color(Theme.battery(percent: snapshot.batteryPercent))
     }
 
     private var solarColor: NSColor {
-        NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
+        Theme.accent(.solar)
     }
 
     private var gridColor: NSColor {
-        guard let watts = snapshot.gridWatts else { return .systemGray }
-        return watts > 0 ? .systemBlue : .systemTeal
+        guard snapshot.gridWatts != nil else { return .systemGray }
+        return Theme.accent(Theme.grid(watts: snapshot.gridWatts))
     }
 
     private var batteryFlowColor: NSColor {
-        guard let watts = snapshot.batteryWatts else { return .systemGray }
-        return watts >= 0 ? .systemGreen : .systemOrange
+        guard snapshot.batteryWatts != nil else { return .systemGray }
+        return Theme.accent(Theme.batteryFlow(watts: snapshot.batteryWatts))
     }
 
+    /// Dynamische Panel-Farbe: loest sich pro Appearance auf, statt den
+    /// Build-Zeit-Zustand einzufrieren (sonst helle Pastellreihen im Dark Mode,
+    /// wenn die View vor dem Einhaengen ins dunkle Fenster gebaut wird).
     private func panelBackground(for color: NSColor, strength: CGFloat) -> NSColor {
-        let adjustedStrength = isDarkMode ? strength * 0.8 : strength
-        return color.withAlphaComponent(adjustedStrength)
-            .blended(withFraction: isDarkMode ? 0.72 : 0.80, of: panelColor) ?? panelColor
+        NSColor(name: nil) { appearance in
+            let dark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            var resolvedTint = color
+            appearance.performAsCurrentDrawingAppearance {
+                resolvedTint = color.usingColorSpace(.deviceRGB) ?? color
+            }
+            let base = dark
+                ? NSColor(calibratedRed: 0.24, green: 0.25, blue: 0.26, alpha: 1)
+                : NSColor(calibratedRed: 0.995, green: 0.998, blue: 1, alpha: 1)
+            let adjusted = dark ? strength * 0.8 : strength
+            return resolvedTint.withAlphaComponent(adjusted)
+                .blended(withFraction: dark ? 0.72 : 0.80, of: base) ?? base
+        }
     }
 }

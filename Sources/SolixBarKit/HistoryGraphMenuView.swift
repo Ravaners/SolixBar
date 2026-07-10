@@ -17,7 +17,7 @@ final class HistoryGraphMenuView: NSView {
         self.onOpenLarge = onOpenLarge
         super.init(frame: NSRect(x: 0, y: 0, width: 396, height: 282))
         wantsLayer = true
-        layer?.cornerRadius = 14
+        layer?.cornerRadius = Theme.radiusCard
         layer?.backgroundColor = menuBackground.cgColor
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
@@ -82,7 +82,10 @@ final class HistoryGraphMenuView: NSView {
             graphContainer.topAnchor.constraint(equalTo: metricControls.bottomAnchor, constant: 8),
             graphContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 13),
             graphContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -13),
-            graphContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12)
+            graphContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
+            // Ohne explizite Hoehe kollabiert der Container (der Graph hat keine
+            // intrinsische Groesse) und der Plot quetscht seinen eigenen Header.
+            graphContainer.heightAnchor.constraint(greaterThanOrEqualToConstant: 190)
         ])
     }
 
@@ -92,20 +95,55 @@ final class HistoryGraphMenuView: NSView {
         stack.spacing = 8
 
         for metric in GraphMetric.allCases {
-            let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(changeGraphMetrics))
-            button.font = .systemFont(ofSize: 11, weight: .semibold)
+            let button = NSButton(checkboxWithTitle: "", target: self, action: #selector(changeGraphMetrics))
+            button.attributedTitle = Self.legendTitle(for: metric, fontSize: 11)
             button.controlSize = .small
-            button.toolTip = "Blendet \(metric.title) im Graphen ein oder aus."
+            button.toolTip = LocalizedText.text(
+                "Blendet \(metric.title) im Graphen ein oder aus.",
+                "Shows or hides \(metric.title) in the graph."
+            )
             graphMetricButtons[metric] = button
             stack.addArrangedSubview(button)
         }
         return stack
     }
 
+    /// Checkbox-Titel mit Farbpunkt in der Linienfarbe — die Checkboxen sind
+    /// zugleich die Legende des kompakten Graphen.
+    static func legendTitle(for metric: GraphMetric, fontSize: CGFloat) -> NSAttributedString {
+        let color: NSColor = switch metric {
+        case .battery: Theme.accent(.batteryHigh)
+        case .solar: Theme.accent(.solar)
+        case .grid: Theme.accent(.gridImport)
+        }
+        let name = switch metric {
+        case .battery: LocalizedText.text("Akku", "Battery")
+        case .solar: "Solar"
+        case .grid: LocalizedText.text("Netzbezug", "Grid import")
+        }
+        let title = NSMutableAttributedString(
+            string: "● ",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: fontSize, weight: .bold),
+                .foregroundColor: color
+            ]
+        )
+        title.append(NSAttributedString(
+            string: name,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
+                .foregroundColor: NSColor.labelColor
+            ]
+        ))
+        return title
+    }
+
     private func reload() {
         segmented.selectedSegment = HistoryRange.allCases.firstIndex(of: settings.historyRange) ?? 0
         customDaysField.stringValue = String(Int(settings.customHistoryDays))
         customDaysField.isEnabled = settings.historyRange == .custom
+        // Nur zeigen, wenn "Eig." aktiv ist — sonst ist das Feld Rauschen.
+        customDaysField.isHidden = settings.historyRange != .custom
         let selectedMetrics = Set(settings.graphMetrics)
         for metric in GraphMetric.allCases {
             graphMetricButtons[metric]?.state = selectedMetrics.contains(metric) ? .on : .off
@@ -158,6 +196,15 @@ final class HistoryGraphMenuView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         menuBackground.setFill()
         bounds.fill()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
+            layer?.backgroundColor = menuBackground.cgColor
+            layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
+        }
+        needsDisplay = true
     }
 
     private var menuBackground: NSColor {

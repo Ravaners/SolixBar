@@ -11,9 +11,9 @@ final class HistoryGraphView: NSView {
     private let animationStart = Date()
     var onClick: (() -> Void)?
 
-    private let batteryColor = NSColor(calibratedRed: 0.05, green: 0.70, blue: 0.35, alpha: 1)
-    private let solarColor = NSColor(calibratedRed: 1.00, green: 0.62, blue: 0.03, alpha: 1)
-    private let gridColor = NSColor(calibratedRed: 0.92, green: 0.10, blue: 0.16, alpha: 1)
+    @MainActor private var batteryColor: NSColor { Theme.accent(.batteryHigh) }
+    @MainActor private var solarColor: NSColor { Theme.accent(.solar) }
+    @MainActor private var gridColor: NSColor { Theme.accent(.gridImport) }
 
     init(
         samples: [SolixHistorySample],
@@ -52,11 +52,7 @@ final class HistoryGraphView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         drawBackground()
-        drawHeader()
         let isCompact = bounds.height < 220
-        if !isCompact {
-            drawLegend()
-        }
 
         let topInset: CGFloat = isCompact ? 58 : 78
         let bottomInset: CGFloat = isCompact ? 42 : 48
@@ -73,20 +69,28 @@ final class HistoryGraphView: NSView {
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
         drawTimeLabels(in: plot)
+        // Header/Legende nach der Plotflaeche zeichnen, damit sie bei knapper
+        // Hoehe niemals unter der Flaeche verschwinden.
+        drawHeader()
+        if !isCompact {
+            drawLegend()
+        }
 
         guard samples.count >= 2 else {
             drawEmptyState()
             return
         }
 
+        // Nur Solar bekommt eine Flaechenfuellung — mehrere ueberlagerte
+        // Fuellungen mischten sich zu einem undefinierbaren Oliv.
         if visibleMetrics.contains(.battery) {
-            drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 3.1, baseline: plot.minY)
+            drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 3.1, baseline: plot.minY, filled: false)
         }
         if visibleMetrics.contains(.solar) {
-            drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 3.1, baseline: plot.minY)
+            drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 3.1, baseline: plot.minY, filled: true)
         }
         if visibleMetrics.contains(.grid) {
-            drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 3.1, baseline: plot.minY)
+            drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 3.1, baseline: plot.minY, filled: false)
         }
     }
 
@@ -174,12 +178,16 @@ final class HistoryGraphView: NSView {
             gridPath.move(to: NSPoint(x: rect.minX, y: y))
             gridPath.line(to: NSPoint(x: rect.maxX, y: y))
 
+            // %-Achse gehoert zur Akku-Linie: gleiche Farbe stellt die Zuordnung
+            // der beiden Y-Achsen klar (links %, rechts Watt).
             let percent = index * 25
             drawText(
                 "\(percent)%",
                 at: NSPoint(x: rect.minX - 50, y: y - 7),
                 font: .monospacedDigitSystemFont(ofSize: 10, weight: .medium),
-                color: .secondaryLabelColor
+                color: visibleMetrics.contains(.battery)
+                    ? batteryColor.withAlphaComponent(0.85)
+                    : .secondaryLabelColor
             )
 
             let watts = Int(round(Double(maxPower) * Double(index) / 4.0))
@@ -275,32 +283,55 @@ final class HistoryGraphView: NSView {
         return (end.addingTimeInterval(-duration), end)
     }
 
+    /// Ticks an runden Uhrzeit-/Tagesgrenzen statt an krummen Bruchteilen der
+    /// Domaene (frueher: 00:33, 06:33 ...). Der letzte Tick ist immer "Jetzt".
     private func timeTicks(for domain: (start: Date, end: Date)) -> [(date: Date, label: String?, isLast: Bool)] {
-        let count: Int
+        let duration = domain.end.timeIntervalSince(domain.start)
+        let step: TimeInterval
         switch range {
         case .current:
-            count = bounds.width < 430 ? 4 : 5
+            step = 30 * 60
         case .day:
-            count = bounds.width < 430 ? 5 : 7
+            step = bounds.width < 430 ? 6 * 3600 : 4 * 3600
         case .week:
-            count = 8
+            step = 24 * 3600
         case .month:
-            count = bounds.width < 430 ? 7 : 11
+            step = bounds.width < 430 ? 7 * 24 * 3600 : 5 * 24 * 3600
         case .custom:
-            count = rangeDuration <= 10 * 24 * 60 * 60 ? 8 : (bounds.width < 430 ? 7 : 11)
+            let days = max(1, (duration / (24 * 3600)).rounded())
+            step = max(1, (days / 6).rounded()) * 24 * 3600
         }
 
-        return (0..<count).map { index in
-            let progress = count == 1 ? 0 : Double(index) / Double(count - 1)
-            let date = domain.start.addingTimeInterval(domain.end.timeIntervalSince(domain.start) * progress)
-            return (date: date, label: index == count - 1 ? "Jetzt" : nil, isLast: index == count - 1)
+        var ticks: [(date: Date, label: String?, isLast: Bool)] = []
+        let calendar = Calendar.current
+        var boundary: Date
+        if step < 24 * 3600 {
+            let anchor = calendar.dateInterval(of: .hour, for: domain.start)?.end ?? domain.start
+            boundary = anchor
+            // auf ein Vielfaches der Schrittweite ab Mitternacht ausrichten
+            while boundary.timeIntervalSince(calendar.startOfDay(for: boundary))
+                .truncatingRemainder(dividingBy: step) != 0 {
+                boundary.addTimeInterval(3600)
+            }
+        } else {
+            boundary = calendar.startOfDay(for: domain.start.addingTimeInterval(24 * 3600))
         }
+        // Puffer von 60% der Schrittweite vor "Jetzt", damit sich das letzte
+        // Zeitlabel nie mit dem Jetzt-Label ueberlagert.
+        while boundary < domain.end.addingTimeInterval(-step * 0.6) {
+            ticks.append((date: boundary, label: nil, isLast: false))
+            boundary.addTimeInterval(step)
+        }
+        ticks.append((date: domain.end, label: LocalizedText.text("Jetzt", "Now"), isLast: true))
+        return ticks
     }
 
     private func timeLabel(for date: Date, isLast: Bool) -> String {
-        if isLast { return "Jetzt" }
+        if isLast { return LocalizedText.text("Jetzt", "Now") }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale(
+            identifier: AppSettings.shared.appLanguage == .english ? "en_US" : "de_DE"
+        )
         switch range {
         case .current, .day:
             formatter.dateFormat = "HH:mm"
@@ -314,19 +345,21 @@ final class HistoryGraphView: NSView {
         return formatter.string(from: date)
     }
 
-    private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat, baseline: CGFloat) {
+    private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat, baseline: CGFloat, filled: Bool) {
         guard points.count >= 2 else { return }
-        let fillPath = NSBezierPath()
-        fillPath.move(to: NSPoint(x: points[0].x, y: baseline))
-        for point in points {
-            fillPath.line(to: point)
+        if filled {
+            let fillPath = NSBezierPath()
+            fillPath.move(to: NSPoint(x: points[0].x, y: baseline))
+            for point in points {
+                fillPath.line(to: point)
+            }
+            if let last = points.last {
+                fillPath.line(to: NSPoint(x: last.x, y: baseline))
+            }
+            fillPath.close()
+            color.withAlphaComponent(0.12).setFill()
+            fillPath.fill()
         }
-        if let last = points.last {
-            fillPath.line(to: NSPoint(x: last.x, y: baseline))
-        }
-        fillPath.close()
-        color.withAlphaComponent(0.10).setFill()
-        fillPath.fill()
 
         let path = NSBezierPath()
         path.move(to: points[0])
@@ -349,9 +382,9 @@ final class HistoryGraphView: NSView {
 
         if let point = points.last {
             color.setFill()
-            NSBezierPath(ovalIn: NSRect(x: point.x - 4.5, y: point.y - 4.5, width: 9, height: 9)).fill()
+            NSBezierPath(ovalIn: NSRect(x: point.x - 3.5, y: point.y - 3.5, width: 7, height: 7)).fill()
             graphBackground.setFill()
-            NSBezierPath(ovalIn: NSRect(x: point.x - 2.0, y: point.y - 2.0, width: 4, height: 4)).fill()
+            NSBezierPath(ovalIn: NSRect(x: point.x - 1.5, y: point.y - 1.5, width: 3, height: 3)).fill()
         }
     }
 
@@ -377,7 +410,7 @@ final class HistoryGraphView: NSView {
         let maxWidth = bounds.width - 36
         let compact = maxWidth < 310
         if visibleMetrics.contains(.battery) {
-            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y, width: compact ? 50 : 58)
+            drawLegendItem(title: LocalizedText.text("Akku", "Battery"), color: batteryColor, x: x, y: y, width: compact ? 50 : 58)
             x += compact ? 56 : 66
         }
         if visibleMetrics.contains(.solar) {
@@ -385,7 +418,7 @@ final class HistoryGraphView: NSView {
             x += compact ? 60 : 72
         }
         if visibleMetrics.contains(.grid) {
-            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y, width: compact ? 50 : 58)
+            drawLegendItem(title: LocalizedText.text("Netz", "Grid"), color: gridColor, x: x, y: y, width: compact ? 50 : 58)
         }
     }
 
