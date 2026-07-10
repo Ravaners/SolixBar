@@ -362,7 +362,8 @@ final class StatusController: NSObject {
             string: refreshIndicator(),
             attributes: [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: round(14 * scale), weight: .bold),
-                .foregroundColor: NSColor.systemBlue
+                .foregroundColor: refreshColor,
+                .shadow: menuBarTextShadow
             ]
         )
     }
@@ -372,7 +373,8 @@ final class StatusController: NSObject {
             string: "\(refreshIndicator()) \(LocalizedText.text("Aktualisiert ...", "Refreshing ..."))",
             attributes: [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * scale), weight: .bold),
-                .foregroundColor: NSColor.systemBlue
+                .foregroundColor: refreshColor,
+                .shadow: menuBarTextShadow
             ]
         )
     }
@@ -401,7 +403,7 @@ final class StatusController: NSObject {
         case .solar:
             solarColor
         case .home:
-            .systemBlue
+            homeConsumptionColor
         case .grid:
             gridColor(snapshot.gridWatts)
         case .batteryFlow:
@@ -433,13 +435,13 @@ final class StatusController: NSObject {
 
     private func gridColor(_ watts: Int?) -> NSColor {
         guard let watts else { return .systemGray }
-        if watts > 0 { return .systemRed }
-        if watts < 0 { return .systemGreen }
+        if watts > 0 { return gridImportColor }
+        if watts < 0 { return gridExportColor }
         return .systemGray
     }
 
     private var solarColor: NSColor {
-        NSColor(calibratedRed: 1.00, green: 0.64, blue: 0.02, alpha: 1)
+        solarFlowColor
     }
 
     private func batteryFlowSymbol(_ watts: Int?) -> String {
@@ -449,8 +451,8 @@ final class StatusController: NSObject {
 
     private func batteryFlowColor(_ watts: Int?) -> NSColor {
         guard let watts else { return .systemGray }
-        if watts > 0 { return .systemGreen }
-        if watts < 0 { return .systemRed }
+        if watts > 0 { return batteryChargingColor }
+        if watts < 0 { return batteryDischargingColor }
         return .systemGray
     }
 
@@ -681,7 +683,8 @@ final class StatusController: NSObject {
                     ofSize: round((string.contains("↓") || string.contains("↑") || string.contains("←") || string.contains("→")) ? 13.5 * scale : 13 * scale),
                     weight: weight
                 ),
-                .foregroundColor: color
+                .foregroundColor: color,
+                .shadow: menuBarTextShadow
             ]
         )
     }
@@ -724,44 +727,63 @@ final class StatusController: NSObject {
 
     private var solarFlowColor: NSColor {
         adaptiveFlowColor(
-            light: (0.72, 0.36, 0.00),
-            dark: (1.00, 0.72, 0.20)
+            light: (0.48, 0.22, 0.00),
+            dark: (1.00, 0.82, 0.30)
         )
     }
 
     private var homeConsumptionColor: NSColor {
         adaptiveFlowColor(
-            light: (0.00, 0.36, 0.72),
-            dark: (0.28, 0.72, 1.00)
+            light: (0.00, 0.27, 0.55),
+            dark: (0.50, 0.82, 1.00)
         )
     }
 
     private var batteryChargingColor: NSColor {
         adaptiveFlowColor(
-            light: (0.00, 0.46, 0.18),
-            dark: (0.25, 1.00, 0.48)
+            light: (0.00, 0.36, 0.12),
+            dark: (0.42, 1.00, 0.58)
         )
     }
 
     private var batteryDischargingColor: NSColor {
         adaptiveFlowColor(
-            light: (0.82, 0.28, 0.00),
-            dark: (1.00, 0.55, 0.18)
+            light: (0.55, 0.12, 0.00),
+            dark: (1.00, 0.55, 0.32)
         )
     }
 
     private var gridImportColor: NSColor {
         adaptiveFlowColor(
-            light: (0.00, 0.32, 0.78),
-            dark: (0.28, 0.68, 1.00)
+            light: (0.00, 0.25, 0.50),
+            dark: (0.48, 0.80, 1.00)
         )
     }
 
     private var gridExportColor: NSColor {
         adaptiveFlowColor(
-            light: (0.46, 0.22, 0.78),
-            dark: (0.76, 0.56, 1.00)
+            light: (0.34, 0.10, 0.58),
+            dark: (0.82, 0.65, 1.00)
         )
+    }
+
+    private var refreshColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.00, 0.24, 0.55),
+            dark: (0.55, 0.85, 1.00)
+        )
+    }
+
+    private var menuBarTextShadow: NSShadow {
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor.black.withAlphaComponent(0.85)
+                : NSColor.white.withAlphaComponent(0.90)
+        }
+        shadow.shadowBlurRadius = 1.5
+        shadow.shadowOffset = NSSize(width: 0, height: -0.5)
+        return shadow
     }
 
     private func adaptiveFlowColor(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> NSColor {
@@ -927,7 +949,8 @@ final class StatusController: NSObject {
             string: isRefreshing ? "\(refreshIndicator()) " : "● ",
             attributes: [
                 .font: NSFont.systemFont(ofSize: round(12 * settings.menuBarScale), weight: .bold),
-                .foregroundColor: isRefreshing ? NSColor.systemBlue : (isOnline ? NSColor.systemGreen : NSColor.systemRed)
+                .foregroundColor: isRefreshing ? refreshColor : (isOnline ? NSColor.systemGreen : NSColor.systemRed),
+                .shadow: menuBarTextShadow
             ]
         ))
         result.append(NSAttributedString(

@@ -103,14 +103,14 @@ def menu_bar(base, x, y, w, h, dark=False):
     compact = w < 1100
     if dark:
         text(draw, (x + 110, y + 50), "Akku 88%", (238, 255, 244), F["menu"])
-        text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (64, 255, 122), F["menu"])
-        text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (255, 184, 51), F["menu"])
-        text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (194, 143, 255), F["menu"])
+        text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (107, 255, 148), F["menu"])
+        text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (255, 209, 77), F["menu"])
+        text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (209, 166, 255), F["menu"])
     else:
         text(draw, (x + 110, y + 50), "Akku 88%", INK, F["menu"])
-        text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (0, 117, 46), F["menu"])
-        text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (184, 92, 0), F["menu"])
-        text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (117, 56, 199), F["menu"])
+        text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (0, 92, 31), F["menu"])
+        text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (122, 56, 0), F["menu"])
+        text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (87, 25, 148), F["menu"])
     paste_icon(base, (x + 28, y + 14, x + 78, y + 64))
 
 
@@ -193,13 +193,21 @@ def render_preview():
 
 
 def render_menubar():
-    base = gradient((1600, 700), [(251, 252, 249, 255), (239, 249, 242, 255), (232, 242, 255, 255)])
+    base = gradient((1600, 840), [(251, 252, 249, 255), (239, 249, 242, 255), (232, 242, 255, 255)])
     d = ImageDraw.Draw(base)
     text(d, (90, 82), "Menüleisten-Anzeige", INK, F["h2"])
     text(d, (92, 154), "Kontrastreich, frei auswählbar und mit farbigen Energiefluss-Pfeilen.", MUTED, F["body"])
     shadow(base, (90, 260, 1510, 380), radius=34, blur=34)
     menu_bar(base, 90, 260, 1420, 120)
-    legend(d, 128, 470)
+    shadow(base, (90, 430, 1510, 550), radius=34, blur=34)
+    menu_bar(base, 90, 430, 1420, 120, dark=True)
+    rounded(d, (90, 620, 770, 730), 24, (241, 246, 241))
+    paste_icon(base, (120, 648, 172, 700))
+    text(d, (205, 660), "↻ Aktualisiert ...", (0, 61, 140), F["menu"])
+    rounded(d, (830, 620, 1510, 730), 24, (22, 29, 25))
+    paste_icon(base, (860, 648, 912, 700))
+    text(d, (945, 660), "↻ Aktualisiert ...", (140, 217, 255), F["menu"])
+    text(d, (128, 775), "Hell und Dunkel · Light and dark", MUTED, F["small"])
     save(base, "menubar-shot.png")
 
 

@@ -2,10 +2,19 @@
 
 ## Unreleased
 
+## 0.3.13 - 2026-07-10
+
+- DE: Die Farben fuer Aktualisierung, Laden, Entladen, Netzbezug, Einspeisung, Solar und Hauslast sind auf hellen und dunklen Menueleisten deutlich kontrastreicher. Ein adaptiver dezenter Rand verbessert die Lesbarkeit auch auf wechselnden oder transparenten Hintergruenden.
+- EN: Refresh, charging, discharging, grid import, grid export, solar, and home-load colors now provide substantially stronger contrast on light and dark menu bars. A subtle adaptive edge improves readability on changing or translucent backgrounds.
+- DE: Die Bedeutung bleibt richtungsabhaengig: Laden ist gruen, Entladen orange-rot, Netzbezug blau, Einspeisung violett und Solar goldfarben.
+- EN: Colors remain direction-aware: charging is green, discharging orange-red, grid import blue, grid export purple, and solar gold.
+
 ## 0.3.12 - 2026-07-10
 
-- Made battery charging, battery discharging, grid import, and grid export immediately recognizable in the menu bar with modern direction labels and high-contrast colors for light and dark appearances.
-- Kept flow colors and direction labels optional: disabling the existing flow display option restores neutral colors and signed values.
+- DE: Laden, Entladen, Netzbezug und Einspeisung sind in der Menueleiste durch moderne Richtungsbegriffe und Farben sofort erkennbar.
+- EN: Battery charging, battery discharging, grid import, and grid export are immediately recognizable in the menu bar through modern direction labels and colors.
+- DE: Flussfarben und Richtungsbegriffe bleiben optional; ohne die Flussanzeige erscheinen neutrale Farben und vorzeichenbehaftete Werte.
+- EN: Flow colors and direction labels remain optional; disabling the flow display restores neutral colors and signed values.
 
 ## 0.3.11 - 2026-07-10
 
