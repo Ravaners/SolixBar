@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.15 - 2026-07-10
+
+- DE: Akku-Symbol und Prozentwert wechseln jetzt unabhaengig von der Energiefluss-Option sichtbar zwischen Rot bis 20 %, Gelb bis 60 % und Gruen ueber 60 %. Dieselben kontrastreichen Stufen gelten im Dashboard auf hellen und dunklen Hintergruenden.
+- EN: The battery icon and percentage now visibly switch independently of the energy-flow option between red up to 20%, yellow up to 60%, and green above 60%. The dashboard uses the same high-contrast levels on light and dark backgrounds.
+- DE: Ein neu gesetzter Gesamtertrag-Startwert wird exakt uebernommen, ohne das vorherige Messintervall nochmals zu addieren.
+- EN: A newly configured total-yield starting value is now adopted exactly without adding the preceding measurement interval again.
+
 ## 0.3.14 - 2026-07-10
 
 - DE: Der Gesamtertrag wird jetzt dauerhaft aus allen fortlaufenden Solarmessungen kumuliert und getrennt je Datenquelle gespeichert. Echte Gesamtwerte der Datenquelle bleiben vorrangig; ohne Gesamtwert beginnt die lokale Messung bei 0 kWh und laeuft ueber Tageswechsel und App-Neustarts weiter.

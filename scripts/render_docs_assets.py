@@ -102,12 +102,12 @@ def menu_bar(base, x, y, w, h, dark=False):
     rounded(draw, (x, y, x + w, y + h), 24, fill)
     compact = w < 1100
     if dark:
-        text(draw, (x + 110, y + 50), "Akku 88%", (238, 255, 244), F["menu"])
+        text(draw, (x + 110, y + 50), "Akku 88%", (107, 255, 148), F["menu"])
         text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (107, 255, 148), F["menu"])
         text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (255, 209, 77), F["menu"])
         text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (209, 166, 255), F["menu"])
     else:
-        text(draw, (x + 110, y + 50), "Akku 88%", INK, F["menu"])
+        text(draw, (x + 110, y + 50), "Akku 88%", (0, 92, 31), F["menu"])
         text(draw, (x + (300 if compact else 350), y + 50), "↓ 144 W" if compact else "↓ Laden 144 W", (0, 92, 31), F["menu"])
         text(draw, (x + (500 if compact else 735), y + 50), "PV 496 W", (122, 56, 0), F["menu"])
         text(draw, (x + (680 if compact else 980), y + 50), "Netz → 86 W" if compact else "Netz → Einspeisen 86 W", (87, 25, 148), F["menu"])
@@ -207,7 +207,10 @@ def render_menubar():
     rounded(d, (830, 620, 1510, 730), 24, (22, 29, 25))
     paste_icon(base, (860, 648, 912, 700))
     text(d, (945, 660), "↻ Aktualisiert ...", (102, 224, 255), F["menu"])
-    text(d, (128, 775), "Hell und Dunkel · Light and dark", MUTED, F["small"])
+    text(d, (128, 775), "Akku 15%", (176, 0, 33), F["small"])
+    text(d, (360, 775), "Akku 45%", (138, 89, 0), F["small"])
+    text(d, (592, 775), "Akku 88%", (0, 92, 31), F["small"])
+    text(d, (930, 775), "Hell und Dunkel · Light and dark", MUTED, F["small"])
     save(base, "menubar-shot.png")
 
 

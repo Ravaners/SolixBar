@@ -432,9 +432,9 @@ final class StatusController: NSObject {
 
     private func batteryColor(_ percent: Int?) -> NSColor {
         guard let percent else { return .systemGray }
-        if percent <= 20 { return .systemRed }
-        if percent <= 45 { return .systemOrange }
-        return .systemGreen
+        if percent <= 20 { return batteryLowColor }
+        if percent <= 60 { return batteryMediumColor }
+        return batteryHighColor
     }
 
     private func gridColor(_ watts: Int?) -> NSColor {
@@ -564,7 +564,9 @@ final class StatusController: NSObject {
             if settings.showMenuBarMetricSymbols,
                 let image = coloredSymbol(
                     symbol(for: metric, snapshot: snapshot),
-                    color: settings.showEnergyFlowArrows ? color(for: metric, snapshot: snapshot) : .labelColor,
+                    color: (metric == .battery || settings.showEnergyFlowArrows)
+                        ? color(for: metric, snapshot: snapshot)
+                        : .labelColor,
                     accessibilityDescription: metricTitle(metric)
                 ) {
                 result.append(imageAttachment(image, scale: scale))
@@ -694,6 +696,9 @@ final class StatusController: NSObject {
     }
 
     private func valueColor(for metric: BarMetric, snapshot: SolixSnapshot) -> NSColor {
+        if metric == .battery {
+            return snapshot.batteryPercent.map(batteryColor) ?? .secondaryLabelColor
+        }
         guard settings.showEnergyFlowArrows else { return .labelColor }
         switch metric {
         case .solar:
@@ -775,6 +780,27 @@ final class StatusController: NSObject {
         adaptiveFlowColor(
             light: (0.00, 0.20, 0.80),
             dark: (0.40, 0.88, 1.00)
+        )
+    }
+
+    private var batteryLowColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.69, 0.00, 0.13),
+            dark: (1.00, 0.42, 0.46)
+        )
+    }
+
+    private var batteryMediumColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.54, 0.35, 0.00),
+            dark: (1.00, 0.85, 0.30)
+        )
+    }
+
+    private var batteryHighColor: NSColor {
+        adaptiveFlowColor(
+            light: (0.00, 0.36, 0.12),
+            dark: (0.42, 1.00, 0.58)
         )
     }
 

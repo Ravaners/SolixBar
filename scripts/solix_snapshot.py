@@ -134,7 +134,8 @@ def _local_energy_totals(solar_watts, now):
     manual_total = _first_number(os.environ.get("SOLIXBAR_TOTAL_KWH_BASE"))
     has_manual_total = manual_total is not None
     previous_manual_total = _first_number(state.get("manualTotalBaseKWh"))
-    if has_manual_total and previous_manual_total != manual_total:
+    total_base_changed = has_manual_total and previous_manual_total != manual_total
+    if total_base_changed:
         current_total = manual_total
     elif has_manual_total and manual_total > current_total:
         current_total = manual_total
@@ -148,7 +149,7 @@ def _local_energy_totals(solar_watts, now):
 
     last_time_text = state.get("lastUpdatedAt")
     last_solar = _first_number(state.get("lastSolarWatts"))
-    if last_time_text and last_solar is not None and solar_watts is not None:
+    if not total_base_changed and last_time_text and last_solar is not None and solar_watts is not None:
         try:
             last_time = datetime.fromisoformat(last_time_text)
             seconds = (now - last_time).total_seconds()
