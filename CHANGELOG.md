@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.16 - 2026-07-10
+
+- DE: Die Menueleistenfarben richten sich jetzt nach der tatsaechlich von macOS aufgeloesten Menueleisten-Textfarbe statt nur nach dem allgemeinen Hell-/Dunkelmodus. Dadurch bleiben Akku-, Fluss- und Aktualisierungsfarben auch auf wallpaper-abhaengigen, transparenten und vibrierenden Menueleisten lesbar.
+- EN: Menu bar colors now follow the actual menu-bar text color resolved by macOS instead of only the general light/dark mode. Battery, flow, and refresh colors therefore remain readable on wallpaper-dependent, translucent, and vibrant menu bars.
+
 ## 0.3.15 - 2026-07-10
 
 - DE: Akku-Symbol und Prozentwert wechseln jetzt unabhaengig von der Energiefluss-Option sichtbar zwischen Rot bis 20 %, Gelb bis 60 % und Gruen ueber 60 %. Dieselben kontrastreichen Stufen gelten im Dashboard auf hellen und dunklen Hintergruenden.

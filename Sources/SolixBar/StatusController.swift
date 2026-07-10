@@ -1,5 +1,21 @@
 import AppKit
 
+private func menuBarUsesDarkBackground(_ appearance: NSAppearance) -> Bool {
+    var label: NSColor?
+    appearance.performAsCurrentDrawingAppearance {
+        label = NSColor.labelColor.usingColorSpace(.deviceRGB)
+    }
+    if let label {
+        let luminance = 0.2126 * label.redComponent
+            + 0.7152 * label.greenComponent
+            + 0.0722 * label.blueComponent
+        return luminance > 0.55
+    }
+
+    let match = appearance.bestMatch(from: [.vibrantDark, .darkAqua, .vibrantLight, .aqua])
+    return match == .vibrantDark || match == .darkAqua
+}
+
 @MainActor
 final class StatusController: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -807,7 +823,7 @@ final class StatusController: NSObject {
     private var menuBarTextShadow: NSShadow {
         let shadow = NSShadow()
         shadow.shadowColor = NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            menuBarUsesDarkBackground(appearance)
                 ? NSColor.black.withAlphaComponent(0.85)
                 : NSColor.white.withAlphaComponent(0.90)
         }
@@ -818,8 +834,7 @@ final class StatusController: NSObject {
 
     private func adaptiveFlowColor(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> NSColor {
         NSColor(name: nil) { appearance in
-            let bestMatch = appearance.bestMatch(from: [.darkAqua, .aqua])
-            let components = bestMatch == .darkAqua ? dark : light
+            let components = menuBarUsesDarkBackground(appearance) ? dark : light
             return NSColor(
                 calibratedRed: components.0,
                 green: components.1,
