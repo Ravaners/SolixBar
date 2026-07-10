@@ -134,7 +134,8 @@ def _local_energy_totals(solar_watts, now):
     manual_total = _first_number(os.environ.get("SOLIXBAR_TOTAL_KWH_BASE"))
     has_manual_total = manual_total is not None
     previous_manual_total = _first_number(state.get("manualTotalBaseKWh"))
-    if has_manual_total and previous_manual_total != manual_total:
+    total_base_changed = has_manual_total and previous_manual_total != manual_total
+    if total_base_changed:
         current_total = manual_total
     elif has_manual_total and manual_total > current_total:
         current_total = manual_total
@@ -148,7 +149,7 @@ def _local_energy_totals(solar_watts, now):
 
     last_time_text = state.get("lastUpdatedAt")
     last_solar = _first_number(state.get("lastSolarWatts"))
-    if last_time_text and last_solar is not None and solar_watts is not None:
+    if not total_base_changed and last_time_text and last_solar is not None and solar_watts is not None:
         try:
             last_time = datetime.fromisoformat(last_time_text)
             seconds = (now - last_time).total_seconds()
@@ -229,7 +230,7 @@ async def main():
             site.get("photovoltaic_power"),
             site.get("pv_power"),
         )
-        local_today_kwh, local_total_kwh, has_manual_total = _local_energy_totals(solar_watts, now)
+        local_today_kwh, local_total_kwh, _ = _local_energy_totals(solar_watts, now)
         api_today_kwh = _first_positive_number(today_kwh, site.get("today_energy"), site.get("energy_today"))
         api_total_kwh = _first_positive_number(
             site.get("total_energy"),
@@ -267,7 +268,7 @@ async def main():
             "gridWatts": _signed_grid_watts(site),
             "batteryWatts": battery_watts,
             "todayKWh": max(api_today_kwh or 0, local_today_kwh),
-            "totalKWh": api_total_kwh if api_total_kwh is not None else (local_total_kwh if has_manual_total else None),
+            "totalKWh": api_total_kwh if api_total_kwh is not None else local_total_kwh,
             "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",
             "updatedAt": now.isoformat(),
         }

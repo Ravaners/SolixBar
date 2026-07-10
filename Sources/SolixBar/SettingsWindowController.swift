@@ -98,7 +98,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixTodayBaseField.placeholderString = "z.B. 7.2"
         solixTodayBaseField.toolTip = "Optionaler Korrekturwert fuer den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zaehlt ab diesem Wert weiter."
         solixTotalBaseField.placeholderString = "z.B. 427.8"
-        solixTotalBaseField.toolTip = "Kumulierter Gesamtertrag aus der Anker-App in kWh. Wichtig, falls die SOLIX API keinen Gesamtwert liefert."
+        solixTotalBaseField.toolTip = LocalizedText.text(
+            "Optionaler Startwert fuer den Gesamtertrag. Ohne API-Gesamtwert kumuliert SolixBar alle fortlaufenden Solarmessungen lokal.",
+            "Optional starting value for total yield. Without an API total, SolixBar locally accumulates all continuous solar measurements."
+        )
 
         for textField in [commandField, urlField, intervalField, solixEmailField, solixPasswordField, solixCountryField, solixTodayBaseField, solixTotalBaseField] {
             textField.delegate = self
@@ -116,7 +119,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
-        showEnergyFlowArrowsButton.toolTip = "Schaltet die farbigen Richtungspfeile für das Energiefluss-Feld und einzelne Energie-Werte ein oder aus."
+        showEnergyFlowArrowsButton.toolTip = "Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus."
         lockDetachedMenuBarButton.toolTip = "Fixiert die abgedockte Leiste, damit sie nicht versehentlich verschoben wird."
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
@@ -177,7 +180,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.title = LocalizedText.text("App-Symbol in der Menüleiste anzeigen", "Show app icon in the menu bar")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
-        showEnergyFlowArrowsButton.title = LocalizedText.text("Farbige Pfeile beim Energiefluss anzeigen", "Show colored energy-flow arrows")
+        showEnergyFlowArrowsButton.title = LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction")
         lockDetachedMenuBarButton.title = LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar")
         autostartButton.title = LocalizedText.text("Beim Login automatisch starten", "Start automatically at login")
     }
@@ -527,7 +530,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case "Ertrag heute", "Yield today":
             return "Korrigiert den heutigen Ertrag in kWh, wenn Anker fuer heute 0 kWh liefert."
         case "Gesamtertrag", "Total yield":
-            return "Setzt den kumulierten Gesamtertrag aus der Anker-App als Startwert. Ohne API-Gesamtwert bleibt Gesamt sonst leer."
+            return LocalizedText.text(
+                "Setzt optional den Gesamtertrag aus der Anker-App als Startwert. Ohne API-Gesamtwert zaehlt SolixBar alle fortlaufenden Messungen zusammen.",
+                "Optionally sets the Anker app total as a starting value. Without an API total, SolixBar adds up all continuous measurements."
+            )
         case "Befehl", "Command":
             return "Der lokale Befehl muss ein JSON-Objekt ausgeben."
         case "URL":

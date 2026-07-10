@@ -175,7 +175,7 @@ final class SolixMenuDashboardView: NSView {
 
         let valueLabel = NSTextField(labelWithString: value ?? "-")
         valueLabel.font = .monospacedDigitSystemFont(ofSize: 23, weight: .bold)
-        valueLabel.textColor = .labelColor
+        valueLabel.textColor = color
         valueLabel.lineBreakMode = .byTruncatingTail
 
         for view in [iconPlate, titleLabel, valueLabel] {
@@ -382,9 +382,19 @@ final class SolixMenuDashboardView: NSView {
 
     private var batteryColor: NSColor {
         guard let percent = snapshot.batteryPercent else { return .systemGray }
-        if percent <= 20 { return .systemRed }
-        if percent <= 45 { return .systemOrange }
-        return .systemGreen
+        if percent <= 20 {
+            return isDarkMode
+                ? NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
+                : NSColor(calibratedRed: 0.69, green: 0.00, blue: 0.13, alpha: 1)
+        }
+        if percent <= 60 {
+            return isDarkMode
+                ? NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+                : NSColor(calibratedRed: 0.54, green: 0.35, blue: 0.00, alpha: 1)
+        }
+        return isDarkMode
+            ? NSColor(calibratedRed: 0.42, green: 1.00, blue: 0.58, alpha: 1)
+            : NSColor(calibratedRed: 0.00, green: 0.36, blue: 0.12, alpha: 1)
     }
 
     private var solarColor: NSColor {

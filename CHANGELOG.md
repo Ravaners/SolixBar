@@ -2,6 +2,63 @@
 
 ## Unreleased
 
+## 0.3.20 - 2026-07-10
+
+- DE: Das Schliesskreuz der abgedockten Leiste wird ausgeblendet, sobald die Leiste fixiert ist. Beim Entfixieren erscheint es sofort wieder; die Leistenbreite passt sich jeweils automatisch an.
+- EN: The detached slim bar's close button is hidden while the bar is locked. It returns immediately when the bar is unlocked, and the bar width adjusts automatically in both states.
+
+## 0.3.19 - 2026-07-10
+
+- DE: Die Farbe der SF-Symbole in der abgedockten Leiste wird jetzt aus dem unmittelbar folgenden Messwert (`Akku`, `PV`, `Last`, `Netz` oder `Fluss`) bestimmt. Dadurch bleiben Sonne, Haus, Netzstecker und Fluss-Punkt auch dann farbig, wenn AppKit keine Symbolbeschreibung weitergibt.
+- EN: SF Symbol colors in the detached bar are now derived from the immediately following metric (`Battery`, `PV`, `Load`, `Grid`, or `Flow`). Solar, home, grid-plug, and flow symbols therefore remain colored even when AppKit does not preserve symbol descriptions.
+
+## 0.3.18 - 2026-07-10
+
+- DE: Sonne, Haus, Akku, Netz und Fluss-Symbol in der abgedockten Leiste sind wieder farbig. Sie verwenden jetzt dieselben festen hellen Semantikfarben wie die zugehoerigen Texte und bleiben dadurch auf dem dunklen Glas-Hintergrund lesbar.
+- EN: Solar, home, battery, grid, and flow symbols in the detached bar are colored again. They now use the same fixed bright semantic colors as their associated text, keeping them readable on the dark glass background.
+- DE: Fluss-Symbole wechseln weiterhin passend zwischen Gruen beim Laden, Orange beim Entladen, Cyan beim Netzbezug und Violett beim Einspeisen.
+- EN: Flow symbols continue to switch appropriately between green for charging, orange for discharging, cyan for grid import, and purple for grid export.
+
+## 0.3.17 - 2026-07-10
+
+- DE: Die abgedockte Leiste verwendet auf ihrem immer dunklen Glas-Hintergrund jetzt feste helle Hochkontrastfarben fuer Akku, Solar, Hauslast, Netzbezug, Einspeisung sowie Laden und Entladen. Ein staerkerer Schatten und eine dunkle Kontur halten die Texte auch ueber dem farbigen Verlauf lesbar.
+- EN: The detached slim bar now uses fixed bright high-contrast colors for battery, solar, home load, grid import, grid export, charging, and discharging on its always-dark glass background. A stronger shadow and dark outline keep text readable over the colored gradient.
+- DE: Eingefaerbte Symbole werden in der abgedockten Leiste hell dargestellt, damit sie nicht mehr mit dem Hintergrund verschmelzen.
+- EN: Colored symbols are rendered bright in the detached bar so they no longer blend into the background.
+
+## 0.3.16 - 2026-07-10
+
+- DE: Die Menueleistenfarben richten sich jetzt nach der tatsaechlich von macOS aufgeloesten Menueleisten-Textfarbe statt nur nach dem allgemeinen Hell-/Dunkelmodus. Dadurch bleiben Akku-, Fluss- und Aktualisierungsfarben auch auf wallpaper-abhaengigen, transparenten und vibrierenden Menueleisten lesbar.
+- EN: Menu bar colors now follow the actual menu-bar text color resolved by macOS instead of only the general light/dark mode. Battery, flow, and refresh colors therefore remain readable on wallpaper-dependent, translucent, and vibrant menu bars.
+
+## 0.3.15 - 2026-07-10
+
+- DE: Akku-Symbol und Prozentwert wechseln jetzt unabhaengig von der Energiefluss-Option sichtbar zwischen Rot bis 20 %, Gelb bis 60 % und Gruen ueber 60 %. Dieselben kontrastreichen Stufen gelten im Dashboard auf hellen und dunklen Hintergruenden.
+- EN: The battery icon and percentage now visibly switch independently of the energy-flow option between red up to 20%, yellow up to 60%, and green above 60%. The dashboard uses the same high-contrast levels on light and dark backgrounds.
+- DE: Ein neu gesetzter Gesamtertrag-Startwert wird exakt uebernommen, ohne das vorherige Messintervall nochmals zu addieren.
+- EN: A newly configured total-yield starting value is now adopted exactly without adding the preceding measurement interval again.
+
+## 0.3.14 - 2026-07-10
+
+- DE: Der Gesamtertrag wird jetzt dauerhaft aus allen fortlaufenden Solarmessungen kumuliert und getrennt je Datenquelle gespeichert. Echte Gesamtwerte der Datenquelle bleiben vorrangig; ohne Gesamtwert beginnt die lokale Messung bei 0 kWh und laeuft ueber Tageswechsel und App-Neustarts weiter.
+- EN: Total yield is now persistently accumulated from all continuous solar measurements and stored separately per data source. Real totals from the provider remain authoritative; without one, local measurement starts at 0 kWh and continues across day changes and app restarts.
+- DE: Aktualisierung, Netzbezug und Hauslast verwenden ein kraeftigeres Royalblau auf hellen und ein helles Cyanblau auf dunklen Hintergruenden.
+- EN: Refresh, grid import, and home load now use a stronger royal blue on light backgrounds and a bright cyan blue on dark backgrounds.
+
+## 0.3.13 - 2026-07-10
+
+- DE: Die Farben fuer Aktualisierung, Laden, Entladen, Netzbezug, Einspeisung, Solar und Hauslast sind auf hellen und dunklen Menueleisten deutlich kontrastreicher. Ein adaptiver dezenter Rand verbessert die Lesbarkeit auch auf wechselnden oder transparenten Hintergruenden.
+- EN: Refresh, charging, discharging, grid import, grid export, solar, and home-load colors now provide substantially stronger contrast on light and dark menu bars. A subtle adaptive edge improves readability on changing or translucent backgrounds.
+- DE: Die Bedeutung bleibt richtungsabhaengig: Laden ist gruen, Entladen orange-rot, Netzbezug blau, Einspeisung violett und Solar goldfarben.
+- EN: Colors remain direction-aware: charging is green, discharging orange-red, grid import blue, grid export purple, and solar gold.
+
+## 0.3.12 - 2026-07-10
+
+- DE: Laden, Entladen, Netzbezug und Einspeisung sind in der Menueleiste durch moderne Richtungsbegriffe und Farben sofort erkennbar.
+- EN: Battery charging, battery discharging, grid import, and grid export are immediately recognizable in the menu bar through modern direction labels and colors.
+- DE: Flussfarben und Richtungsbegriffe bleiben optional; ohne die Flussanzeige erscheinen neutrale Farben und vorzeichenbehaftete Werte.
+- EN: Flow colors and direction labels remain optional; disabling the flow display restores neutral colors and signed values.
+
 ## 0.3.11 - 2026-07-10
 
 - Made the refresh indicator more obvious by replacing the menu bar values with a blue `Aktualisiert ...` state while data is being fetched.
