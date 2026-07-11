@@ -16,6 +16,10 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Volle Historie: der Release-Changelog listet Commits seit dem
+          # vorherigen Tag.
+          fetch-depth: 0
 
       - name: Swift version
         run: swift --version
@@ -45,11 +49,24 @@ jobs:
           name: SolixBar-macOS
           path: SolixBar-macOS.zip
 
-      - name: Attach bundle to release (tags only)
+      - name: Attach bundle to release with changelog (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NOTES="Hinweis: Das Bundle ist ad-hoc signiert. Beim ersten Start: Rechtsklick -> Oeffnen. / Note: The bundle is ad-hoc signed. First launch: right-click -> Open."
-          gh release create "${GITHUB_REF_NAME}" --generate-notes --notes "$NOTES" || true
+          PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          {
+            echo "Hinweis: Das Bundle ist ad-hoc signiert. Beim ersten Start: Rechtsklick -> \"Oeffnen\"."
+            echo "Note: The bundle is ad-hoc signed. First launch: right-click -> \"Open\"."
+            echo
+            echo "## Changelog"
+            if [ -n "$PREV_TAG" ]; then
+              git log --no-merges --pretty='- %s' "${PREV_TAG}..${GITHUB_REF_NAME}"
+              echo
+              echo "Kompletter Diff: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${GITHUB_REF_NAME}"
+            else
+              git log --no-merges --pretty='- %s' "${GITHUB_REF_NAME}"
+            fi
+          } > release-notes.md
+          gh release create "${GITHUB_REF_NAME}" --title "SolixBar ${GITHUB_REF_NAME}" --notes-file release-notes.md || true
           gh release upload "${GITHUB_REF_NAME}" SolixBar-macOS.zip --clobber
