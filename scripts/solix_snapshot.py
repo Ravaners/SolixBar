@@ -86,6 +86,23 @@ def _first_dict(*values):
     return {}
 
 
+def _pv_channel_watts(solarbank, first_solarbank):
+    """Leistung je MPPT-Eingang (solar_power_1..4), sofern das Modell sie meldet.
+
+    Solarbank 2 Pro / Solarbank 3 melden 4 Kanäle, Solarbank 2 Plus/AC 2,
+    die erste Solarbank-Generation keine. Ohne Kanal-Reporting: None.
+    (Feldnamen laut anker-solix-api; mangels Hardware unverifiziert.)
+    """
+    channels = []
+    for index in range(1, 5):
+        key = f"solar_power_{index}"
+        value = _as_int(solarbank.get(key), first_solarbank.get(key))
+        if value is None:
+            break
+        channels.append(value)
+    return channels or None
+
+
 def _first_solarbank(devices):
     return next(
         (
@@ -272,6 +289,10 @@ async def main():
             "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",
             "updatedAt": now.isoformat(),
         }
+
+        pv_watts = _pv_channel_watts(solarbank, first_solarbank)
+        if pv_watts is not None:
+            snapshot["pvWatts"] = pv_watts
 
         print(json.dumps(snapshot, separators=(",", ":")))
 

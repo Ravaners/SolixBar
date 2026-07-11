@@ -11,6 +11,9 @@ struct SolixSnapshot: Codable, Sendable {
     var totalKWh: Double?
     var status: String?
     var updatedAt: Date
+    /// Leistung je PV-Eingang (MPPT-Kanal); nur bei Modellen mit
+    /// Kanal-Reporting vorhanden (Solarbank 2/3), sonst nil.
+    var pvWatts: [Int]?
 
     init(
         siteName: String,
@@ -22,7 +25,8 @@ struct SolixSnapshot: Codable, Sendable {
         todayKWh: Double? = nil,
         totalKWh: Double? = nil,
         status: String? = nil,
-        updatedAt: Date
+        updatedAt: Date,
+        pvWatts: [Int]? = nil
     ) {
         self.siteName = siteName
         self.batteryPercent = batteryPercent
@@ -34,6 +38,7 @@ struct SolixSnapshot: Codable, Sendable {
         self.totalKWh = totalKWh
         self.status = status
         self.updatedAt = updatedAt
+        self.pvWatts = pvWatts
     }
 
     init(from decoder: Decoder) throws {
@@ -48,6 +53,7 @@ struct SolixSnapshot: Codable, Sendable {
         totalKWh = try container.decodeIfPresent(Double.self, forKey: .totalKWh)
         status = try container.decodeIfPresent(String.self, forKey: .status)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+        pvWatts = try container.decodeIfPresent([Int].self, forKey: .pvWatts)
     }
 
     static let demo = SolixSnapshot(
@@ -60,6 +66,7 @@ struct SolixSnapshot: Codable, Sendable {
         todayKWh: 3.74,
         totalKWh: 427.8,
         status: "Online",
-        updatedAt: Date()
+        updatedAt: Date(),
+        pvWatts: [438, 204]
     )
 }

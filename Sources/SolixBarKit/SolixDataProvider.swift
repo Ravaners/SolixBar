@@ -36,6 +36,16 @@ final class DemoSolixDataProvider: SolixDataProvider {
         snapshot.batteryPercent = 65 + (minute % 25)
         snapshot.batteryWatts = (snapshot.solarWatts ?? 0) - (snapshot.homeWatts ?? 0)
         snapshot.updatedAt = Date()
+        // Zwei simulierte MPPT-Eingänge. In den Minuten 40–45 fällt Kanal 2
+        // auf 0 — damit lassen sich Pro-PV-Anzeige und -Warnung ohne
+        // Hardware ausprobieren.
+        let solar = snapshot.solarWatts ?? 0
+        if (40...45).contains(minute) {
+            snapshot.pvWatts = [solar, 0]
+        } else {
+            let first = Int(Double(solar) * 0.62)
+            snapshot.pvWatts = [first, solar - first]
+        }
         return snapshot
     }
 }

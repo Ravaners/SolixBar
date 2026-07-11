@@ -215,6 +215,7 @@ struct AppSettingsSnapshot: Equatable {
     var dashboardWindowLevel: WindowLevelMode
     var graphWindowLevel: WindowLevelMode
     var updateCheckEnabled: Bool
+    var showPerPVValues: Bool
 }
 
 @MainActor
@@ -504,6 +505,13 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "updateCheckEnabled") }
     }
 
+    /// PV-Leistung je Eingang im Dashboard (nur bei Modellen mit
+    /// Kanal-Reporting); aus = nur der Gesamtwert.
+    var showPerPVValues: Bool {
+        get { followBool("showPerPVValues", fallback: true) }
+        set { defaults.set(newValue, forKey: "showPerPVValues") }
+    }
+
     /// Zuletzt gemeldete Update-Version — Zustand, keine Einstellung: bewusst
     /// nicht im Snapshot, damit "Abbrechen" im Einstellungsfenster keine
     /// bereits gezeigte Benachrichtigung wieder scharf schaltet.
@@ -547,7 +555,8 @@ final class AppSettings {
             detachedBarLevel: detachedBarLevel,
             dashboardWindowLevel: dashboardWindowLevel,
             graphWindowLevel: graphWindowLevel,
-            updateCheckEnabled: updateCheckEnabled
+            updateCheckEnabled: updateCheckEnabled,
+            showPerPVValues: showPerPVValues
         )
     }
 
@@ -586,5 +595,6 @@ final class AppSettings {
         dashboardWindowLevel = snapshot.dashboardWindowLevel
         graphWindowLevel = snapshot.graphWindowLevel
         updateCheckEnabled = snapshot.updateCheckEnabled
+        showPerPVValues = snapshot.showPerPVValues
     }
 }

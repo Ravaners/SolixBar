@@ -118,7 +118,19 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.spacing = 12
         primaryRow.distribution = .fillEqually
 
-        var detailRows = [
+        var detailRows: [NSView] = []
+        // Leistung je PV-Eingang (nur bei Modellen mit Kanal-Reporting und
+        // eingeschalteter Option): "438 W · 204 W" in Eingangs-Reihenfolge.
+        if AppSettings.shared.showPerPVValues,
+           let pvWatts = snapshot.pvWatts, !pvWatts.isEmpty {
+            detailRows.append(compactMetricRow(
+                LocalizedText.text("PV-Eingänge", "PV Inputs"),
+                pvWatts.map { "\($0) W" }.joined(separator: " · "),
+                "sun.max",
+                Theme.vivid(.solar)
+            ))
+        }
+        detailRows += [
             compactMetricRow(
                 LocalizedText.text("Hauslast", "Home Load"),
                 withTrend(snapshot.homeWatts.map { "\($0) W" }, arrow: trendArrow(current: snapshot.homeWatts, previous: previous?.homeWatts, threshold: 5)),

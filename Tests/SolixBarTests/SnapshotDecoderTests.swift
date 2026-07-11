@@ -35,5 +35,15 @@ struct SnapshotDecoderTests {
         let snapshot = try SnapshotDecoder.decode(Data(json.utf8))
         #expect(snapshot.batteryPercent == 50)
         #expect(snapshot.solarWatts == nil)
+        #expect(snapshot.pvWatts == nil)
+    }
+
+    @Test("decodes per-PV channel watts when present")
+    func decodesPVChannels() throws {
+        let json = """
+        { "solarWatts": 642, "pvWatts": [438, 204], "updatedAt": "2026-07-06T19:30:00Z" }
+        """
+        let snapshot = try SnapshotDecoder.decode(Data(json.utf8))
+        #expect(snapshot.pvWatts == [438, 204])
     }
 }
