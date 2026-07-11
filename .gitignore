@@ -1,16 +1,7 @@
-.DS_Store
 .build/
-*.pyc
-__pycache__/
-
-# Local/generated runtime assets
-work/
 outputs/
-bin/
-obj/
-.vs/
-*.user
-*.suo
-
-# Local secrets or generated command snippets
-*.env
+work/
+.claude/
+.DS_Store
+*.xcodeproj
+renders/

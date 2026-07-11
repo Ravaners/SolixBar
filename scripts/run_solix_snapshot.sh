@@ -1,10 +1,23 @@
 #!/bin/zsh
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Laeuft sowohl aus dem Repo (scripts/) als auch aus dem App-Bundle
+# (Contents/Resources/). Pfade sind deshalb relativ zum Script bzw.
+# per Umgebungsvariable uebersteuerbar:
+#   SOLIXBAR_ENV_FILE  Pfad zur Env-Datei (Default: <repo>/work/solixbar.env)
+#   SOLIXBAR_PYTHON    Python-Interpreter (Default: Repo-venv, sonst python3)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="${SOLIXBAR_ENV_FILE:-$ROOT_DIR/work/solixbar.env}"
-PYTHON="$ROOT_DIR/work/solix-venv312/bin/python"
-SNAPSHOT_SCRIPT="$ROOT_DIR/scripts/solix_snapshot.py"
+SNAPSHOT_SCRIPT="$SCRIPT_DIR/solix_snapshot.py"
+
+if [[ -n "${SOLIXBAR_PYTHON:-}" ]]; then
+  PYTHON="$SOLIXBAR_PYTHON"
+elif [[ -x "$ROOT_DIR/work/solix-venv312/bin/python" ]]; then
+  PYTHON="$ROOT_DIR/work/solix-venv312/bin/python"
+else
+  PYTHON="$(command -v python3)"
+fi
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
