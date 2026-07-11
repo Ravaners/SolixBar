@@ -26,6 +26,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let solixTodayBaseRow = NSStackView()
     private let solixTotalBaseRow = NSStackView()
     private let graphFitButton = NSButton(checkboxWithTitle: "Graph an vorhandene Daten anpassen", target: nil, action: nil)
+    private let customRangeField = NSTextField()
+    private let customRangeUnitPopup = NSPopUpButton()
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
@@ -414,6 +416,35 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let languageRow = formRow(labelText: LocalizedText.text("Sprache", "Language"), control: languagePopup)
         let dashboardTitle = sectionTitle(LocalizedText.text("Dashboard", "Dashboard"))
         let graphFitRow = settingRow(graphFitButton, help: graphFitButton.toolTip ?? "")
+        customRangeField.alignment = .center
+        customRangeField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+        customRangeField.target = self
+        customRangeField.action = #selector(applyPreview)
+        customRangeField.delegate = self
+        customRangeField.toolTip = LocalizedText.text(
+            "Dauer des eigenen Zeitraums (Chip \"Eig.\" im Verlauf).",
+            "Duration of the custom range (chip \"Eig.\" in the history)."
+        )
+        customRangeUnitPopup.target = self
+        customRangeUnitPopup.action = #selector(applyPreview)
+        customRangeUnitPopup.addItems(withTitles: [
+            LocalizedText.text("Stunden", "hours"),
+            LocalizedText.text("Tage", "days"),
+            LocalizedText.text("Wochen", "weeks"),
+            LocalizedText.text("Monate", "months")
+        ])
+        let customRangeStack = NSStackView(views: [customRangeField, customRangeUnitPopup])
+        customRangeStack.orientation = .horizontal
+        customRangeStack.spacing = 8
+        customRangeField.widthAnchor.constraint(equalToConstant: 64).isActive = true
+        let customRangeRow = NSStackView(views: [
+            label(LocalizedText.text("Eig. Zeitraum", "Custom range")),
+            customRangeStack,
+            helpButton(customRangeField.toolTip ?? "")
+        ])
+        customRangeRow.orientation = .horizontal
+        customRangeRow.spacing = 12
+        customRangeRow.alignment = .centerY
         let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
         let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
@@ -422,7 +453,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, startTitle, autostartRow, autostartStatus, hint] {
+        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, startTitle, autostartRow, autostartStatus, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -443,7 +474,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             graphFitRow.topAnchor.constraint(equalTo: dashboardTitle.bottomAnchor, constant: 10),
             graphFitRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            startTitle.topAnchor.constraint(equalTo: graphFitRow.bottomAnchor, constant: 24),
+            customRangeRow.topAnchor.constraint(equalTo: graphFitRow.bottomAnchor, constant: 10),
+            customRangeRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            startTitle.topAnchor.constraint(equalTo: customRangeRow.bottomAnchor, constant: 24),
             startTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             autostartRow.topAnchor.constraint(equalTo: startTitle.bottomAnchor, constant: 12),
@@ -718,6 +752,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         stackedButton.state = settings.menuBarStacked ? .on : .off
         stackedDetachedButton.state = settings.detachedBarStacked ? .on : .off
         graphFitButton.state = settings.graphFitsData ? .on : .off
+        customRangeField.stringValue = String(
+            HistoryGraphMenuView.customValue(days: settings.customHistoryDays, unit: settings.customHistoryUnit)
+        )
+        let unitIndex = ["hours", "days", "weeks", "months"].firstIndex(of: settings.customHistoryUnit) ?? 1
+        customRangeUnitPopup.selectItem(at: unitIndex)
         detachedIconButton.state = settings.detachedShowIcon ? .on : .off
         detachedLabelsButton.state = settings.detachedShowLabels ? .on : .off
         detachedSymbolsButton.state = settings.detachedShowSymbols ? .on : .off
@@ -782,6 +821,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.menuBarStacked = stackedButton.state == .on
         settings.detachedBarStacked = stackedDetachedButton.state == .on
         settings.graphFitsData = graphFitButton.state == .on
+        let unitKeys = ["hours", "days", "weeks", "months"]
+        let selectedUnit = unitKeys[max(0, min(unitKeys.count - 1, customRangeUnitPopup.indexOfSelectedItem))]
+        settings.customHistoryUnit = selectedUnit
+        let value = max(1, customRangeField.integerValue)
+        settings.customHistoryDays = min(365, HistoryGraphMenuView.days(fromValue: value, unit: selectedUnit))
         settings.detachedShowIcon = detachedIconButton.state == .on
         settings.detachedShowLabels = detachedLabelsButton.state == .on
         settings.detachedShowSymbols = detachedSymbolsButton.state == .on

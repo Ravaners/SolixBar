@@ -91,6 +91,36 @@ struct HistoryStoreTests {
         #expect(defaults.data(forKey: "solixHistorySamples") == nil)
     }
 
+    @Test("keeps year-old data hourly-thinned, recent data at full resolution")
+    func twoTierRetention() {
+        let (store, _) = makeStore()
+        let now = Date()
+        // 40 Tage alt, auf eine volle Stunde gepinnt: 12 Samples in EINEM
+        // Stunden-Bucket -> genau eines (das letzte) bleibt.
+        let hourBase = Date(
+            timeIntervalSince1970: floor((now.timeIntervalSince1970 - 40 * 86_400) / 3600) * 3600
+        )
+        for minute in 0..<12 {
+            store.record(
+                snapshot(solar: 100 + minute, at: hourBase.addingTimeInterval(Double(minute) * 300)),
+                sourceKey: "url",
+                refreshInterval: 300
+            )
+        }
+        // 400 Tage alt: faellt ganz raus
+        store.record(snapshot(solar: 1, at: now.addingTimeInterval(-400 * 86_400)), sourceKey: "url", refreshInterval: 300)
+        // frisch: bleibt voll aufgeloest
+        store.record(snapshot(solar: 555, at: now.addingTimeInterval(-60)), sourceKey: "url", refreshInterval: 300)
+        store.record(snapshot(solar: 556, at: now.addingTimeInterval(-30)), sourceKey: "url", refreshInterval: 300)
+
+        let year = store.samples(duration: 366 * 86_400, sourceKey: "url")
+        let old = year.filter { $0.date < now.addingTimeInterval(-31 * 86_400) }
+        #expect(old.count == 1)
+        #expect(old.first?.solarWatts == 111)
+        let fresh = year.filter { $0.date >= now.addingTimeInterval(-3600) }
+        #expect(fresh.count == 2)
+    }
+
     @Test("persists across store instances")
     func persistence() {
         let suite = "solixbar-tests-\(UUID().uuidString)"

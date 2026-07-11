@@ -1,13 +1,12 @@
 import AppKit
 
+/// Großes Verlaufsfenster: nutzt dieselbe Chip-Kopfzeile wie das Dashboard.
 @MainActor
 final class LargeGraphWindowController: NSWindowController {
     private let settings = AppSettings.shared
     private let graphProvider: () -> [SolixHistorySample]
-    private let segmented = NSSegmentedControl(labels: HistoryRange.allCases.map(\.shortTitle), trackingMode: .selectOne, target: nil, action: nil)
-    private let customDaysField = NSTextField()
     private let graphContainer = NSView()
-    private var graphMetricButtons: [GraphMetric: NSButton] = [:]
+    private var header: GraphControlHeader?
 
     init(graphProvider: @escaping () -> [SolixHistorySample]) {
         self.graphProvider = graphProvider
@@ -17,7 +16,7 @@ final class LargeGraphWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "SOLIX Verlauf"
+        window.title = LocalizedText.text("SOLIX Verlauf", "SOLIX History")
         window.minSize = NSSize(width: 620, height: 400)
         window.center()
         super.init(window: window)
@@ -30,15 +29,7 @@ final class LargeGraphWindowController: NSWindowController {
     }
 
     func rebuild() {
-        segmented.selectedSegment = HistoryRange.allCases.firstIndex(of: settings.historyRange) ?? 0
-        customDaysField.stringValue = String(Int(settings.customHistoryDays))
-        customDaysField.isEnabled = settings.historyRange == .custom
-
-        let selectedMetrics = Set(settings.graphMetrics)
-        for metric in GraphMetric.allCases {
-            graphMetricButtons[metric]?.state = selectedMetrics.contains(metric) ? .on : .off
-        }
-
+        header?.reload()
         graphContainer.subviews.forEach { $0.removeFromSuperview() }
         let graph = HistoryGraphView(
             samples: graphProvider(),
@@ -46,6 +37,7 @@ final class LargeGraphWindowController: NSWindowController {
             range: settings.historyRange,
             rangeDuration: settings.historyDuration,
             visibleMetrics: settings.graphMetrics,
+            showsHeader: false,
             size: NSSize(width: 680, height: 360)
         )
         graph.translatesAutoresizingMaskIntoConstraints = false
@@ -61,99 +53,27 @@ final class LargeGraphWindowController: NSWindowController {
 
     private func buildView() -> NSView {
         let container = NSView()
+        let header = GraphControlHeader(onChange: { [weak self] in
+            self?.rebuild()
+        })
+        self.header = header
 
-        let title = NSTextField(labelWithString: "Verlauf")
-        title.font = .boldSystemFont(ofSize: 16)
-        title.textColor = .labelColor
-
-        segmented.target = self
-        segmented.action = #selector(changeRange)
-        segmented.segmentStyle = .rounded
-        segmented.controlSize = .regular
-        segmented.toolTip = "Wählt den Zeitraum für den Graphen."
-
-        customDaysField.placeholderString = LocalizedText.text("Tage", "days")
-        customDaysField.target = self
-        customDaysField.action = #selector(changeCustomDays)
-        customDaysField.cell = CenteredTextFieldCell(textCell: "")
-        customDaysField.alignment = .center
-        customDaysField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
-        customDaysField.toolTip = "Anzahl der Tage für den individuellen Zeitraum."
-
-        let metricControls = graphMetricControls()
-
-        for view in [title, segmented, customDaysField, metricControls, graphContainer] {
+        for view in [header, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
 
         NSLayoutConstraint.activate([
-            title.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
-            title.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            header.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
+            header.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            header.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -20),
 
-            segmented.centerYAnchor.constraint(equalTo: title.centerYAnchor),
-            segmented.leadingAnchor.constraint(equalTo: title.trailingAnchor, constant: 18),
-            segmented.widthAnchor.constraint(equalToConstant: 250),
-            segmented.heightAnchor.constraint(equalToConstant: 28),
-
-            customDaysField.centerYAnchor.constraint(equalTo: title.centerYAnchor),
-            customDaysField.leadingAnchor.constraint(equalTo: segmented.trailingAnchor, constant: 10),
-            customDaysField.widthAnchor.constraint(equalToConstant: 84),
-            customDaysField.heightAnchor.constraint(equalToConstant: 28),
-
-            metricControls.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 14),
-            metricControls.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            metricControls.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -20),
-            metricControls.heightAnchor.constraint(equalToConstant: 28),
-
-            graphContainer.topAnchor.constraint(equalTo: metricControls.bottomAnchor, constant: 12),
+            graphContainer.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 14),
             graphContainer.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
             graphContainer.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
             graphContainer.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -20)
         ])
 
         return container
-    }
-
-    private func graphMetricControls() -> NSStackView {
-        let stack = NSStackView()
-        stack.orientation = .horizontal
-        stack.spacing = 12
-
-        for metric in GraphMetric.allCases {
-            let button = NSButton(checkboxWithTitle: "", target: self, action: #selector(changeGraphMetrics))
-            button.attributedTitle = HistoryGraphMenuView.legendTitle(for: metric, fontSize: 12)
-            button.toolTip = LocalizedText.text(
-                "Blendet \(metric.title) im Graphen ein oder aus.",
-                "Shows or hides \(metric.title) in the graph."
-            )
-            graphMetricButtons[metric] = button
-            stack.addArrangedSubview(button)
-        }
-        return stack
-    }
-
-    @objc private func changeRange() {
-        settings.historyRange = historyRange(at: segmented.selectedSegment) ?? .day
-        AppLogger.info("Large graph range changed to \(settings.historyRange.rawValue).")
-        rebuild()
-    }
-
-    @objc private func changeCustomDays() {
-        settings.customHistoryDays = Double(max(1, customDaysField.integerValue))
-        AppLogger.info("Large graph custom days changed to \(Int(settings.customHistoryDays)).")
-        rebuild()
-    }
-
-    @objc private func changeGraphMetrics() {
-        let selected = GraphMetric.allCases.filter { graphMetricButtons[$0]?.state == .on }
-        settings.graphMetrics = selected.isEmpty ? GraphMetric.allCases : selected
-        let metricNames = settings.graphMetrics.map(\.rawValue).joined(separator: ",")
-        AppLogger.info("Large graph metrics changed to \(metricNames).")
-        rebuild()
-    }
-
-    private func historyRange(at index: Int) -> HistoryRange? {
-        HistoryRange.allCases.indices.contains(index) ? HistoryRange.allCases[index] : nil
     }
 }

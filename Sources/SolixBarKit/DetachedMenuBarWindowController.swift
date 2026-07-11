@@ -285,7 +285,10 @@ private final class DetachedMenuBarView: NSView {
 
     private func buildView() {
         let glass = NSVisualEffectView()
-        glass.material = .hudWindow
+        // .hudWindow erzwingt dunkle Vibrancy für alle Subviews — dadurch
+        // wurden im Light Mode die Dunkelmodus-Farben aufgelöst. .popover
+        // ist adaptiv und folgt der echten Appearance.
+        glass.material = .popover
         glass.blendingMode = .behindWindow
         glass.state = .active
         glass.wantsLayer = true

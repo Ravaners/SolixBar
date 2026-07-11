@@ -29,7 +29,8 @@ final class SolixHistoryStore {
     private let fileURL: URL
     private let legacyKey = "solixHistorySamples"
     private let accumulatorKey = "solixEnergyAccumulators"
-    private let maxAge: TimeInterval = 31 * 24 * 60 * 60
+    private let maxAge: TimeInterval = 366 * 24 * 60 * 60
+    private let fineWindow: TimeInterval = 31 * 24 * 60 * 60
     private var cache: HistoryFile?
 
     init(defaults: UserDefaults = .standard, fileURL: URL = SolixPaths.historyFileURL) {
@@ -84,21 +85,38 @@ final class SolixHistoryStore {
             .sorted { $0.date < $1.date }
     }
 
-    /// Cap so, dass die längste angebotene Ansicht (30 Tage) beim konfigurierten
-    /// Intervall vollständig gefüllt werden kann (früher: hart 2000 Samples
-    /// == ~7 Tage bei 300 s Intervall, obwohl die UI 30 Tage anbietet).
+    /// Cap für das Feinfenster (31 Tage volle Auflösung) so, dass es beim
+    /// konfigurierten Intervall vollständig gefüllt werden kann.
     static func maxSamples(refreshInterval: TimeInterval) -> Int {
         let interval = max(60, refreshInterval)
         let thirtyDays = 30.0 * 24 * 60 * 60
         return max(2000, Int(thirtyDays / interval) + 100)
     }
 
+    /// Zweistufige Aufbewahrung: 31 Tage in voller Aufloesung, danach bis zu
+    /// 366 Tage auf Stundenaufloesung ausgeduennt — Jahresansichten ohne
+    /// Multi-Megabyte-Datei.
     private func pruned(_ samples: [SolixHistorySample], from date: Date, refreshInterval: TimeInterval) -> [SolixHistorySample] {
-        let cutoff = date.addingTimeInterval(-maxAge)
-        let filtered = samples.filter { $0.date >= cutoff }
+        let ageCutoff = date.addingTimeInterval(-maxAge)
+        let fineCutoff = date.addingTimeInterval(-fineWindow)
+        let kept = samples.filter { $0.date >= ageCutoff }
+
+        var hourly: [Int: SolixHistorySample] = [:]
+        var fine: [SolixHistorySample] = []
+        for sample in kept {
+            if sample.date >= fineCutoff {
+                fine.append(sample)
+            } else {
+                // letztes Sample je Stunde gewinnt
+                hourly[Int(sample.date.timeIntervalSince1970 / 3600)] = sample
+            }
+        }
         let cap = Self.maxSamples(refreshInterval: refreshInterval)
-        guard filtered.count > cap else { return filtered }
-        return Array(filtered.suffix(cap))
+        if fine.count > cap {
+            fine = Array(fine.suffix(cap))
+        }
+        let coarse = hourly.values.sorted { $0.date < $1.date }
+        return coarse + fine
     }
 
     // MARK: Persistenz
