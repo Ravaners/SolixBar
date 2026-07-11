@@ -12,11 +12,22 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Screenshots / Screenshots
 
-![SolixBar menu bar preview](docs/assets/menubar-shot.svg)
+Alle Bilder zeigen Demo-Daten. / All images show demo data.
 
-![SolixBar detached bar preview](docs/assets/detached-bar-shot.png)
+| Dashboard | Verlaufsfenster / History window |
+|---|---|
+| ![Dashboard](docs/review-assets/after-dashboard-dark.png) | ![Verlaufsfenster](docs/review-assets/after-graph-large-dark.png) |
 
-![SolixBar graph preview](docs/assets/graph-shot.svg)
+Zweizeilige Kompaktanzeige in der Menüleiste und abgedockte schmale Leiste: / Two-line compact menu bar display and detached slim bar:
+
+![Kompaktanzeige](docs/review-assets/menubar-stacked-dark.png)
+![Abgedockte Leiste](docs/review-assets/after-detached-bar-dark.png)
+
+Einstellungen mit sortierbarer Werte-Auswahl und optionalen Warnungen: / Settings with sortable value lists and optional warnings:
+
+| Menüleiste / Menu bar | Warnungen / Warnings |
+|---|---|
+| ![Einstellungen Menüleiste](docs/review-assets/settings-menubar-dark.png) | ![Einstellungen Warnungen](docs/review-assets/settings-warnings-dark.png) |
 
 ## Funktionen / Features
 
@@ -34,10 +45,16 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 - Zeitraeume: Aktuell, 24 Stunden, 7 Tage, 30 Tage und individuell. / Graph ranges: current, 24 hours, 7 days, 30 days, and custom.
 - Sichtbare Fragezeichen-Hilfen in den Einstellungen. / Visible question-mark help controls in settings.
 - Lokale Logdatei fuer Fehleranalyse: `~/Library/Application Support/SolixBar/SolixBar.log`. / Local log file for troubleshooting.
+- Werte-Auswahl als sortierbare Listen: Häkchen wählt, Ziehen ordnet — je Leiste und je Ansicht (einzeilig/kompakt) unabhängig. / Value selection as sortable lists: checkboxes select, dragging reorders — independent per bar and per view (single-line/compact).
+- Verlaufsgraph als eigenes Fenster abdockbar; Fensterebene (vorn/normal/hinten) für Leiste, Dashboard und Verlaufsfenster getrennt wählbar. / History graph detachable as its own window; window level (front/normal/behind) selectable separately for bar, dashboard, and history window.
+- Datenexport als CSV oder JSON direkt aus dem Menü. / Data export as CSV or JSON right from the menu.
+- Optionale Warnungen: Akku niedrig, PV-Einbruch (nachts still), Zeitfenster, tote PV-Eingänge — als macOS-Mitteilung plus Menü-Hinweis. / Optional warnings: battery low, PV collapse (silent at night), time window, dead PV inputs — as macOS notifications plus a menu indicator.
+- Leistung je PV-Eingang (Solarbank 2/3): "PV-Anzeige" wählbar als Gesamtwert, Einzelwerte oder beides — getrennt für Dashboard im Menü, abgedocktes Fenster, Menüleiste und abgedockte Leiste. / Per-PV-input power (Solarbank 2/3): "PV display" selectable as total, individual inputs, or both — separately per surface.
+- Täglicher Update-Hinweis auf neue GitHub-Releases (abschaltbar, installiert nichts). / Daily update notice for new GitHub releases (can be disabled, installs nothing).
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.4.0`
+Aktuelle Version / Current version: `0.4.2`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

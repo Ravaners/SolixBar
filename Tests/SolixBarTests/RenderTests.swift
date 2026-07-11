@@ -167,7 +167,10 @@ struct RenderTests {
         let controller = SettingsWindowController(onPreview: {}, onSave: {}, onReset: {})
         let window = try #require(controller.window)
         let content = try #require(window.contentView)
-        window.alphaValue = 0
+        // Nicht per alphaValue verstecken: dann lässt AppKit die Textzeichnung
+        // beim cacheDisplay weg (leere Panes) — stattdessen aus dem sichtbaren
+        // Bereich schieben.
+        window.setFrameOrigin(NSPoint(x: -4000, y: -4000))
         controller.showWindow(nil)
         window.setContentSize(NSSize(width: 720, height: 660))
         RunLoop.main.run(until: Date().addingTimeInterval(0.5))
@@ -178,8 +181,33 @@ struct RenderTests {
             for (index, name) in names.enumerated() where index < tabs.numberOfTabViewItems {
                 tabs.selectTabViewItem(at: index)
                 RunLoop.main.run(until: Date().addingTimeInterval(0.3))
-                let rep = try #require(content.bitmapImageRepForCachingDisplay(in: content.bounds))
-                content.cacheDisplay(in: content.bounds, to: rep)
+                // cacheDisplay lässt bei Fenster-Inhalten Text/Hintergrund weg;
+                // der PDF-Pfad geht durch draw(_:) und erfasst alles.
+                let pdfData = content.dataWithPDF(inside: content.bounds)
+                let pdfImage = try #require(NSImage(data: pdfData))
+                let scale: CGFloat = 2
+                let size = content.bounds.size
+                let rep = try #require(NSBitmapImageRep(
+                    bitmapDataPlanes: nil,
+                    pixelsWide: Int(size.width * scale),
+                    pixelsHigh: Int(size.height * scale),
+                    bitsPerSample: 8,
+                    samplesPerPixel: 4,
+                    hasAlpha: true,
+                    isPlanar: false,
+                    colorSpaceName: .deviceRGB,
+                    bytesPerRow: 0,
+                    bitsPerPixel: 0
+                ))
+                rep.size = size
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+                (NSAppearance(named: appearance) ?? NSAppearance.currentDrawing()).performAsCurrentDrawingAppearance {
+                    NSColor.windowBackgroundColor.setFill()
+                    NSRect(origin: .zero, size: size).fill()
+                    pdfImage.draw(in: NSRect(origin: .zero, size: size))
+                }
+                NSGraphicsContext.restoreGraphicsState()
                 let png = try #require(rep.representation(using: .png, properties: [:]))
                 try png.write(to: Self.outputDir.appendingPathComponent("settings-\(name)-\(suffix).png"))
             }
