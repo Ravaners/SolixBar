@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class StatusController: NSObject {
@@ -102,6 +103,72 @@ final class StatusController: NSObject {
 
     @objc private func openUpdatePage() {
         NSWorkspace.shared.open(availableUpdate?.url ?? UpdateChecker.releasesPageURL)
+    }
+
+    /// Exportiert die History der aktuellen Datenquelle als CSV oder JSON.
+    /// Formatwahl direkt im Speichern-Dialog (Popup unten im Panel).
+    @objc private func exportData() {
+        let panel = NSSavePanel()
+        panel.title = LocalizedText.text("Daten exportieren", "Export data")
+        panel.allowedContentTypes = [.commaSeparatedText]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = HistoryExporter.defaultFilename(ext: "csv")
+
+        let formatLabel = NSTextField(labelWithString: LocalizedText.text("Format:", "Format:"))
+        let formatPopup = NSPopUpButton()
+        formatPopup.addItems(withTitles: ["CSV", "JSON"])
+        let accessory = NSStackView(views: [formatLabel, formatPopup])
+        accessory.orientation = .horizontal
+        accessory.spacing = 8
+        accessory.edgeInsets = NSEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+        accessory.translatesAutoresizingMaskIntoConstraints = false
+        let accessoryContainer = NSView(frame: NSRect(x: 0, y: 0, width: 220, height: 36))
+        accessoryContainer.addSubview(accessory)
+        NSLayoutConstraint.activate([
+            accessory.centerXAnchor.constraint(equalTo: accessoryContainer.centerXAnchor),
+            accessory.centerYAnchor.constraint(equalTo: accessoryContainer.centerYAnchor)
+        ])
+        panel.accessoryView = accessoryContainer
+
+        @MainActor
+        final class FormatSwitcher: NSObject {
+            let panel: NSSavePanel
+            init(panel: NSSavePanel) { self.panel = panel }
+            @objc func formatChanged(_ sender: NSPopUpButton) {
+                let isJSON = sender.indexOfSelectedItem == 1
+                panel.allowedContentTypes = [isJSON ? .json : .commaSeparatedText]
+                panel.nameFieldStringValue = HistoryExporter.defaultFilename(ext: isJSON ? "json" : "csv")
+            }
+        }
+        let switcher = FormatSwitcher(panel: panel)
+        formatPopup.target = switcher
+        formatPopup.action = #selector(FormatSwitcher.formatChanged(_:))
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = panel.runModal()
+        withExtendedLifetime(switcher) {}
+        guard response == .OK, let url = panel.url else { return }
+
+        let sourceKey = settings.dataSourceMode.rawValue
+        let samples = historyStore.samples(duration: 366 * 24 * 60 * 60, sourceKey: sourceKey)
+        let current = currentSnapshot()
+        do {
+            if formatPopup.indexOfSelectedItem == 1 {
+                let data = try HistoryExporter.json(samples: samples, current: current, sourceKey: sourceKey)
+                try data.write(to: url, options: .atomic)
+            } else {
+                let csv = HistoryExporter.csv(samples: samples, current: current)
+                try Data(csv.utf8).write(to: url, options: .atomic)
+            }
+            AppLogger.info("Exported \(samples.count) samples to \(url.lastPathComponent).")
+        } catch {
+            AppLogger.error("Export failed: \(error.localizedDescription)")
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = LocalizedText.text("Export fehlgeschlagen", "Export failed")
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
+        }
     }
 
     private func evaluateWarnings(for snapshot: SolixSnapshot) {
@@ -473,6 +540,7 @@ final class StatusController: NSObject {
             #selector(toggleLargeGraph),
             "chart.xyaxis.line"
         ))
+        menu.addItem(action(LocalizedText.text("Daten exportieren ...", "Export data ..."), #selector(exportData), "square.and.arrow.up"))
         menu.addItem(action(LocalizedText.text("Einstellungen ...", "Settings ..."), #selector(openSettings), "gearshape"))
         menu.addItem(action(LocalizedText.text("Logdatei anzeigen", "Show log file"), #selector(showLogFile), "doc.text.magnifyingglass"))
         menu.addItem(NSMenuItem.separator())
