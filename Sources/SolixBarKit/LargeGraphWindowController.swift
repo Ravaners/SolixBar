@@ -31,10 +31,7 @@ final class LargeGraphWindowController: NSWindowController {
 
     func rebuild() {
         segmented.selectedSegment = HistoryRange.allCases.firstIndex(of: settings.historyRange) ?? 0
-        customDaysField.stringValue = LocalizedText.text(
-            "\(Int(settings.customHistoryDays)) Tage",
-            "\(Int(settings.customHistoryDays)) days"
-        )
+        customDaysField.stringValue = String(Int(settings.customHistoryDays))
         customDaysField.isEnabled = settings.historyRange == .custom
 
         let selectedMetrics = Set(settings.graphMetrics)

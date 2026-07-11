@@ -23,6 +23,7 @@ final class HistoryGraphMenuView: NSView {
     private let onRangeChange: () -> Void
     private let onOpenLarge: () -> Void
     private let customDaysField = NSTextField()
+    private let customDaysSuffix = NSTextField(labelWithString: "")
     private let graphContainer = NSView()
     private var rangeChips: [HistoryRange: NSButton] = [:]
     private var legendChips: [GraphMetric: NSButton] = [:]
@@ -89,7 +90,11 @@ final class HistoryGraphMenuView: NSView {
             legendRow.addArrangedSubview(chip)
         }
 
-        for view in [title, rangeRow, legendRow, customDaysField, graphContainer] {
+        customDaysSuffix.stringValue = LocalizedText.text("Tage", "days")
+        customDaysSuffix.font = .systemFont(ofSize: 11, weight: .medium)
+        customDaysSuffix.textColor = .secondaryLabelColor
+
+        for view in [title, rangeRow, legendRow, customDaysField, customDaysSuffix, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -108,9 +113,11 @@ final class HistoryGraphMenuView: NSView {
             legendRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
 
             customDaysField.centerYAnchor.constraint(equalTo: rangeRow.centerYAnchor),
-            customDaysField.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            customDaysSuffix.centerYAnchor.constraint(equalTo: rangeRow.centerYAnchor),
+            customDaysSuffix.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            customDaysField.trailingAnchor.constraint(equalTo: customDaysSuffix.leadingAnchor, constant: -5),
             customDaysField.leadingAnchor.constraint(greaterThanOrEqualTo: rangeRow.trailingAnchor, constant: 10),
-            customDaysField.widthAnchor.constraint(equalToConstant: 72),
+            customDaysField.widthAnchor.constraint(equalToConstant: 44),
             customDaysField.heightAnchor.constraint(equalToConstant: 22),
 
             graphContainer.topAnchor.constraint(equalTo: legendRow.bottomAnchor, constant: 14),
@@ -191,12 +198,10 @@ final class HistoryGraphMenuView: NSView {
             guard let chip = legendChips[metric] else { continue }
             styleLegendChip(chip, metric: metric, active: selectedMetrics.contains(metric))
         }
-        customDaysField.stringValue = LocalizedText.text(
-            "\(Int(settings.customHistoryDays)) Tage",
-            "\(Int(settings.customHistoryDays)) days"
-        )
+        customDaysField.stringValue = String(Int(settings.customHistoryDays))
         customDaysField.isEnabled = settings.historyRange == .custom
         customDaysField.isHidden = settings.historyRange != .custom
+        customDaysSuffix.isHidden = settings.historyRange != .custom
 
         graphContainer.subviews.forEach { $0.removeFromSuperview() }
         let graph = HistoryGraphView(
