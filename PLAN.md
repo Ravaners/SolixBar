@@ -77,6 +77,18 @@ visueller Abnahme.
 - [x] PR im Fork mit Vorher/Nachher-Bildern: https://github.com/itsab1989/SolixBar/pull/1
 - [x] Upstream-Issue: https://github.com/Ravaners/SolixBar/issues/3 (Arbeitspakete mit Datei:Zeile, Repro, Akzeptanzkriterien, Referenz-Commits, Demo-Renders, Icon-Vorschlag, Hardware-Test-Bitte, Optionen-Frage).
 
+## Phase 6 — Nutzer-Feedback-Runde & Veröffentlichung ✅ (2026-07-11, v0.4.1)
+
+- [x] Fensterebene wählbar (vorn/normal/hinten), getrennt für Slim-Bar und abgedocktes Dashboard; wirkt live bei Vorschau/Speichern.
+- [x] Slim-Bar: Schließen-Kreuz nur bei Hover (Platz bleibt reserviert, kein Umbruch); Breite aus echten Layout-Maßen statt Schätzung (kein Leerraum rechts, Mindestbreite 200 pt).
+- [x] "Farbige Werte" und "Flussrichtung" getrennt schaltbar, je Leiste unabhängig; ohne Farben keine .solixRole-Tags (Slim-Bar koloriert sonst selbst).
+- [x] Sammel-Metrik "Energiefluss" entfernt — zeigte dieselben Pfeile/Begriffe wie die Pfeil-Option doppelt; Migration schaltet Betroffenen die Pfeil-Option ein. Vorzeichen bei Netz/Akku-Fluss nur noch ohne Flussrichtung (dann einzige Richtungsinfo).
+- [x] Kompaktanzeige respektiert Flussrichtung (↓/↑/←/→ vor den Werten) und zeigt die Status-Metrik.
+- [x] Render-Fidelity: echtes Verlaufsfenster (Chip-Kopfzeile) statt nackter Graph-View; Slim-Bar pro Appearance neu aufgebaut über Desktop-Verlauf (Offscreen rendert keine Vibrancy); Trend-Pfeile im Dashboard-Render.
+- [x] Neue App-Icon-Entwürfe "Panel als Diagramm" (Variante A geneigt/ansteigend, B ruhig), Generator in `scripts/make_icon_proposal.swift`.
+- [x] CI: Releases bekommen automatisch einen Commit-Changelog seit dem vorherigen Tag.
+- [x] Veröffentlichung: PR gegen Upstream (Ravaners/SolixBar#4), Issue #3 zu einem konsolidierten Beitrag umgeschrieben (natürliches Deutsch, aktuelle Bilder, Optionen-Prompt für die Maintainer-KI), Release v0.4.1 mit Changelog.
+
 ## Teststrategie (Querschnitt)
 
 | Ebene | Werkzeug | Deckt ab |
