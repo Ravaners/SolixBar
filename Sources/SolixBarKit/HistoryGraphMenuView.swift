@@ -3,6 +3,19 @@ import AppKit
 /// Verlaufs-Sektion im Dashboard: Zeitraum und Legende als kompakte klickbare
 /// Chips in einer Karte (statt Segmented Control + System-Checkboxen in drei
 /// gestapelten Ebenen), darunter der Graph mit Luft dazwischen.
+/// Borderless Button mit symmetrischem Innenabstand — der frühere
+/// Leerzeichen-Trick zentrierte den Text nicht (Trailing-Spaces werden beim
+/// Rendern verschluckt).
+@MainActor
+private final class ChipButton: NSButton {
+    override var intrinsicContentSize: NSSize {
+        var size = super.intrinsicContentSize
+        size.width += 20
+        size.height = 22
+        return size
+    }
+}
+
 @MainActor
 final class HistoryGraphMenuView: NSView {
     private let settings = AppSettings.shared
@@ -32,14 +45,9 @@ final class HistoryGraphMenuView: NSView {
     }
 
     private func buildView() {
-        let title = NSTextField(labelWithString: LocalizedText.text("Verlauf", "History"))
-        title.font = .boldSystemFont(ofSize: 13)
-        title.textColor = .labelColor
-
         let rangeRow = NSStackView()
         rangeRow.orientation = .horizontal
         rangeRow.spacing = 4
-        rangeRow.alignment = .firstBaseline
         for range in HistoryRange.allCases {
             let chip = makeChip(action: #selector(changeRange(_:)))
             chip.tag = HistoryRange.allCases.firstIndex(of: range) ?? 0
@@ -77,27 +85,24 @@ final class HistoryGraphMenuView: NSView {
             legendRow.addArrangedSubview(chip)
         }
 
-        for view in [title, rangeRow, legendRow, customDaysField, graphContainer] {
+        for view in [rangeRow, legendRow, customDaysField, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
 
         NSLayoutConstraint.activate([
-            title.topAnchor.constraint(equalTo: topAnchor, constant: 14),
-            title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            // Zeitraum-Chips linksbündig oben, Legende direkt darunter —
+            // beide Steuerzeilen teilen sich eine linke Kante.
+            rangeRow.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            rangeRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            rangeRow.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -14),
 
-            // Baseline-Ausrichtung: Text der Chips fluchtet mit "Verlauf",
-            // centerY liess die Grundlinien sichtbar auseinanderlaufen.
-            rangeRow.firstBaselineAnchor.constraint(equalTo: title.firstBaselineAnchor),
-            rangeRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
-            rangeRow.leadingAnchor.constraint(greaterThanOrEqualTo: title.trailingAnchor, constant: 10),
-
-            legendRow.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 14),
+            legendRow.topAnchor.constraint(equalTo: rangeRow.bottomAnchor, constant: 8),
             legendRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
 
-            customDaysField.centerYAnchor.constraint(equalTo: legendRow.centerYAnchor),
+            customDaysField.centerYAnchor.constraint(equalTo: rangeRow.centerYAnchor),
             customDaysField.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
-            customDaysField.leadingAnchor.constraint(greaterThanOrEqualTo: legendRow.trailingAnchor, constant: 10),
+            customDaysField.leadingAnchor.constraint(greaterThanOrEqualTo: rangeRow.trailingAnchor, constant: 10),
             customDaysField.widthAnchor.constraint(equalToConstant: 72),
             customDaysField.heightAnchor.constraint(equalToConstant: 22),
 
@@ -112,7 +117,7 @@ final class HistoryGraphMenuView: NSView {
     }
 
     private func makeChip(action: Selector) -> NSButton {
-        let chip = NSButton(title: "", target: self, action: action)
+        let chip = ChipButton(title: "", target: self, action: action)
         chip.isBordered = false
         chip.wantsLayer = true
         chip.layer?.cornerRadius = 11
@@ -124,7 +129,7 @@ final class HistoryGraphMenuView: NSView {
 
     private func styleRangeChip(_ chip: NSButton, title: String, selected: Bool) {
         chip.attributedTitle = NSAttributedString(
-            string: "  \(title)  ",
+            string: title,
             attributes: [
                 .font: NSFont.systemFont(ofSize: 11, weight: selected ? .bold : .medium),
                 .foregroundColor: selected ? NSColor.labelColor : NSColor.secondaryLabelColor
@@ -149,7 +154,7 @@ final class HistoryGraphMenuView: NSView {
         // Punkt kleiner und minimal angehoben, damit er die Zeile nicht
         // anhebt und optisch auf der Textmitte sitzt.
         let text = NSMutableAttributedString(
-            string: "  ● ",
+            string: "● ",
             attributes: [
                 .font: NSFont.systemFont(ofSize: 9, weight: .bold),
                 .baselineOffset: 0.5,
@@ -157,7 +162,7 @@ final class HistoryGraphMenuView: NSView {
             ]
         )
         text.append(NSAttributedString(
-            string: "\(name)  ",
+            string: name,
             attributes: [
                 .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
                 .foregroundColor: active ? NSColor.labelColor : NSColor.tertiaryLabelColor
