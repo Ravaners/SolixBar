@@ -31,7 +31,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let updateCheckButton = NSButton(checkboxWithTitle: "Automatisch nach Updates suchen", target: nil, action: nil)
-    private let perPVButton = NSButton(checkboxWithTitle: "Einzelne PV-Eingänge anzeigen", target: nil, action: nil)
+    private let perPVButton = NSButton(checkboxWithTitle: "PV-Eingänge einzeln statt Summe", target: nil, action: nil)
+    private let menuBarPerPVButton = NSButton(checkboxWithTitle: "PV-Eingänge einzeln statt Summe", target: nil, action: nil)
+    private let detachedPerPVButton = NSButton(checkboxWithTitle: "PV-Eingänge einzeln statt Summe", target: nil, action: nil)
     private let warnBatteryButton = NSButton(checkboxWithTitle: "Bei niedrigem Akkustand warnen", target: nil, action: nil)
     private let warnBatteryThresholdField = NSTextField()
     private let warnPVStallButton = NSButton(checkboxWithTitle: "Bei PV-Einbruch warnen", target: nil, action: nil)
@@ -195,7 +197,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, perPVButton, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, perPVButton, menuBarPerPVButton, detachedPerPVButton, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -338,10 +340,20 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         )
         warnPVWindowStartField.toolTip = LocalizedText.text("Beginn des Zeitfensters (Stunde, 0–23).", "Window start (hour, 0–23).")
         warnPVWindowEndField.toolTip = LocalizedText.text("Ende des Zeitfensters (Stunde, 1–24).", "Window end (hour, 1–24).")
-        perPVButton.title = LocalizedText.text("Einzelne PV-Eingänge anzeigen", "Show individual PV inputs")
+        perPVButton.title = LocalizedText.text("PV-Eingänge einzeln statt Summe", "Individual PV inputs instead of total")
         perPVButton.toolTip = LocalizedText.text(
-            "Zeigt im Dashboard die Leistung jedes PV-Eingangs einzeln (z. B. \"438 W · 204 W\"). Erscheint nur bei Solarbanks, die ihre MPPT-Kanäle einzeln melden; sonst bleibt es beim Gesamtwert.",
-            "Shows each PV input's power separately in the dashboard (e.g. \"438 W · 204 W\"). Only appears for Solarbanks that report their MPPT channels individually; otherwise the total is shown."
+            "Die PV-Kachel im Dashboard zeigt die Leistung jedes Eingangs einzeln (z. B. \"438 · 204 W\") statt der Summe. Braucht eine Solarbank, die ihre MPPT-Kanäle einzeln meldet; sonst bleibt es beim Gesamtwert.",
+            "The dashboard's PV tile shows each input's power separately (e.g. \"438 · 204 W\") instead of the total. Requires a Solarbank that reports its MPPT channels individually; otherwise the total is shown."
+        )
+        menuBarPerPVButton.title = perPVButton.title
+        detachedPerPVButton.title = perPVButton.title
+        menuBarPerPVButton.toolTip = LocalizedText.text(
+            "Der PV-Wert in der Menüleiste zeigt die Eingänge einzeln (\"438·204W\") statt der Summe — gilt für einzeilige und Kompaktansicht. Braucht Kanal-Reporting (Solarbank 2/3).",
+            "The PV value in the menu bar shows the inputs individually (\"438·204W\") instead of the total — applies to single-line and compact views. Requires channel reporting (Solarbank 2/3)."
+        )
+        detachedPerPVButton.toolTip = LocalizedText.text(
+            "Der PV-Wert der abgedockten Leiste zeigt die Eingänge einzeln (\"438·204W\") statt der Summe — gilt für einzeilige und Kompaktansicht. Braucht Kanal-Reporting (Solarbank 2/3).",
+            "The detached bar's PV value shows the inputs individually (\"438·204W\") instead of the total — applies to single-line and compact views. Requires channel reporting (Solarbank 2/3)."
         )
         updateCheckButton.toolTip = LocalizedText.text(
             "Fragt einmal täglich die GitHub-Releases ab. Bei einer neueren Version erscheint eine Mitteilung und ein Eintrag im Menü — installiert wird nichts automatisch.",
@@ -398,6 +410,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let showMetricSymbolsRow = settingRow(showMetricSymbolsButton, help: showMetricSymbolsButton.toolTip ?? "")
         let showFlowColorsRow = settingRow(showFlowColorsButton, help: showFlowColorsButton.toolTip ?? "")
         let showEnergyFlowArrowsRow = settingRow(showEnergyFlowArrowsButton, help: showEnergyFlowArrowsButton.toolTip ?? "")
+        let menuBarPerPVRow = settingRow(menuBarPerPVButton, help: menuBarPerPVButton.toolTip ?? "")
         let scaleRow = NSStackView(views: [label(LocalizedText.text("Skalierung", "Scale")), scaleSlider, scaleValue, helpButton(labelTooltip("Skalierung"))])
         scaleRow.orientation = .horizontal
         scaleRow.spacing = 12
@@ -405,7 +418,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleValue.alignment = .right
         scaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [previewTitle, menuBarPreview, metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showFlowColorsRow, showEnergyFlowArrowsRow, scaleRow] {
+        for view in [previewTitle, menuBarPreview, metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showFlowColorsRow, showEnergyFlowArrowsRow, menuBarPerPVRow, scaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -446,12 +459,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showEnergyFlowArrowsRow.topAnchor.constraint(equalTo: showFlowColorsRow.bottomAnchor, constant: 8),
             showEnergyFlowArrowsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
+            menuBarPerPVRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 8),
+            menuBarPerPVRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
+
             scaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
         // Skalierung unter der jeweils tieferen Spalte.
         let scaleBelowList = scaleRow.topAnchor.constraint(greaterThanOrEqualTo: metricGrid.bottomAnchor, constant: 16)
-        let scaleBelowRows = scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 16)
+        let scaleBelowRows = scaleRow.topAnchor.constraint(equalTo: menuBarPerPVRow.bottomAnchor, constant: 16)
         scaleBelowRows.priority = .defaultHigh
         NSLayoutConstraint.activate([scaleBelowList, scaleBelowRows])
 
@@ -471,6 +487,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let symbolsRow = settingRow(detachedSymbolsButton, help: detachedSymbolsButton.toolTip ?? "")
         let colorsRow = settingRow(detachedFlowColorsButton, help: detachedFlowColorsButton.toolTip ?? "")
         let arrowsRow = settingRow(detachedArrowsButton, help: detachedArrowsButton.toolTip ?? "")
+        let detachedPerPVRow = settingRow(detachedPerPVButton, help: detachedPerPVButton.toolTip ?? "")
         let lockRow = settingRow(lockDetachedMenuBarButton, help: lockDetachedMenuBarButton.toolTip ?? "")
         let levelRow = NSStackView(views: [
             label(LocalizedText.text("Fensterebene", "Window level")),
@@ -492,7 +509,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [metricTitle, metricGrid, displayTitle, stackedDetachedRow, iconRow, labelsRow, symbolsRow, colorsRow, arrowsRow, lockRow, levelRow, detachedScaleRow, hint] {
+        for view in [metricTitle, metricGrid, displayTitle, stackedDetachedRow, iconRow, labelsRow, symbolsRow, colorsRow, arrowsRow, detachedPerPVRow, lockRow, levelRow, detachedScaleRow, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -526,7 +543,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             arrowsRow.topAnchor.constraint(equalTo: colorsRow.bottomAnchor, constant: 8),
             arrowsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
-            lockRow.topAnchor.constraint(equalTo: arrowsRow.bottomAnchor, constant: 8),
+            detachedPerPVRow.topAnchor.constraint(equalTo: arrowsRow.bottomAnchor, constant: 8),
+            detachedPerPVRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
+
+            lockRow.topAnchor.constraint(equalTo: detachedPerPVRow.bottomAnchor, constant: 8),
             lockRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             levelRow.topAnchor.constraint(equalTo: lockRow.bottomAnchor, constant: 12),
@@ -1122,6 +1142,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         displayActiveMetricList(detached: true)
         updateCheckButton.state = settings.updateCheckEnabled ? .on : .off
         perPVButton.state = settings.showPerPVValues ? .on : .off
+        menuBarPerPVButton.state = settings.menuBarPerPVWatts ? .on : .off
+        detachedPerPVButton.state = settings.detachedPerPVWatts ? .on : .off
         warnBatteryButton.state = settings.warnBatteryLowEnabled ? .on : .off
         warnBatteryThresholdField.stringValue = String(settings.warnBatteryLowThreshold)
         warnPVStallButton.state = settings.warnPVStallEnabled ? .on : .off
@@ -1194,6 +1216,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.graphWindowLevel = levelModes[max(0, min(levelModes.count - 1, graphLevelPopup.indexOfSelectedItem))]
         settings.updateCheckEnabled = updateCheckButton.state == .on
         settings.showPerPVValues = perPVButton.state == .on
+        settings.menuBarPerPVWatts = menuBarPerPVButton.state == .on
+        settings.detachedPerPVWatts = detachedPerPVButton.state == .on
         settings.warnBatteryLowEnabled = warnBatteryButton.state == .on
         if let threshold = Int(warnBatteryThresholdField.stringValue) {
             settings.warnBatteryLowThreshold = threshold
@@ -1299,7 +1323,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showLabels: settings.showMetricLabels,
             showSymbols: settings.showMenuBarMetricSymbols,
             showArrows: settings.showEnergyFlowArrows,
-            showColors: settings.showFlowColors
+            showColors: settings.showFlowColors,
+            perPVWatts: settings.menuBarPerPVWatts
         )
         let stripWidth: CGFloat = 560
         let stripHeight: CGFloat = 28

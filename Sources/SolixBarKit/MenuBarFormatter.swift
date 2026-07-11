@@ -192,7 +192,7 @@ final class MenuBarFormatter {
         case .battery:
             formatBarMetric(metric, value: snapshot.batteryPercent.map { "\($0)%" } ?? "--%", options: options)
         case .solar:
-            formatBarMetric(metric, value: snapshot.solarWatts.map { "\($0)W" } ?? "--W", options: options)
+            formatBarMetric(metric, value: solarValueText(for: snapshot, options: options) ?? "--W", options: options)
         case .home:
             formatBarMetric(metric, value: snapshot.homeWatts.map { "\($0)W" } ?? "--W", options: options)
         case .grid:
@@ -212,6 +212,15 @@ final class MenuBarFormatter {
         options.showLabels ? "\(metric.localizedShortTitle) \(value)" : value
     }
 
+    /// PV-Wert: Summe ("642W") oder Einzelwerte je Eingang ("438·204W"),
+    /// wenn die Option aktiv ist und der Snapshot Kanäle meldet.
+    private func solarValueText(for snapshot: SolixSnapshot, options: MenuBarDisplayOptions) -> String? {
+        if options.perPVWatts, let channels = snapshot.pvWatts, channels.count > 1 {
+            return channels.map(String.init).joined(separator: "·") + "W"
+        }
+        return snapshot.solarWatts.map { "\($0)W" }
+    }
+
     /// Kompaktwert für die zweizeilige Anzeige: nur Zahl + Einheit, die
     /// Metrik-Identität trägt das Glyph. Mit Pfeil-Option zeigt der Wert
     /// zusätzlich seine Flussrichtung — dieselbe Semantik wie einzeilig
@@ -221,8 +230,8 @@ final class MenuBarFormatter {
         case .battery:
             return snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
         case .solar:
-            guard let watts = snapshot.solarWatts else { return "--W" }
-            return options.showArrows && watts > 0 ? "↓\(watts)W" : "\(watts)W"
+            guard let value = solarValueText(for: snapshot, options: options) else { return "--W" }
+            return options.showArrows && (snapshot.solarWatts ?? 0) > 0 ? "↓\(value)" : value
         case .home:
             return snapshot.homeWatts.map { "\($0)W" } ?? "--W"
         case .grid:

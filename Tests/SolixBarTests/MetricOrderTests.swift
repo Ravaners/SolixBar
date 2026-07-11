@@ -41,6 +41,51 @@ struct MetricOrderTests {
         #expect(settings.barMetrics == [.solar, .battery])
     }
 
+    @Test("per-PV option shows channel watts instead of the sum")
+    func perPVWatts() {
+        let formatter = MenuBarFormatter()
+        var options = MenuBarDisplayOptions(
+            metrics: [.solar],
+            showLabels: false,
+            showSymbols: false,
+            showArrows: false,
+            showColors: false
+        )
+        var snapshot = SolixSnapshot.demo
+        snapshot.pvWatts = [438, 204]
+
+        options.perPVWatts = true
+        #expect(formatter.plainTitle(for: snapshot, options: options) == "438·204W")
+        // Kompaktansicht nutzt dieselben Einzelwerte, mit Pfeil wenn aktiv.
+        options.showArrows = true
+        let stacked = formatter.stackedEntries(for: snapshot, options: options)
+        #expect(stacked.first?.text == "↓438·204W")
+
+        // Ohne Kanalwerte (Solarbank 1) fällt die Anzeige auf die Summe zurück.
+        snapshot.pvWatts = nil
+        options.showArrows = false
+        #expect(formatter.plainTitle(for: snapshot, options: options) == "\(snapshot.solarWatts ?? 0)W")
+
+        // Option aus: Summe wie bisher.
+        options.perPVWatts = false
+        snapshot.pvWatts = [438, 204]
+        #expect(formatter.plainTitle(for: snapshot, options: options) == "\(snapshot.solarWatts ?? 0)W")
+    }
+
+    @Test("per-PV settings survive the snapshot/apply round-trip and follow chain")
+    func perPVSettingsRoundTrip() {
+        let settings = AppSettings.shared
+        let original = settings.snapshot()
+        defer { settings.apply(original) }
+
+        var modified = original
+        modified.menuBarPerPVWatts = true
+        modified.detachedPerPVWatts = true
+        modified.showPerPVValues = true
+        settings.apply(modified)
+        #expect(settings.snapshot() == modified)
+    }
+
     @Test("stacked entries respect a custom order")
     func stackedEntriesOrder() {
         let formatter = MenuBarFormatter()

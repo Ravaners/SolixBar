@@ -372,7 +372,8 @@ final class StatusController: NSObject {
             showLabels: settings.showMetricLabels,
             showSymbols: settings.showMenuBarMetricSymbols,
             showArrows: settings.showEnergyFlowArrows,
-            showColors: settings.showFlowColors
+            showColors: settings.showFlowColors,
+            perPVWatts: settings.menuBarPerPVWatts
         )
     }
 
@@ -382,7 +383,8 @@ final class StatusController: NSObject {
             showLabels: settings.detachedShowLabels,
             showSymbols: settings.detachedShowSymbols,
             showArrows: settings.detachedShowArrows,
-            showColors: settings.detachedShowFlowColors
+            showColors: settings.detachedShowFlowColors,
+            perPVWatts: settings.detachedPerPVWatts
         )
     }
 
@@ -569,7 +571,7 @@ final class StatusController: NSObject {
 
     private func dashboardItem(_ snapshot: SolixSnapshot) -> NSMenuItem {
         let item = NSMenuItem()
-        item.view = SolixMenuDashboardView(
+        let view = SolixMenuDashboardView(
             snapshot: snapshot,
             previous: previousSnapshot,
             graphProvider: { [weak self] in self?.graphSamples() ?? [] },
@@ -580,6 +582,13 @@ final class StatusController: NSObject {
                 self?.openLargeGraph()
             }
         )
+        // Erzwungene Appearance schon beim Bau mitgeben: sonst baut sich die
+        // View beim ersten Einblenden im Menüfenster komplett neu auf
+        // (Appearance-Wechsel), was das Layout gelegentlich kollabieren ließ.
+        if settings.appearanceMode != .system {
+            view.appearance = NSApp.appearance
+        }
+        item.view = view
         return item
     }
 
@@ -927,6 +936,7 @@ final class StatusController: NSObject {
         let signature = [
             settings.barMetrics.map(\.rawValue).joined(separator: ","),
             settings.effectiveStackedBarMetrics.map(\.rawValue).joined(separator: ","),
+            String(settings.menuBarPerPVWatts),
             String(settings.showMetricLabels),
             String(settings.showMenuBarMetricSymbols),
             String(settings.showEnergyFlowArrows),

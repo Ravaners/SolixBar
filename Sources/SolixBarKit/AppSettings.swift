@@ -218,6 +218,8 @@ struct AppSettingsSnapshot: Equatable {
     var graphWindowLevel: WindowLevelMode
     var updateCheckEnabled: Bool
     var showPerPVValues: Bool
+    var menuBarPerPVWatts: Bool
+    var detachedPerPVWatts: Bool
     var warnBatteryLowEnabled: Bool
     var warnBatteryLowThreshold: Int
     var warnPVStallEnabled: Bool
@@ -546,11 +548,23 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "updateCheckEnabled") }
     }
 
-    /// PV-Leistung je Eingang im Dashboard (nur bei Modellen mit
-    /// Kanal-Reporting); aus = nur der Gesamtwert.
+    /// PV-Wert im Dashboard als Einzelwerte je Eingang statt Summe
+    /// (nur bei Modellen mit Kanal-Reporting).
     var showPerPVValues: Bool {
-        get { followBool("showPerPVValues", fallback: true) }
+        get { followBool("showPerPVValues", fallback: false) }
         set { defaults.set(newValue, forKey: "showPerPVValues") }
+    }
+
+    /// PV-Wert in der Menüleiste als Einzelwerte je Eingang statt Summe.
+    var menuBarPerPVWatts: Bool {
+        get { followBool("menuBarPerPVWatts", fallback: false) }
+        set { defaults.set(newValue, forKey: "menuBarPerPVWatts") }
+    }
+
+    /// Abgedockte Leiste; folgt der Menüleisten-Option, bis explizit gesetzt.
+    var detachedPerPVWatts: Bool {
+        get { followBool("detachedPerPVWatts", fallback: menuBarPerPVWatts) }
+        set { defaults.set(newValue, forKey: "detachedPerPVWatts") }
     }
 
     // MARK: Warnungen (alle opt-in — ein Update darf nicht unaufgefordert
@@ -677,6 +691,8 @@ final class AppSettings {
             graphWindowLevel: graphWindowLevel,
             updateCheckEnabled: updateCheckEnabled,
             showPerPVValues: showPerPVValues,
+            menuBarPerPVWatts: menuBarPerPVWatts,
+            detachedPerPVWatts: detachedPerPVWatts,
             warnBatteryLowEnabled: warnBatteryLowEnabled,
             warnBatteryLowThreshold: warnBatteryLowThreshold,
             warnPVStallEnabled: warnPVStallEnabled,
@@ -727,6 +743,8 @@ final class AppSettings {
         graphWindowLevel = snapshot.graphWindowLevel
         updateCheckEnabled = snapshot.updateCheckEnabled
         showPerPVValues = snapshot.showPerPVValues
+        menuBarPerPVWatts = snapshot.menuBarPerPVWatts
+        detachedPerPVWatts = snapshot.detachedPerPVWatts
         warnBatteryLowEnabled = snapshot.warnBatteryLowEnabled
         warnBatteryLowThreshold = snapshot.warnBatteryLowThreshold
         warnPVStallEnabled = snapshot.warnPVStallEnabled

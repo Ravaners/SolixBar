@@ -102,10 +102,19 @@ final class SolixMenuDashboardView: NSView {
             batteryColor,
             plateColor: Theme.vivid(Theme.battery(percent: snapshot.batteryPercent))
         )
+        // PV-Wert wahlweise als Einzelwerte je Eingang ("438 · 204 W") statt
+        // Summe; der Trend-Pfeil bezieht sich weiterhin auf die Summe.
+        let solarValue: String?
+        if AppSettings.shared.showPerPVValues,
+           let pvWatts = snapshot.pvWatts, pvWatts.count > 1 {
+            solarValue = pvWatts.map(String.init).joined(separator: " · ") + " W"
+        } else {
+            solarValue = snapshot.solarWatts.map { "\($0) W" }
+        }
         let solar = primaryMetricPanel(
             "Solar",
             withTrend(
-                snapshot.solarWatts.map { "\($0) W" },
+                solarValue,
                 arrow: trendArrow(current: snapshot.solarWatts, previous: previous?.solarWatts, threshold: 5)
             ),
             "sun.max.fill",
@@ -118,19 +127,7 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.spacing = 12
         primaryRow.distribution = .fillEqually
 
-        var detailRows: [NSView] = []
-        // Leistung je PV-Eingang (nur bei Modellen mit Kanal-Reporting und
-        // eingeschalteter Option): "438 W · 204 W" in Eingangs-Reihenfolge.
-        if AppSettings.shared.showPerPVValues,
-           let pvWatts = snapshot.pvWatts, !pvWatts.isEmpty {
-            detailRows.append(compactMetricRow(
-                LocalizedText.text("PV-Eingänge", "PV Inputs"),
-                pvWatts.map { "\($0) W" }.joined(separator: " · "),
-                "sun.max",
-                Theme.vivid(.solar)
-            ))
-        }
-        detailRows += [
+        var detailRows = [
             compactMetricRow(
                 LocalizedText.text("Hauslast", "Home Load"),
                 withTrend(snapshot.homeWatts.map { "\($0) W" }, arrow: trendArrow(current: snapshot.homeWatts, previous: previous?.homeWatts, threshold: 5)),
@@ -217,6 +214,16 @@ final class SolixMenuDashboardView: NSView {
             }
             subviews.forEach { $0.removeFromSuperview() }
             buildView()
+        }
+        // Der Appearance-Neuaufbau passiert typischerweise beim ERSTEN
+        // Einblenden im Menüfenster. Ohne erzwungenen Layout-Pass und
+        // Höhen-Abgleich blieb der frisch gebaute Inhalt gelegentlich
+        // kollabiert (unterster Abschnitt — der Graph — unsichtbar), bis das
+        // Menü ein zweites Mal geöffnet wurde.
+        layoutSubtreeIfNeeded()
+        let fitted = fittingSize.height
+        if fitted > 200, abs(fitted - frame.height) > 1 {
+            setFrameSize(NSSize(width: frame.width, height: fitted))
         }
         needsDisplay = true
     }
