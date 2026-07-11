@@ -279,7 +279,8 @@ final class StatusController: NSObject {
                     sourceKey: settings.dataSourceMode.rawValue,
                     refreshInterval: settings.refreshInterval
                 )
-                AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
+                let pvInfo = snapshot.pvWatts.map { ", pv=[\($0.map(String.init).joined(separator: ","))]W" } ?? ""
+                AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W\(pvInfo).")
                 evaluateWarnings(for: snapshot)
             } catch {
                 // Letzten gültigen Snapshot behalten: ein transienter Fehler
