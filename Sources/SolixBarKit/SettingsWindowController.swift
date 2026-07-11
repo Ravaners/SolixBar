@@ -41,6 +41,25 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let warnPVWindowStartField = NSTextField()
     private let warnPVWindowEndField = NSTextField()
     private let warnPerPVButton = NSButton(checkboxWithTitle: "Einzelne PV-Eingänge überwachen", target: nil, action: nil)
+
+    // Vier unabhängige Metrik-Listen (Leiste × Ansicht). Die Kompakt-Listen
+    // folgen der einzeiligen Liste, bis der Nutzer sie entkoppelt.
+    private enum MetricListKind: CaseIterable {
+        case dockedNormal, dockedStacked, detachedNormal, detachedStacked
+    }
+    private struct MetricListState {
+        var order: [BarMetric]
+        var selected: Set<BarMetric>
+    }
+    private var metricListStates: [MetricListKind: MetricListState] = [:]
+    private var dockedStackedFollows = true
+    private var detachedStackedFollows = true
+    private let menuMetricSegment = NSSegmentedControl()
+    private let menuMetricList = MetricOrderListView()
+    private let menuFollowButton = NSButton(checkboxWithTitle: "Folgt der einzeiligen Liste", target: nil, action: nil)
+    private let detachedMetricSegment = NSSegmentedControl()
+    private let detachedMetricList = MetricOrderListView()
+    private let detachedFollowButton = NSButton(checkboxWithTitle: "Folgt der einzeiligen Liste", target: nil, action: nil)
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
     private let stackedButton = NSButton(checkboxWithTitle: "Zweizeilige Kompaktanzeige", target: nil, action: nil)
     private let stackedDetachedButton = NSButton(checkboxWithTitle: "Abgedockte Leiste: Kompaktanzeige", target: nil, action: nil)
@@ -63,8 +82,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let detachedLevelPopup = NSPopUpButton()
     private let dashboardLevelPopup = NSPopUpButton()
     private let graphLevelPopup = NSPopUpButton()
-    private var metricButtons: [BarMetric: NSButton] = [:]
-    private var detachedMetricButtons: [BarMetric: NSButton] = [:]
     private var originalSettings: AppSettingsSnapshot?
     private var originalAutostart = false
     private var isSaving = false
@@ -330,6 +347,20 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             "Fragt einmal täglich die GitHub-Releases ab. Bei einer neueren Version erscheint eine Mitteilung und ein Eintrag im Menü — installiert wird nichts automatisch.",
             "Checks the GitHub releases once a day. A newer version shows a notification and a menu entry — nothing is installed automatically."
         )
+        menuFollowButton.title = LocalizedText.text("Folgt der einzeiligen Liste", "Follows the single-line list")
+        detachedFollowButton.title = menuFollowButton.title
+        for follow in [menuFollowButton, detachedFollowButton] {
+            follow.toolTip = LocalizedText.text(
+                "Angehakt übernimmt die Kompaktansicht Auswahl und Reihenfolge der einzeiligen Ansicht. Abwählen macht sie unabhängig (eigene Häkchen, eigene Reihenfolge).",
+                "When checked, the compact view mirrors the single-line selection and order. Uncheck to make it independent (own checkboxes, own order)."
+            )
+        }
+        for segment in [menuMetricSegment, detachedMetricSegment] where segment.segmentCount == 2 {
+            segment.setLabel(LocalizedText.text("Einzeilig", "Single line"), forSegment: 0)
+            segment.setLabel(LocalizedText.text("Kompakt", "Compact"), forSegment: 1)
+        }
+        menuMetricList.reloadTitles()
+        detachedMetricList.reloadTitles()
         for popup in [detachedLevelPopup, dashboardLevelPopup, graphLevelPopup] {
             let index = popup.indexOfSelectedItem
             popup.removeAllItems()
@@ -359,7 +390,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         menuBarPreview.layer?.masksToBounds = true
 
         let metricTitle = sectionTitle(LocalizedText.text("Angezeigte Werte", "Visible Values"))
-        let metricGrid = buildMetricGrid(for: .menuBar)
+        let metricGrid = buildMetricListSection(detached: false)
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
         let showIconRow = settingRow(showIconButton, help: showIconButton.toolTip ?? "")
         let stackedRow = settingRow(stackedButton, help: stackedButton.toolTip ?? "")
@@ -387,38 +418,42 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             menuBarPreview.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             menuBarPreview.heightAnchor.constraint(equalToConstant: 62),
 
+            // Zwei Spalten: links die (hohe) Werte-Liste, rechts Darstellung.
             metricTitle.topAnchor.constraint(equalTo: menuBarPreview.bottomAnchor, constant: 18),
             metricTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             metricGrid.topAnchor.constraint(equalTo: metricTitle.bottomAnchor, constant: 10),
             metricGrid.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            metricGrid.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
 
-            displayTitle.topAnchor.constraint(equalTo: metricGrid.bottomAnchor, constant: 24),
-            displayTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            displayTitle.topAnchor.constraint(equalTo: metricTitle.topAnchor),
+            displayTitle.leadingAnchor.constraint(equalTo: metricGrid.trailingAnchor, constant: 32),
 
             showIconRow.topAnchor.constraint(equalTo: displayTitle.bottomAnchor, constant: 10),
-            showIconRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            showIconRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             stackedRow.topAnchor.constraint(equalTo: showIconRow.bottomAnchor, constant: 8),
-            stackedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            stackedRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             showLabelsRow.topAnchor.constraint(equalTo: stackedRow.bottomAnchor, constant: 8),
-            showLabelsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            showLabelsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             showMetricSymbolsRow.topAnchor.constraint(equalTo: showLabelsRow.bottomAnchor, constant: 8),
-            showMetricSymbolsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            showMetricSymbolsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             showFlowColorsRow.topAnchor.constraint(equalTo: showMetricSymbolsRow.bottomAnchor, constant: 8),
-            showFlowColorsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            showFlowColorsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             showEnergyFlowArrowsRow.topAnchor.constraint(equalTo: showFlowColorsRow.bottomAnchor, constant: 8),
-            showEnergyFlowArrowsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            showEnergyFlowArrowsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
-            scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 16),
             scaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
+        // Skalierung unter der jeweils tieferen Spalte.
+        let scaleBelowList = scaleRow.topAnchor.constraint(greaterThanOrEqualTo: metricGrid.bottomAnchor, constant: 16)
+        let scaleBelowRows = scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 16)
+        scaleBelowRows.priority = .defaultHigh
+        NSLayoutConstraint.activate([scaleBelowList, scaleBelowRows])
 
         return container
     }
@@ -428,7 +463,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func detachedPane() -> NSView {
         let container = NSView()
         let metricTitle = sectionTitle(LocalizedText.text("Angezeigte Werte", "Visible Values"))
-        let metricGrid = buildMetricGrid(for: .detachedBar)
+        let metricGrid = buildMetricListSection(detached: true)
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
         let stackedDetachedRow = settingRow(stackedDetachedButton, help: stackedDetachedButton.toolTip ?? "")
         let iconRow = settingRow(detachedIconButton, help: detachedIconButton.toolTip ?? "")
@@ -463,41 +498,40 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
 
         NSLayoutConstraint.activate([
+            // Zwei Spalten wie im Menüleisten-Tab.
             metricTitle.topAnchor.constraint(equalTo: container.topAnchor, constant: 22),
             metricTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             metricGrid.topAnchor.constraint(equalTo: metricTitle.bottomAnchor, constant: 10),
             metricGrid.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            metricGrid.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
 
-            displayTitle.topAnchor.constraint(equalTo: metricGrid.bottomAnchor, constant: 24),
-            displayTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            displayTitle.topAnchor.constraint(equalTo: metricTitle.topAnchor),
+            displayTitle.leadingAnchor.constraint(equalTo: metricGrid.trailingAnchor, constant: 32),
 
             stackedDetachedRow.topAnchor.constraint(equalTo: displayTitle.bottomAnchor, constant: 10),
-            stackedDetachedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            stackedDetachedRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             iconRow.topAnchor.constraint(equalTo: stackedDetachedRow.bottomAnchor, constant: 8),
-            iconRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            iconRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             labelsRow.topAnchor.constraint(equalTo: iconRow.bottomAnchor, constant: 8),
-            labelsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            labelsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             symbolsRow.topAnchor.constraint(equalTo: labelsRow.bottomAnchor, constant: 8),
-            symbolsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            symbolsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             colorsRow.topAnchor.constraint(equalTo: symbolsRow.bottomAnchor, constant: 8),
-            colorsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            colorsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             arrowsRow.topAnchor.constraint(equalTo: colorsRow.bottomAnchor, constant: 8),
-            arrowsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            arrowsRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             lockRow.topAnchor.constraint(equalTo: arrowsRow.bottomAnchor, constant: 8),
-            lockRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            lockRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
             levelRow.topAnchor.constraint(equalTo: lockRow.bottomAnchor, constant: 12),
-            levelRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            levelRow.leadingAnchor.constraint(equalTo: displayTitle.leadingAnchor),
 
-            detachedScaleRow.topAnchor.constraint(equalTo: levelRow.bottomAnchor, constant: 12),
             detachedScaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             detachedScaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
 
@@ -505,6 +539,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             hint.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             hint.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
+        // Skalierung unter der jeweils tieferen Spalte.
+        let scaleBelowList = detachedScaleRow.topAnchor.constraint(greaterThanOrEqualTo: metricGrid.bottomAnchor, constant: 16)
+        let scaleBelowRows = detachedScaleRow.topAnchor.constraint(equalTo: levelRow.bottomAnchor, constant: 12)
+        scaleBelowRows.priority = .defaultHigh
+        NSLayoutConstraint.activate([scaleBelowList, scaleBelowRows])
 
         return container
     }
@@ -797,34 +836,113 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
 
-    private enum MetricGridTarget {
-        case menuBar
-        case detachedBar
-    }
+    /// Werte-Auswahl mit Reihenfolge: Segment schaltet zwischen der
+    /// einzeiligen und der Kompakt-Liste um, Häkchen wählen aus, Ziehen
+    /// sortiert. Die Kompakt-Liste folgt der einzeiligen, bis sie über die
+    /// Checkbox entkoppelt wird.
+    private func buildMetricListSection(detached: Bool) -> NSView {
+        let segment = detached ? detachedMetricSegment : menuMetricSegment
+        let list = detached ? detachedMetricList : menuMetricList
+        let follow = detached ? detachedFollowButton : menuFollowButton
 
-    private func buildMetricGrid(for target: MetricGridTarget) -> NSGridView {
-        let rows = [
-            [BarMetric.battery, .solar, .home],
-            [BarMetric.grid, .batteryFlow, .today],
-            [BarMetric.total, .status]
-        ].map { metrics in
-            metrics.map { metric in
-                let button = NSButton(checkboxWithTitle: localizedMetricTitle(metric), target: self, action: #selector(applyPreview))
-                button.toolTip = metricTooltip(metric)
-                switch target {
-                case .menuBar:
-                    metricButtons[metric] = button
-                case .detachedBar:
-                    detachedMetricButtons[metric] = button
-                }
-                return settingRow(button, help: metricTooltip(metric))
-            }
+        segment.segmentCount = 2
+        segment.setLabel(LocalizedText.text("Einzeilig", "Single line"), forSegment: 0)
+        segment.setLabel(LocalizedText.text("Kompakt", "Compact"), forSegment: 1)
+        segment.selectedSegment = 0
+        segment.target = self
+        segment.action = #selector(metricSegmentChanged(_:))
+        segment.toolTip = LocalizedText.text(
+            "Einzeilig und Kompakt (zweizeilig) haben je eine eigene Auswahl und Reihenfolge.",
+            "Single-line and compact (two-line) views each have their own selection and order."
+        )
+
+        follow.target = self
+        follow.action = #selector(metricFollowToggled(_:))
+        follow.isHidden = true
+
+        list.onChange = { [weak self] in
+            guard let self else { return }
+            self.storeActiveMetricList(detached: detached)
+            self.applyPreview()
         }
 
-        let grid = NSGridView(views: rows)
-        grid.rowSpacing = 6
-        grid.columnSpacing = 16
-        return grid
+        let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
+            "Häkchen wählt die Werte aus, Ziehen ändert die Reihenfolge.",
+            "Checkboxes pick the values, dragging changes the order."
+        ))
+        hint.textColor = .secondaryLabelColor
+        hint.font = .systemFont(ofSize: 11)
+
+        let stack = NSStackView(views: [segment, list, follow, hint])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 8
+        return stack
+    }
+
+    private func activeMetricListKind(detached: Bool) -> MetricListKind {
+        let segment = detached ? detachedMetricSegment : menuMetricSegment
+        let stacked = segment.selectedSegment == 1
+        switch (detached, stacked) {
+        case (false, false): return .dockedNormal
+        case (false, true): return .dockedStacked
+        case (true, false): return .detachedNormal
+        case (true, true): return .detachedStacked
+        }
+    }
+
+    /// Übernimmt den sichtbaren Listen-Zustand in die Arbeitskopie — außer im
+    /// "Folgt"-Modus, wo die Liste nur die einzeilige Auswahl spiegelt.
+    private func storeActiveMetricList(detached: Bool) {
+        let kind = activeMetricListKind(detached: detached)
+        let follows = detached ? detachedStackedFollows : dockedStackedFollows
+        if (kind == .dockedStacked || kind == .detachedStacked) && follows { return }
+        let list = detached ? detachedMetricList : menuMetricList
+        metricListStates[kind] = MetricListState(order: list.orderedMetrics, selected: list.selected)
+    }
+
+    /// Zeigt die Arbeitskopie des aktiven Segments an; die Kompakt-Liste im
+    /// "Folgt"-Modus zeigt die einzeilige Liste ausgegraut.
+    private func displayActiveMetricList(detached: Bool) {
+        let kind = activeMetricListKind(detached: detached)
+        let list = detached ? detachedMetricList : menuMetricList
+        let follow = detached ? detachedFollowButton : menuFollowButton
+        let isStacked = kind == .dockedStacked || kind == .detachedStacked
+        let follows = detached ? detachedStackedFollows : dockedStackedFollows
+
+        follow.isHidden = !isStacked
+        follow.state = follows ? .on : .off
+
+        let sourceKind: MetricListKind = if isStacked && follows {
+            detached ? .detachedNormal : .dockedNormal
+        } else {
+            kind
+        }
+        let state = metricListStates[sourceKind]
+            ?? MetricListState(order: BarMetric.allCases, selected: Set(BarMetric.allCases))
+        list.load(order: state.order, selected: state.selected)
+        list.isListEnabled = !(isStacked && follows)
+    }
+
+    @objc private func metricSegmentChanged(_ sender: NSSegmentedControl) {
+        displayActiveMetricList(detached: sender == detachedMetricSegment)
+    }
+
+    @objc private func metricFollowToggled(_ sender: NSButton) {
+        let detached = sender == detachedFollowButton
+        let follows = sender.state == .on
+        if detached {
+            detachedStackedFollows = follows
+        } else {
+            dockedStackedFollows = follows
+        }
+        if !follows {
+            // Entkoppeln: aktuelle einzeilige Liste als Startzustand übernehmen.
+            let normal = metricListStates[detached ? .detachedNormal : .dockedNormal]
+            metricListStates[detached ? .detachedStacked : .dockedStacked] = normal
+        }
+        displayActiveMetricList(detached: detached)
+        applyPreview()
     }
 
     private func sectionTitle(_ text: String) -> NSTextField {
@@ -894,69 +1012,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         popover.contentViewController = controller
         popover.contentSize = container.fittingSize
         popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
-    }
-
-    private func metricTooltip(_ metric: BarMetric) -> String {
-        if settings.appLanguage == .english {
-            switch metric {
-            case .battery:
-                return "Shows the current battery level in percent in the menu bar."
-            case .solar:
-                return "Shows the current solar output in watts in the menu bar."
-            case .home:
-                return "Shows the current real home load in watts in the menu bar."
-            case .grid:
-                return "Shows current grid import or export in watts."
-            case .batteryFlow:
-                return "Shows whether the battery is charging or discharging."
-            case .today:
-                return "Shows today's solar yield in kWh."
-            case .total:
-                return "Shows the total measured solar yield in kWh."
-            case .status:
-                return "Shows the current data-source status."
-            }
-        }
-        switch metric {
-        case .battery:
-            return "Zeigt den aktuellen Akkustand in Prozent in der Menüleiste."
-        case .solar:
-            return "Zeigt die aktuelle Solarleistung in Watt in der Menüleiste."
-        case .home:
-            return "Zeigt die aktuelle echte Hauslast in Watt in der Menüleiste."
-        case .grid:
-            return "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt."
-        case .batteryFlow:
-            return "Zeigt, ob der Akku gerade lädt oder entlädt."
-        case .today:
-            return "Zeigt den heutigen Solarertrag in kWh."
-        case .total:
-            return "Zeigt den gesamten bisher gemessenen Solarertrag in kWh."
-        case .status:
-            return "Zeigt den aktuellen Status der Datenquelle."
-        }
-    }
-
-    private func localizedMetricTitle(_ metric: BarMetric) -> String {
-        guard settings.appLanguage == .english else { return metric.title }
-        switch metric {
-        case .battery:
-            return "Battery"
-        case .solar:
-            return "PV"
-        case .home:
-            return "Home"
-        case .grid:
-            return "Grid Import"
-        case .batteryFlow:
-            return "Battery Flow"
-        case .today:
-            return "Today's Yield"
-        case .total:
-            return "Total Yield"
-        case .status:
-            return "Status"
-        }
     }
 
     private func labelTooltip(_ text: String) -> String {
@@ -1045,14 +1100,26 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         detachedScaleSlider.doubleValue = settings.detachedMenuBarScale
         detachedScaleValue.stringValue = "\(Int(round(detachedScaleSlider.doubleValue * 100))) %"
 
-        let selected = Set(settings.barMetrics)
-        for metric in BarMetric.allCases {
-            metricButtons[metric]?.state = selected.contains(metric) ? .on : .off
-        }
-        let detachedSelected = Set(settings.detachedBarMetrics)
-        for metric in BarMetric.allCases {
-            detachedMetricButtons[metric]?.state = detachedSelected.contains(metric) ? .on : .off
-        }
+        metricListStates[.dockedNormal] = MetricListState(
+            order: settings.barMetrics, selected: Set(settings.barMetrics)
+        )
+        let dockedStacked = settings.stackedBarMetrics
+        dockedStackedFollows = dockedStacked.isEmpty
+        metricListStates[.dockedStacked] = MetricListState(
+            order: settings.effectiveStackedBarMetrics,
+            selected: Set(settings.effectiveStackedBarMetrics)
+        )
+        metricListStates[.detachedNormal] = MetricListState(
+            order: settings.detachedBarMetrics, selected: Set(settings.detachedBarMetrics)
+        )
+        let detachedStacked = settings.detachedStackedBarMetrics
+        detachedStackedFollows = detachedStacked.isEmpty
+        metricListStates[.detachedStacked] = MetricListState(
+            order: settings.effectiveDetachedStackedBarMetrics,
+            selected: Set(settings.effectiveDetachedStackedBarMetrics)
+        )
+        displayActiveMetricList(detached: false)
+        displayActiveMetricList(detached: true)
         updateCheckButton.state = settings.updateCheckEnabled ? .on : .off
         perPVButton.state = settings.showPerPVValues ? .on : .off
         warnBatteryButton.state = settings.warnBatteryLowEnabled ? .on : .off
@@ -1102,8 +1169,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.command = commandField.stringValue
         settings.urlString = urlField.stringValue
         settings.refreshInterval = TimeInterval(max(60, intervalField.integerValue))
-        settings.barMetrics = BarMetric.allCases.filter { metricButtons[$0]?.state == .on }
-        settings.detachedBarMetrics = BarMetric.allCases.filter { detachedMetricButtons[$0]?.state == .on }
+        storeActiveMetricList(detached: false)
+        storeActiveMetricList(detached: true)
+        func orderedResult(_ kind: MetricListKind) -> [BarMetric] {
+            guard let state = metricListStates[kind] else { return [] }
+            return state.order.filter(state.selected.contains)
+        }
+        settings.barMetrics = orderedResult(.dockedNormal)
+        settings.detachedBarMetrics = orderedResult(.detachedNormal)
+        settings.stackedBarMetrics = dockedStackedFollows ? [] : orderedResult(.dockedStacked)
+        settings.detachedStackedBarMetrics = detachedStackedFollows ? [] : orderedResult(.detachedStacked)
         settings.showMenuBarIcon = showIconButton.state == .on
         settings.menuBarStacked = stackedButton.state == .on
         settings.detachedBarStacked = stackedDetachedButton.state == .on
@@ -1220,7 +1295,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func updateMenuBarPreview() {
         let snapshot = SolixSnapshot.demo
         let options = MenuBarDisplayOptions(
-            metrics: settings.barMetrics,
+            metrics: settings.menuBarStacked ? settings.effectiveStackedBarMetrics : settings.barMetrics,
             showLabels: settings.showMetricLabels,
             showSymbols: settings.showMenuBarMetricSymbols,
             showArrows: settings.showEnergyFlowArrows,

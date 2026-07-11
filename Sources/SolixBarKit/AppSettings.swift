@@ -187,6 +187,8 @@ struct AppSettingsSnapshot: Equatable {
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
     var detachedBarMetrics: [BarMetric]
+    var stackedBarMetrics: [BarMetric]
+    var detachedStackedBarMetrics: [BarMetric]
     var detachedShowLabels: Bool
     var detachedShowSymbols: Bool
     var detachedShowArrows: Bool
@@ -284,6 +286,36 @@ final class AppSettings {
         set {
             defaults.set(newValue.map(\.rawValue), forKey: "detachedBarMetrics")
         }
+    }
+
+    /// Werte der Kompaktansicht (Menüleiste); leer = folgt der einzeiligen
+    /// Liste, bis der Nutzer sie in den Einstellungen entkoppelt.
+    var stackedBarMetrics: [BarMetric] {
+        get {
+            guard let values = defaults.array(forKey: "stackedBarMetrics") as? [String] else { return [] }
+            return values.compactMap(BarMetric.init(rawValue:))
+        }
+        set { defaults.set(newValue.map(\.rawValue), forKey: "stackedBarMetrics") }
+    }
+
+    var effectiveStackedBarMetrics: [BarMetric] {
+        let stacked = stackedBarMetrics
+        return stacked.isEmpty ? barMetrics : stacked
+    }
+
+    /// Werte der Kompaktansicht der abgedockten Leiste; leer = folgt deren
+    /// einzeiliger Liste (die ihrerseits der Menüleiste folgen kann).
+    var detachedStackedBarMetrics: [BarMetric] {
+        get {
+            guard let values = defaults.array(forKey: "detachedStackedBarMetrics") as? [String] else { return [] }
+            return values.compactMap(BarMetric.init(rawValue:))
+        }
+        set { defaults.set(newValue.map(\.rawValue), forKey: "detachedStackedBarMetrics") }
+    }
+
+    var effectiveDetachedStackedBarMetrics: [BarMetric] {
+        let stacked = detachedStackedBarMetrics
+        return stacked.isEmpty ? detachedBarMetrics : stacked
     }
 
     private func followBool(_ key: String, fallback: Bool) -> Bool {
@@ -614,6 +646,8 @@ final class AppSettings {
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
             detachedBarMetrics: detachedBarMetrics,
+            stackedBarMetrics: stackedBarMetrics,
+            detachedStackedBarMetrics: detachedStackedBarMetrics,
             detachedShowLabels: detachedShowLabels,
             detachedShowSymbols: detachedShowSymbols,
             detachedShowArrows: detachedShowArrows,
@@ -662,6 +696,8 @@ final class AppSettings {
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
         detachedBarMetrics = snapshot.detachedBarMetrics
+        stackedBarMetrics = snapshot.stackedBarMetrics
+        detachedStackedBarMetrics = snapshot.detachedStackedBarMetrics
         detachedShowLabels = snapshot.detachedShowLabels
         detachedShowSymbols = snapshot.detachedShowSymbols
         detachedShowArrows = snapshot.detachedShowArrows

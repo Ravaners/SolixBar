@@ -172,7 +172,7 @@ struct RenderTests {
         window.setContentSize(NSSize(width: 720, height: 660))
         RunLoop.main.run(until: Date().addingTimeInterval(0.5))
         let tabs = try #require(findTabView(content))
-        let names = ["menubar", "detachedbar", "datasource", "app"]
+        let names = ["menubar", "detachedbar", "datasource", "warnings", "app"]
         for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             window.appearance = NSAppearance(named: appearance)
             for (index, name) in names.enumerated() where index < tabs.numberOfTabViewItems {

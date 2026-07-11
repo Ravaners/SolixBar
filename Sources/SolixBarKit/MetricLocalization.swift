@@ -32,6 +32,35 @@ extension BarMetric {
         case .status: "Status"
         }
     }
+
+    var localizedTooltip: String {
+        switch self {
+        case .battery: LocalizedText.text(
+            "Zeigt den aktuellen Akkustand in Prozent.",
+            "Shows the current battery level in percent.")
+        case .solar: LocalizedText.text(
+            "Zeigt die aktuelle Solarleistung in Watt.",
+            "Shows the current solar output in watts.")
+        case .home: LocalizedText.text(
+            "Zeigt die aktuelle echte Hauslast in Watt.",
+            "Shows the current real home load in watts.")
+        case .grid: LocalizedText.text(
+            "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt.",
+            "Shows current grid import or export in watts.")
+        case .batteryFlow: LocalizedText.text(
+            "Zeigt, ob der Akku gerade lädt oder entlädt.",
+            "Shows whether the battery is charging or discharging.")
+        case .today: LocalizedText.text(
+            "Zeigt den heutigen Solarertrag in kWh.",
+            "Shows today's solar yield in kWh.")
+        case .total: LocalizedText.text(
+            "Zeigt den gesamten bisher gemessenen Solarertrag in kWh.",
+            "Shows the total measured solar yield in kWh.")
+        case .status: LocalizedText.text(
+            "Zeigt den aktuellen Status der Datenquelle.",
+            "Shows the current data-source status.")
+        }
+    }
 }
 
 @MainActor

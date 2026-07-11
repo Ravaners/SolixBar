@@ -386,11 +386,25 @@ final class StatusController: NSObject {
         )
     }
 
+    /// Kompaktansichten haben eigene Werte-Listen (Auswahl + Reihenfolge);
+    /// nur die Metriken unterscheiden sich von den einzeiligen Optionen.
+    private var stackedSettingsDisplayOptions: MenuBarDisplayOptions {
+        var options = settingsDisplayOptions
+        options.metrics = settings.effectiveStackedBarMetrics
+        return options
+    }
+
+    private var stackedDetachedDisplayOptions: MenuBarDisplayOptions {
+        var options = detachedDisplayOptions
+        options.metrics = settings.effectiveDetachedStackedBarMetrics
+        return options
+    }
+
     private func applyTitle(for snapshot: SolixSnapshot, level: MenuBarDisplayLevel) {
         let options = settingsDisplayOptions.applying(level)
 
         if settings.menuBarStacked {
-            let entries = formatter.stackedEntries(for: snapshot, options: options)
+            let entries = formatter.stackedEntries(for: snapshot, options: stackedSettingsDisplayOptions.applying(level))
             if entries.count >= 2,
                let image = StackedMenuBarRenderer.image(
                    entries: entries,
@@ -856,7 +870,7 @@ final class StatusController: NSObject {
                 stackedImageProvider: { [weak self] in
                     guard let self, self.settings.detachedBarStacked,
                           let snapshot = self.currentSnapshot() else { return nil }
-                    let entries = self.formatter.stackedEntries(for: snapshot, options: self.detachedDisplayOptions)
+                    let entries = self.formatter.stackedEntries(for: snapshot, options: self.stackedDetachedDisplayOptions)
                     guard entries.count >= 2 else { return nil }
                     return StackedMenuBarRenderer.image(
                         entries: entries,
@@ -912,6 +926,7 @@ final class StatusController: NSObject {
         // versteckt es hinter der Notch, und die Anzeige verschwindet.
         let signature = [
             settings.barMetrics.map(\.rawValue).joined(separator: ","),
+            settings.effectiveStackedBarMetrics.map(\.rawValue).joined(separator: ","),
             String(settings.showMetricLabels),
             String(settings.showMenuBarMetricSymbols),
             String(settings.showEnergyFlowArrows),
