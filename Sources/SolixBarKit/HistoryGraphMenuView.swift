@@ -39,6 +39,7 @@ final class HistoryGraphMenuView: NSView {
         let rangeRow = NSStackView()
         rangeRow.orientation = .horizontal
         rangeRow.spacing = 4
+        rangeRow.alignment = .firstBaseline
         for range in HistoryRange.allCases {
             let chip = makeChip(action: #selector(changeRange(_:)))
             chip.tag = HistoryRange.allCases.firstIndex(of: range) ?? 0
@@ -85,7 +86,9 @@ final class HistoryGraphMenuView: NSView {
             title.topAnchor.constraint(equalTo: topAnchor, constant: 14),
             title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
 
-            rangeRow.centerYAnchor.constraint(equalTo: title.centerYAnchor),
+            // Baseline-Ausrichtung: Text der Chips fluchtet mit "Verlauf",
+            // centerY liess die Grundlinien sichtbar auseinanderlaufen.
+            rangeRow.firstBaselineAnchor.constraint(equalTo: title.firstBaselineAnchor),
             rangeRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
             rangeRow.leadingAnchor.constraint(greaterThanOrEqualTo: title.trailingAnchor, constant: 10),
 
@@ -143,10 +146,13 @@ final class HistoryGraphMenuView: NSView {
         case .solar: "Solar"
         case .grid: LocalizedText.text("Netz", "Grid")
         }
+        // Punkt kleiner und minimal angehoben, damit er die Zeile nicht
+        // anhebt und optisch auf der Textmitte sitzt.
         let text = NSMutableAttributedString(
             string: "  ● ",
             attributes: [
-                .font: NSFont.systemFont(ofSize: 11, weight: .bold),
+                .font: NSFont.systemFont(ofSize: 9, weight: .bold),
+                .baselineOffset: 0.5,
                 .foregroundColor: active ? accent : NSColor.tertiaryLabelColor
             ]
         )

@@ -58,7 +58,9 @@ final class HistoryGraphView: NSView {
         drawBackground()
         let isCompact = bounds.height < 220
 
-        let topInset: CGFloat = isCompact ? 58 : 78
+        // Ohne Innen-Header (Dashboard: Chips übernehmen Titel + Legende)
+        // braucht der Plot oben nur minimalen Abstand.
+        let topInset: CGFloat = showsHeader ? (isCompact ? 58 : 78) : 18
         let bottomInset: CGFloat = isCompact ? 42 : 48
         let leftInset: CGFloat = isCompact ? 64 : 70
         let rightInset: CGFloat = isCompact ? 70 : 82
@@ -75,7 +77,7 @@ final class HistoryGraphView: NSView {
         // Header/Legende nach der Plotfläche zeichnen, damit sie bei knapper
         // Höhe niemals unter der Fläche verschwinden.
         drawHeader()
-        if !isCompact {
+        if !isCompact && showsHeader {
             drawLegend()
         }
 

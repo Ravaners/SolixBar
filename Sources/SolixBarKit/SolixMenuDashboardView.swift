@@ -221,20 +221,20 @@ final class SolixMenuDashboardView: NSView {
             panel.addSubview(view)
         }
 
+        // Stat-Tile-Aufbau: Icon vertikal zentriert, Titel und Wert an einer
+        // gemeinsamen linken Kante — eine Ausrichtungsachse statt drei.
         NSLayoutConstraint.activate([
-            iconPlate.topAnchor.constraint(equalTo: panel.topAnchor, constant: 12),
-            iconPlate.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 12),
+            iconPlate.centerYAnchor.constraint(equalTo: panel.centerYAnchor),
+            iconPlate.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 14),
             iconPlate.widthAnchor.constraint(equalToConstant: 36),
             iconPlate.heightAnchor.constraint(equalToConstant: 36),
 
-            titleLabel.topAnchor.constraint(equalTo: panel.topAnchor, constant: 16),
-            titleLabel.leadingAnchor.constraint(equalTo: iconPlate.trailingAnchor, constant: 10),
+            titleLabel.topAnchor.constraint(equalTo: panel.topAnchor, constant: 17),
+            titleLabel.leadingAnchor.constraint(equalTo: iconPlate.trailingAnchor, constant: 12),
             titleLabel.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -12),
 
-            valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            // Wert nutzt die volle Kartenbreite statt die Icon-Einrückung zu
-            // erben — sonst kippt die Karte optisch.
-            valueLabel.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 14),
+            valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+            valueLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             valueLabel.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -12)
         ])
 
