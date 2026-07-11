@@ -101,7 +101,8 @@ struct RenderTests {
             onClose: {}
         )
         let view = try #require(controller.window?.contentView)
-        try render(view, appearance: .darkAqua, name: "detached-bar", settle: 0.6)
+        try render(view, appearance: .darkAqua, name: "detached-bar-dark", settle: 0.6)
+        try render(view, appearance: .aqua, name: "detached-bar-light", settle: 0.6)
     }
 
     @Test("settings tabs render in light and dark")

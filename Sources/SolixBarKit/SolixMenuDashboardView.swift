@@ -17,6 +17,7 @@ final class SolixMenuDashboardView: NSView {
     private let onOpenLarge: () -> Void
     private var updatedLabel: NSTextField?
     private var updatedTimer: Timer?
+    private var isRebuildingForAppearance = false
     private weak var detailsContainer: NSStackView?
 
     init(
@@ -92,13 +93,13 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.distribution = .fillEqually
 
         var detailRows = [
-            compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", Theme.accent(.load)),
+            compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", Theme.vivid(.load)),
             compactMetricRow(LocalizedText.text("Netzbezug", "Grid Import"), signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
             compactMetricRow(LocalizedText.text("Akku-Fluss", "Battery Flow"), signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
-            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", Theme.accent(.yieldToday))
+            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", Theme.vivid(.yieldToday))
         ]
         if let totalKWh = snapshot.totalKWh {
-            detailRows.append(compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), String(format: "%.1f kWh", totalKWh), "sum", Theme.accent(.yieldTotal)))
+            detailRows.append(compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), String(format: "%.1f kWh", totalKWh), "sum", Theme.vivid(.yieldTotal)))
         }
         let details = NSStackView(views: detailRows)
         details.orientation = .vertical
@@ -148,14 +149,22 @@ final class SolixMenuDashboardView: NSView {
         ])
     }
 
+    /// Kompletter Neuaufbau bei Appearance-Wechsel: einzelne Layer-Refreshes
+    /// haben immer wieder eingefrorene cgColor-Reste übersehen (weiße Streifen
+    /// zwischen den Reihen im Dark Mode) — neu bauen erschlägt die ganze
+    /// Fehlerklasse.
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
+        guard !isRebuildingForAppearance else { return }
+        isRebuildingForAppearance = true
+        defer { isRebuildingForAppearance = false }
         effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
             layer?.backgroundColor = backgroundColor.cgColor
             if style == .menu {
                 layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
             }
-            detailsContainer?.layer?.backgroundColor = panelColor.cgColor
+            subviews.forEach { $0.removeFromSuperview() }
+            buildView()
         }
         needsDisplay = true
     }
@@ -422,17 +431,17 @@ final class SolixMenuDashboardView: NSView {
     }
 
     private var solarColor: NSColor {
-        Theme.accent(.solar)
+        Theme.vivid(.solar)
     }
 
     private var gridColor: NSColor {
         guard snapshot.gridWatts != nil else { return .systemGray }
-        return Theme.accent(Theme.grid(watts: snapshot.gridWatts))
+        return Theme.vivid(Theme.grid(watts: snapshot.gridWatts))
     }
 
     private var batteryFlowColor: NSColor {
         guard snapshot.batteryWatts != nil else { return .systemGray }
-        return Theme.accent(Theme.batteryFlow(watts: snapshot.batteryWatts))
+        return Theme.vivid(Theme.batteryFlow(watts: snapshot.batteryWatts))
     }
 
     /// Dynamische Panel-Farbe: löst sich pro Appearance auf, statt den

@@ -30,6 +30,12 @@ final class StatusController: NSObject {
         rebuildMenu()
         refresh()
         logMenuBarDiagnostics()
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(systemAppearanceChanged),
+            name: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil
+        )
         if settings.isDetachedMenuBarActive {
             AppLogger.info("Restoring detached slim bar from previous session.")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
@@ -399,26 +405,34 @@ final class StatusController: NSObject {
     }
 
     private func graphSamples() -> [SolixHistorySample] {
-        let samples = historyStore.samples(
+        // Demo-Modus: immer eine synthetische Kurve über die volle gewählte
+        // Spanne — der Verlauf enthält sonst nur die seit Erstnutzung
+        // aufgezeichneten Minuten und lange Zeiträume blieben leer.
+        if settings.dataSourceMode == .demo {
+            return demoGraphSamples(duration: settings.historyDuration)
+        }
+        return historyStore.samples(
             duration: settings.historyDuration,
             sourceKey: settings.dataSourceMode.rawValue
         )
-        guard samples.count < 3, settings.dataSourceMode == .demo else { return samples }
-        return demoGraphSamples(duration: settings.historyDuration)
     }
 
     private func demoGraphSamples(duration: TimeInterval) -> [SolixHistorySample] {
         let now = Date()
-        let count = 32
+        let days = max(1.0, duration / 86_400)
+        let count = min(240, max(48, Int(days * 24)))
         return (0..<count).map { index in
             let progress = Double(index) / Double(count - 1)
+            // Tageszyklen: Sonne folgt dem Tagesrhythmus über die ganze Spanne.
+            let dayPhase = (progress * days).truncatingRemainder(dividingBy: 1)
+            let sunlight = max(0, sin(dayPhase * .pi))
+            let seasonal = 0.75 + 0.25 * sin(progress * .pi * 2)
             let wave = sin(progress * .pi * 2.4)
-            let sunlight = max(0, sin(progress * .pi))
             return SolixHistorySample(
                 date: now.addingTimeInterval(-duration * (1 - progress)),
-                batteryPercent: 58 + Int(progress * 22) + Int(wave * 6),
-                solarWatts: Int(720 * sunlight),
-                gridWatts: Int(max(0, 220 - (720 * sunlight * 0.45)))
+                batteryPercent: min(100, max(15, 58 + Int(progress * 22) + Int(wave * 12))),
+                solarWatts: Int(720 * sunlight * seasonal),
+                gridWatts: Int(max(0, 220 - (720 * sunlight * seasonal * 0.45)))
             )
         }
     }
@@ -985,6 +999,20 @@ final class StatusController: NSObject {
             blue: start.blueComponent + (end.blueComponent - start.blueComponent) * t,
             alpha: 1
         )
+    }
+
+    /// Systemweiter Hell/Dunkel-Wechsel: Menü-Dashboard und Fenster neu
+    /// aufbauen, damit keine Ansicht mit alten Farben hängen bleibt.
+    @objc private func systemAppearanceChanged() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self else { return }
+            AppLogger.info("System appearance changed: rebuilding views.")
+            self.updateTitle()
+            self.rebuildMenu()
+            self.detachedDashboardWindow?.rebuild()
+            self.detachedMenuBarWindow?.rebuild()
+            self.largeGraphWindow?.rebuild()
+        }
     }
 
     @objc private func refreshMenuAction() {

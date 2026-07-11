@@ -22,8 +22,11 @@ final class HistoryGraphMenuView: NSView {
     private let graphProvider: () -> [SolixHistorySample]
     private let onRangeChange: () -> Void
     private let onOpenLarge: () -> Void
-    private let customDaysField = NSTextField()
-    private let customDaysSuffix = NSTextField(labelWithString: "")
+    private let customRow = NSStackView()
+    private let customValueLabel = NSTextField(labelWithString: "")
+    private var customUnitChips: [String: NSButton] = [:]
+    private var customMinusChip: NSButton?
+    private var customPlusChip: NSButton?
     private let graphContainer = NSView()
     private var rangeChips: [HistoryRange: NSButton] = [:]
     private var legendChips: [GraphMetric: NSButton] = [:]
@@ -64,18 +67,6 @@ final class HistoryGraphMenuView: NSView {
             rangeRow.addArrangedSubview(chip)
         }
 
-        customDaysField.placeholderString = LocalizedText.text("Tage", "days")
-        customDaysField.target = self
-        customDaysField.action = #selector(changeCustomDays)
-        customDaysField.cell = CenteredTextFieldCell(textCell: "")
-        customDaysField.alignment = .center
-        customDaysField.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
-        customDaysField.textColor = .labelColor
-        customDaysField.toolTip = LocalizedText.text(
-            "Anzahl der Tage für den individuellen Zeitraum.",
-            "Number of days for the custom range."
-        )
-
         let legendRow = NSStackView()
         legendRow.orientation = .horizontal
         legendRow.spacing = 6
@@ -90,20 +81,42 @@ final class HistoryGraphMenuView: NSView {
             legendRow.addArrangedSubview(chip)
         }
 
-        customDaysSuffix.stringValue = LocalizedText.text("Tage", "days")
-        customDaysSuffix.font = .systemFont(ofSize: 11, weight: .medium)
-        customDaysSuffix.textColor = .secondaryLabelColor
+        // Eigener Zeitraum: reine Klick-Steuerung (−/＋ und Einheiten-Chips) —
+        // Textfelder bekommen in NSMenu-Dropdowns keinen Tastaturfokus.
+        customRow.orientation = .horizontal
+        customRow.spacing = 4
+        let minus = makeChip(action: #selector(decrementCustom))
+        minus.attributedTitle = Self.stepperTitle("−")
+        customMinusChip = minus
+        customValueLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .bold)
+        customValueLabel.textColor = .labelColor
+        customValueLabel.alignment = .center
+        let plus = makeChip(action: #selector(incrementCustom))
+        plus.attributedTitle = Self.stepperTitle("＋")
+        customPlusChip = plus
+        customRow.addArrangedSubview(minus)
+        customRow.addArrangedSubview(customValueLabel)
+        customRow.addArrangedSubview(plus)
+        let spacerLabel = NSTextField(labelWithString: " ")
+        customRow.addArrangedSubview(spacerLabel)
+        for (key, name) in [("hours", LocalizedText.text("Std.", "hrs")), ("days", LocalizedText.text("Tage", "days")), ("weeks", LocalizedText.text("Wo.", "wks"))] {
+            let chip = makeChip(action: #selector(changeCustomUnit(_:)))
+            chip.identifier = NSUserInterfaceItemIdentifier(key)
+            chip.toolTip = name
+            customUnitChips[key] = chip
+            customRow.addArrangedSubview(chip)
+        }
 
-        for view in [title, rangeRow, legendRow, customDaysField, customDaysSuffix, graphContainer] {
+        for view in [title, rangeRow, legendRow, customRow, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
 
         NSLayoutConstraint.activate([
-            // Titel links, Zeitraum-Chips Baseline-bündig daneben, Legende
-            // darunter an derselben linken Kante.
+            // Titel links auf der optischen Zeilenmitte der Chips (centerY —
+            // Baseline wirkt bei unterschiedlichen Schriftgrößen versetzt).
             title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
-            title.firstBaselineAnchor.constraint(equalTo: rangeRow.firstBaselineAnchor),
+            title.centerYAnchor.constraint(equalTo: rangeRow.centerYAnchor),
 
             rangeRow.topAnchor.constraint(equalTo: topAnchor, constant: 12),
             rangeRow.leadingAnchor.constraint(equalTo: title.trailingAnchor, constant: 14),
@@ -112,13 +125,12 @@ final class HistoryGraphMenuView: NSView {
             legendRow.topAnchor.constraint(equalTo: rangeRow.bottomAnchor, constant: 8),
             legendRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
 
-            customDaysField.centerYAnchor.constraint(equalTo: rangeRow.centerYAnchor),
-            customDaysSuffix.centerYAnchor.constraint(equalTo: rangeRow.centerYAnchor),
-            customDaysSuffix.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
-            customDaysField.trailingAnchor.constraint(equalTo: customDaysSuffix.leadingAnchor, constant: -5),
-            customDaysField.leadingAnchor.constraint(greaterThanOrEqualTo: rangeRow.trailingAnchor, constant: 10),
-            customDaysField.widthAnchor.constraint(equalToConstant: 44),
-            customDaysField.heightAnchor.constraint(equalToConstant: 22),
+            // Eigene Zeile für den individuellen Zeitraum: rechts neben der
+            // Legende, nur bei "Eig." sichtbar.
+            customRow.centerYAnchor.constraint(equalTo: legendRow.centerYAnchor),
+            customRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            customRow.leadingAnchor.constraint(greaterThanOrEqualTo: legendRow.trailingAnchor, constant: 10),
+            customValueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 30),
 
             graphContainer.topAnchor.constraint(equalTo: legendRow.bottomAnchor, constant: 14),
             graphContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
@@ -198,10 +210,19 @@ final class HistoryGraphMenuView: NSView {
             guard let chip = legendChips[metric] else { continue }
             styleLegendChip(chip, metric: metric, active: selectedMetrics.contains(metric))
         }
-        customDaysField.stringValue = String(Int(settings.customHistoryDays))
-        customDaysField.isEnabled = settings.historyRange == .custom
-        customDaysField.isHidden = settings.historyRange != .custom
-        customDaysSuffix.isHidden = settings.historyRange != .custom
+        let isCustom = settings.historyRange == .custom
+        customRow.isHidden = !isCustom
+        if isCustom {
+            customValueLabel.stringValue = String(Self.customValue(days: settings.customHistoryDays, unit: settings.customHistoryUnit))
+            for (key, chip) in customUnitChips {
+                let name = switch key {
+                case "hours": LocalizedText.text("Std.", "hrs")
+                case "weeks": LocalizedText.text("Wo.", "wks")
+                default: LocalizedText.text("Tage", "days")
+                }
+                styleRangeChip(chip, title: name, selected: settings.customHistoryUnit == key)
+            }
+        }
 
         graphContainer.subviews.forEach { $0.removeFromSuperview() }
         let graph = HistoryGraphView(
@@ -261,9 +282,54 @@ final class HistoryGraphMenuView: NSView {
         onRangeChange()
     }
 
-    @objc private func changeCustomDays() {
-        settings.customHistoryDays = Double(max(1, customDaysField.integerValue))
-        AppLogger.info("Dashboard graph custom days changed to \(Int(settings.customHistoryDays)).")
+    private static func stepperTitle(_ symbol: String) -> NSAttributedString {
+        NSAttributedString(
+            string: symbol,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 12, weight: .bold),
+                .foregroundColor: NSColor.labelColor
+            ]
+        )
+    }
+
+    /// Umrechnung Tage <-> Anzeigeeinheit (Speicherformat bleibt Tage).
+    static func customValue(days: Double, unit: String) -> Int {
+        switch unit {
+        case "hours": max(1, Int((days * 24).rounded()))
+        case "weeks": max(1, Int((days / 7).rounded()))
+        default: max(1, Int(days.rounded()))
+        }
+    }
+
+    static func days(fromValue value: Int, unit: String) -> Double {
+        switch unit {
+        case "hours": max(1.0 / 24, Double(value) / 24)
+        case "weeks": Double(value) * 7
+        default: Double(value)
+        }
+    }
+
+    private func stepCustom(_ delta: Int) {
+        let unit = settings.customHistoryUnit
+        let value = max(1, Self.customValue(days: settings.customHistoryDays, unit: unit) + delta)
+        settings.customHistoryDays = min(365, Self.days(fromValue: value, unit: unit))
+        AppLogger.info("Dashboard graph custom range: \(value) \(unit).")
+        reload()
+        onRangeChange()
+    }
+
+    @objc private func incrementCustom() {
+        stepCustom(1)
+    }
+
+    @objc private func decrementCustom() {
+        stepCustom(-1)
+    }
+
+    @objc private func changeCustomUnit(_ sender: NSButton) {
+        guard let key = sender.identifier?.rawValue else { return }
+        settings.customHistoryUnit = key
+        AppLogger.info("Dashboard graph custom unit changed to \(key).")
         reload()
         onRangeChange()
     }

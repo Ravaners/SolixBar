@@ -71,7 +71,7 @@ enum StackedMenuBarRenderer {
                 var x: CGFloat = 1
                 for (index, entry) in row.enumerated() {
                     if index > 0 { x += entryGap }
-                    let color = brightPalette ? Theme.bright(entry.role) : Theme.color(entry.role)
+                    let color = brightPalette ? Theme.hud(entry.role) : Theme.color(entry.role)
                     if let glyph = NSImage(systemSymbolName: entry.symbolName, accessibilityDescription: nil)?
                         .withSymbolConfiguration(.init(pointSize: glyphHeight, weight: .bold)) {
                         let tinted = glyph.tinted(color)
@@ -100,7 +100,7 @@ enum StackedMenuBarRenderer {
             if showWarning {
                 let attributes: [NSAttributedString.Key: Any] = [
                     .font: NSFont.systemFont(ofSize: round(9 * scale), weight: .bold),
-                    .foregroundColor: brightPalette ? Theme.bright(.batteryMedium) : Theme.color(.batteryMedium)
+                    .foregroundColor: brightPalette ? Theme.hud(.batteryMedium) : Theme.color(.batteryMedium)
                 ]
                 ("⚠" as NSString).draw(
                     at: NSPoint(x: width - warningWidth, y: height / 2 - round(6 * scale)),

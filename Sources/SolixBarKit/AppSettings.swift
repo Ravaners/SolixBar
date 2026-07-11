@@ -192,6 +192,7 @@ struct AppSettingsSnapshot {
     var appLanguage: AppLanguage
     var historyRange: HistoryRange
     var customHistoryDays: Double
+    var customHistoryUnit: String
     var graphMetrics: [GraphMetric]
     var graphFitsData: Bool
     var isDetachedMenuBarActive: Bool
@@ -381,6 +382,13 @@ final class AppSettings {
         set { defaults.set(min(365, max(1, newValue)), forKey: "customHistoryDays") }
     }
 
+    /// Anzeigeeinheit des eigenen Zeitraums (hours/days/weeks); gespeichert
+    /// wird immer in Tagen (customHistoryDays).
+    var customHistoryUnit: String {
+        get { defaults.string(forKey: "customHistoryUnit") ?? "days" }
+        set { defaults.set(newValue, forKey: "customHistoryUnit") }
+    }
+
     var historyDuration: TimeInterval {
         historyRange.duration(customDays: customHistoryDays)
     }
@@ -444,6 +452,7 @@ final class AppSettings {
             appLanguage: appLanguage,
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
+            customHistoryUnit: customHistoryUnit,
             graphMetrics: graphMetrics,
             graphFitsData: graphFitsData,
             isDetachedMenuBarActive: isDetachedMenuBarActive,
@@ -475,6 +484,7 @@ final class AppSettings {
         appLanguage = snapshot.appLanguage
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
+        customHistoryUnit = snapshot.customHistoryUnit
         graphMetrics = snapshot.graphMetrics
         graphFitsData = snapshot.graphFitsData
         isDetachedMenuBarActive = snapshot.isDetachedMenuBarActive

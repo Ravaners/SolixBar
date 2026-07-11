@@ -342,9 +342,9 @@ private final class DetachedMenuBarView: NSView {
             label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             stack.addArrangedSubview(label)
         } else {
-            let label = NSTextField(labelWithString: "SOLIX wartet auf Daten")
+            let label = NSTextField(labelWithString: LocalizedText.text("SOLIX wartet auf Daten", "SOLIX waiting for data"))
             label.font = .systemFont(ofSize: 13, weight: .semibold)
-            label.textColor = .white
+            label.textColor = .labelColor
             stack.addArrangedSubview(label)
         }
 
@@ -388,7 +388,7 @@ private final class DetachedMenuBarView: NSView {
                 systemSymbolName: "xmark.circle.fill",
                 accessibilityDescription: LocalizedText.text("Schließen", "Close")
             )?.withSymbolConfiguration(.init(pointSize: round(13 * settings.detachedMenuBarScale), weight: .semibold))
-            closeButton.contentTintColor = NSColor.white.withAlphaComponent(0.72)
+            closeButton.contentTintColor = NSColor.secondaryLabelColor
             closeButton.toolTip = LocalizedText.text(
                 "Abgedockte Leiste schließen.",
                 "Close detached slim bar."
@@ -413,7 +413,7 @@ private final class DetachedMenuBarView: NSView {
         let image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "SOLIX")?
             .withSymbolConfiguration(.init(pointSize: round(14 * settings.detachedMenuBarScale), weight: .semibold))
         guard let image else { return nil }
-        return image.tinted(NSColor.white.withAlphaComponent(0.85))
+        return image.tinted(NSColor.labelColor.withAlphaComponent(0.85))
     }
 
     /// Löst Farben über das semantische Rollen-Attribut (.solixRole) auf,
@@ -434,7 +434,7 @@ private final class DetachedMenuBarView: NSView {
         result.enumerateAttributes(in: fullRange) { attributes, range, _ in
             let role = (attributes[.solixRole] as? String).flatMap(ColorRole.init(rawValue:))
             if let attachment = attributes[.attachment] as? NSTextAttachment, let image = attachment.image {
-                let tinted = image.tinted(Theme.bright(role ?? .neutral))
+                let tinted = image.tinted(Theme.hud(role ?? .neutral))
                 let replacement = NSTextAttachment()
                 replacement.image = tinted
                 replacement.bounds = attachment.bounds
@@ -444,11 +444,11 @@ private final class DetachedMenuBarView: NSView {
             let substring = (result.string as NSString).substring(with: range)
             let color: NSColor
             if let role {
-                color = Theme.bright(role)
+                color = Theme.hud(role)
             } else if substring.trimmingCharacters(in: .whitespaces) == "•" {
-                color = NSColor(calibratedWhite: 0.86, alpha: 1)
+                color = .secondaryLabelColor
             } else {
-                color = .white
+                color = .labelColor
             }
             result.addAttribute(.foregroundColor, value: color, range: range)
         }
@@ -459,11 +459,13 @@ private final class DetachedMenuBarView: NSView {
         onClose()
     }
 
+    /// Dunkles HUD im Dark Mode, helles Milchglas im Light Mode — vorher
+    /// war die Leiste in beiden Modi dunkel.
     private var readableBackground: NSColor {
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
                 ? NSColor(calibratedRed: 0.08, green: 0.10, blue: 0.11, alpha: 0.90)
-                : NSColor(calibratedRed: 0.10, green: 0.13, blue: 0.13, alpha: 0.82)
+                : NSColor(calibratedRed: 0.97, green: 0.98, blue: 0.985, alpha: 0.88)
         }
     }
 

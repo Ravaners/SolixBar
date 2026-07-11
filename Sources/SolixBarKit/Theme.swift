@@ -130,6 +130,29 @@ enum Theme {
         }
     }
 
+    /// Leuchtende Variante: hell = gesättigter Akzent, dunkel = Bright-Palette.
+    /// Für Icon-Plates und Werte, die im Dark Mode sonst absaufen.
+    static func vivid(_ role: ColorRole) -> NSColor {
+        NSColor(name: nil) { appearance in
+            usesDarkBackground(appearance) ? bright(role) : accent(role)
+        }
+    }
+
+    /// Farbe für die abgedockte Leiste: löst sich pro Appearance auf —
+    /// dunkles Glas -> Bright-Palette, helles Glas -> kräftige Lesefarben.
+    static func hud(_ role: ColorRole) -> NSColor {
+        NSColor(name: nil) { appearance in
+            if usesDarkBackground(appearance) {
+                return bright(role)
+            }
+            var resolved = NSColor.labelColor
+            appearance.performAsCurrentDrawingAppearance {
+                resolved = color(role).usingColorSpace(.deviceRGB) ?? .labelColor
+            }
+            return resolved
+        }
+    }
+
     static func battery(percent: Int?) -> ColorRole {
         guard let percent else { return .neutral }
         if percent <= 20 { return .batteryLow }
