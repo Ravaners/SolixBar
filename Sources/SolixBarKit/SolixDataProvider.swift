@@ -51,6 +51,51 @@ final class DemoSolixDataProvider: SolixDataProvider {
     }
 }
 
+/// Warnungs-Test: spielt ab Aktivierung ein gerafftes Szenario ab (Zeit
+/// läuft 10-fach), damit aktivierte Warnungen innerhalb weniger Minuten
+/// wirklich feuern — mit den Standard-Einstellungen (Schwelle 20 %,
+/// Einbruch-Dauer 15 min):
+///   Demo-Minute  0–9: normale Erzeugung (Akku 42 %, PV 385+235 W)
+///   Demo-Minute 10–29: Akku fällt auf 16 % (→ Akku-Warnung),
+///                       Eingang 2 fällt auf 0 W (→ Pro-PV ab Minute 25)
+///   ab Demo-Minute 30: kompletter PV-Einbruch (→ PV-Warnung ab Minute 45)
+/// Bei 30-Sekunden-Abruf entspricht das real ca. 1 / 2,5 / 4,5 Minuten.
+final class DemoWarningsSolixDataProvider: SolixDataProvider {
+    private let start: Date
+    /// Eine reale Sekunde = zehn Szenario-Sekunden.
+    private static let timeCompression: Double = 10
+
+    init(start: Date) {
+        self.start = start
+    }
+
+    func fetchSnapshot() async throws -> SolixSnapshot {
+        let demoMinute = Date().timeIntervalSince(start) * Self.timeCompression / 60
+        let updatedAt = start.addingTimeInterval(demoMinute * 60)
+
+        var snapshot = SolixSnapshot.demo
+        snapshot.siteName = "Anker SOLIX"
+        snapshot.status = await MainActor.run { LocalizedText.text("Warnungs-Test", "Warning test") }
+        snapshot.updatedAt = updatedAt
+        snapshot.homeWatts = 310
+        snapshot.gridWatts = 0
+        switch demoMinute {
+        case ..<10:
+            snapshot.batteryPercent = 42
+            snapshot.pvWatts = [385, 235]
+        case ..<30:
+            snapshot.batteryPercent = 16
+            snapshot.pvWatts = [385, 0]
+        default:
+            snapshot.batteryPercent = 16
+            snapshot.pvWatts = [0, 0]
+        }
+        snapshot.solarWatts = snapshot.pvWatts?.reduce(0, +)
+        snapshot.batteryWatts = (snapshot.solarWatts ?? 0) - (snapshot.homeWatts ?? 0)
+        return snapshot
+    }
+}
+
 /// Liest eine Pipe auf einem eigenen Thread leer, damit der Kindprozess bei
 /// grosser Ausgabe (>64 KB Pipe-Puffer) nicht blockiert.
 private final class PipeDrain: @unchecked Sendable {

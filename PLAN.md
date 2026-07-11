@@ -101,6 +101,7 @@ visueller Abnahme.
 - [x] Version automatisch: `VERSION`-Datei → Info.plist beim Packen (PlistBuddy, Build-Nummer aus Commit-Zähler); CI verweigert Tags, die nicht zur `VERSION` passen.
 - [x] Nachträge aus der Live-Abnahme: "PV-Anzeige" (Gesamt/Einzeln/Beides) getrennt für Menü-Dashboard, abgedocktes Fenster, Menüleiste und abgedockte Leiste; Graph-Linien fehlten beim ersten Menü-Öffnen (Animations-Timer lief nicht im Menü-Tracking-Modus → .common); Demo simuliert den PV-Kanal-Ausfall nur noch bei aktiver Pro-PV-Warnung; Refresh-Log enthält pvWatts.
 - [x] Live-Abnahme durch Nutzer erfolgt; PR #4 + Issue #3 aktualisiert, Tag v0.4.2.
+- [x] Nachtrag 2 (in v0.4.2 aufgenommen, Release neu getaggt): "Einbruch je PV-Eingang melden" (eigene Kanal-Historie statt Geschwister-Vergleich — Defekt-Erkennung, auch wenn alle Eingänge betroffen sind); Datenquelle "Demo (Warnungs-Test)" mit gerafftem Szenario (30-s-Abruf, Zeit ×10), damit aktivierte Warnungen in Minuten real feuern; Fork-main per Merge auf den Release-Stand (README-Startseite).
 
 ## Teststrategie (Querschnitt)
 

@@ -87,6 +87,7 @@ final class SolixMenuDashboardView: NSView {
         // Demo-Modus deutlich kennzeichnen, damit niemand Beispieldaten für
         // echte Anlagenwerte hält.
         let isDemo = AppSettings.shared.dataSourceMode == .demo
+            || AppSettings.shared.dataSourceMode == .demoWarnings
         let status = badge(
             isDemo ? "Demo" : (snapshot.status ?? LocalizedText.text("Unbekannt", "Unknown")),
             color: isDemo ? .systemBlue : statusColor

@@ -163,6 +163,57 @@ struct WarningEngineTests {
         #expect(run(&darkEngine, config: config, steps: darkSteps).isEmpty)
     }
 
+    @Test("per-channel dip fires from own history even when siblings are dark too")
+    func perChannelDip() {
+        var config = WarningEngine.Config()
+        config.perPVDipEnabled = true
+        config.pvStallMinutes = 15
+
+        // Beide Eingänge erzeugen, dann brechen BEIDE ein (z. B. Kabeldefekt
+        // am gemeinsamen Strang) — der Geschwister-Vergleich griffe hier nicht.
+        var engine = WarningEngine()
+        var steps: [(minute: Int, battery: Int?, solar: Int?, pv: [Int]?)] = []
+        for minute in stride(from: 0, through: 30, by: 5) { steps.append((minute, nil, 500, [300, 200])) }
+        for minute in stride(from: 35, through: 60, by: 5) { steps.append((minute, nil, 0, [0, 0])) }
+        let fired = run(&engine, config: config, steps: steps)
+        #expect(fired.map(\.event).contains(.pvChannelDead(index: 0)))
+        #expect(fired.map(\.event).contains(.pvChannelDead(index: 1)))
+
+        // Ohne die Dip-Option bleibt derselbe Verlauf still (Geschwister dunkel).
+        var strictEngine = WarningEngine()
+        var strictConfig = WarningEngine.Config()
+        strictConfig.perPVEnabled = true
+        strictConfig.pvStallMinutes = 15
+        #expect(run(&strictEngine, config: strictConfig, steps: steps).isEmpty)
+
+        // Nachts (nie erzeugt) bleibt auch die Dip-Option still.
+        var nightEngine = WarningEngine()
+        var nightSteps: [(minute: Int, battery: Int?, solar: Int?, pv: [Int]?)] = []
+        for minute in stride(from: 0, through: 60, by: 5) { nightSteps.append((minute, nil, 0, [0, 0])) }
+        #expect(run(&nightEngine, config: config, steps: nightSteps).isEmpty)
+    }
+
+    @Test("warning-test demo scenario drives all three warnings")
+    func demoWarningsScenario() async throws {
+        // Szenario-Start 6 reale Minuten in der Vergangenheit = Demo-Minute 60:
+        // Endphase, kompletter Einbruch.
+        let provider = DemoWarningsSolixDataProvider(start: Date().addingTimeInterval(-6 * 60))
+        let late = try await provider.fetchSnapshot()
+        #expect(late.batteryPercent == 16)
+        #expect(late.pvWatts == [0, 0])
+        #expect(late.solarWatts == 0)
+
+        // Demo-Minute ~15: Akku niedrig, Eingang 2 tot, Eingang 1 erzeugt.
+        let mid = try await DemoWarningsSolixDataProvider(start: Date().addingTimeInterval(-90)).fetchSnapshot()
+        #expect(mid.batteryPercent == 16)
+        #expect(mid.pvWatts == [385, 0])
+
+        // Demo-Minute ~5: alles normal.
+        let early = try await DemoWarningsSolixDataProvider(start: Date().addingTimeInterval(-30)).fetchSnapshot()
+        #expect(early.batteryPercent == 42)
+        #expect(early.pvWatts == [385, 235])
+    }
+
     @Test("disabled warnings never fire")
     func disabledStaysSilent() {
         var engine = WarningEngine()
@@ -183,6 +234,7 @@ struct WarningEngineTests {
         defer { settings.apply(original) }
 
         var modified = original
+        modified.warnPerPVDipEnabled = true
         modified.warnBatteryLowEnabled = true
         modified.warnBatteryLowThreshold = 33
         modified.warnPVStallEnabled = true

@@ -20,7 +20,11 @@ struct WarningEngine {
         /// Tagesfenster (lokale Stunden), in dem 0 W immer verdächtig ist.
         var pvWindowStartHour = 9
         var pvWindowEndHour = 17
+        /// Eingang tot, während die anderen Eingänge erzeugen.
         var perPVEnabled = false
+        /// Einbruch je Eingang: hat selbst kürzlich erzeugt, liefert jetzt
+        /// nichts mehr — erkennt Defekte auch ohne Geschwister-Vergleich.
+        var perPVDipEnabled = false
     }
 
     enum Event: Equatable {
@@ -43,6 +47,7 @@ struct WarningEngine {
     private var pvStalledSince: Date?
     private var channelDeadSince: [Int: Date] = [:]
     private var channelArmed: [Int: Bool] = [:]
+    private var channelHistory: [Int: [(date: Date, watts: Int)]] = [:]
 
     /// Meldet alle NEU eingetretenen Warn-Ereignisse für diesen Snapshot.
     /// `calendar` ist nur fürs Zeitfenster relevant (Tests reichen UTC durch).
@@ -127,25 +132,44 @@ struct WarningEngine {
         config: Config
     ) -> [Event] {
         activeEvents.removeAll { if case .pvChannelDead = $0 { true } else { false } }
-        guard config.perPVEnabled, let channels = snapshot.pvWatts, channels.count > 1 else {
+        guard config.perPVEnabled || config.perPVDipEnabled,
+              let channels = snapshot.pvWatts, channels.count > 1 else {
             channelDeadSince.removeAll()
+            channelHistory.removeAll()
             return []
         }
         var events: [Event] = []
         for (index, watts) in channels.enumerated() {
-            let siblingsMax = channels.enumerated()
-                .filter { $0.offset != index }
-                .map(\.element)
-                .max() ?? 0
-            // Geschwister-Kanäle liefern = es ist hell; dieser Kanal sollte auch.
-            guard watts < Self.deadbandWatts, siblingsMax >= config.pvStallMinRecentWatts else {
+            var history = channelHistory[index] ?? []
+            history.append((date, watts))
+            history.removeAll { $0.date < date.addingTimeInterval(-Self.lookback) }
+            channelHistory[index] = history
+
+            guard watts < Self.deadbandWatts else {
                 channelDeadSince[index] = nil
-                if watts >= Self.deadbandWatts { channelArmed[index] = true }
+                channelArmed[index] = true
                 continue
             }
             if channelDeadSince[index] == nil { channelDeadSince[index] = date }
             let deadMinutes = date.timeIntervalSince(channelDeadSince[index] ?? date) / 60
             guard deadMinutes >= Double(config.pvStallMinutes) else { continue }
+
+            // Zwei Wege zum selben Ereignis (je einzeln zuschaltbar):
+            // Geschwister erzeugen = es ist hell, dieser Kanal sollte auch;
+            // oder der Kanal hat selbst kürzlich erzeugt und ist eingebrochen
+            // (Defekt-Erkennung ohne Geschwister-Vergleich, z. B. wenn alle
+            // Eingänge gleichzeitig betroffen sind).
+            let siblingsMax = channels.enumerated()
+                .filter { $0.offset != index }
+                .map(\.element)
+                .max() ?? 0
+            let deadWhileSiblingsProduce = config.perPVEnabled
+                && siblingsMax >= config.pvStallMinRecentWatts
+            let ownRecentMax = history.map(\.watts).max() ?? 0
+            let dippedAfterProduction = config.perPVDipEnabled
+                && ownRecentMax >= config.pvStallMinRecentWatts
+            guard deadWhileSiblingsProduce || dippedAfterProduction else { continue }
+
             activeEvents.append(.pvChannelDead(index: index))
             if channelArmed[index, default: true] {
                 channelArmed[index] = false

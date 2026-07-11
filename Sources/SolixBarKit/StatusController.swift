@@ -27,6 +27,7 @@ final class StatusController: NSObject {
     private var updateCheckTimer: Timer?
     private var availableUpdate: ReleaseInfo?
     private var warningEngine = WarningEngine()
+    private var demoWarningsStart: Date?
 
     func start() {
         settings.migrateMenuBarGridMetricIfNeeded()
@@ -229,9 +230,21 @@ final class StatusController: NSObject {
     }
 
     private func provider() -> SolixDataProvider {
+        if settings.dataSourceMode != .demoWarnings {
+            demoWarningsStart = nil
+        }
         switch settings.dataSourceMode {
         case .demo:
             return DemoSolixDataProvider()
+        case .demoWarnings:
+            // Szenario startet mit der Aktivierung des Modus; frische Engine,
+            // damit bereits gemeldete Warnungen erneut feuern können.
+            if demoWarningsStart == nil {
+                demoWarningsStart = Date()
+                warningEngine = WarningEngine()
+                AppLogger.info("Warning-test demo scenario started.")
+            }
+            return DemoWarningsSolixDataProvider(start: demoWarningsStart ?? Date())
         case .command:
             // Passwort kommt aus dem Schlüsselbund und wird nur als
             // Umgebungsvariable an den Befehl übergeben, nie auf Platte.
@@ -335,7 +348,11 @@ final class StatusController: NSObject {
 
     private func scheduleRefreshTimer() {
         timer?.invalidate()
-        let interval = max(60, settings.refreshInterval)
+        // Warnungs-Test: fester 30-Sekunden-Takt, damit das geraffte
+        // Szenario zügig durchläuft.
+        let interval = settings.dataSourceMode == .demoWarnings
+            ? 30
+            : max(60, settings.refreshInterval)
         let newTimer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
@@ -999,7 +1016,7 @@ final class StatusController: NSObject {
 
     private var isCurrentDataSourceConfigured: Bool {
         switch settings.dataSourceMode {
-        case .demo:
+        case .demo, .demoWarnings:
             true
         case .command:
             !settings.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1010,7 +1027,7 @@ final class StatusController: NSObject {
 
     private func configurationMessage() -> String? {
         switch settings.dataSourceMode {
-        case .demo:
+        case .demo, .demoWarnings:
             nil
         case .command:
             isCurrentDataSourceConfigured ? "Noch keine Daten vom JSON-Befehl geladen." : "Kein JSON-Befehl konfiguriert."

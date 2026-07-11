@@ -44,6 +44,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let warnPVWindowStartField = NSTextField()
     private let warnPVWindowEndField = NSTextField()
     private let warnPerPVButton = NSButton(checkboxWithTitle: "Einzelne PV-Eingänge überwachen", target: nil, action: nil)
+    private let warnPerPVDipButton = NSButton(checkboxWithTitle: "Einbruch je PV-Eingang melden", target: nil, action: nil)
 
     // Vier unabhängige Metrik-Listen (Leiste × Ansicht). Die Kompakt-Listen
     // folgen der einzeiligen Liste, bis der Nutzer sie entkoppelt.
@@ -125,7 +126,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func buildView() -> NSView {
         let container = NSView()
 
-        modePopup.addItems(withTitles: ["Demo", "Lokaler JSON-Befehl", "JSON-URL"])
+        modePopup.addItems(withTitles: ["Demo", "Demo (Warnungs-Test)", "Lokaler JSON-Befehl", "JSON-URL"])
         appearancePopup.addItems(withTitles: ["Automatisch", "Hell", "Dunkel"])
         languagePopup.addItems(withTitles: ["Deutsch", "English"])
         applyLocalizedControlTitles()
@@ -198,7 +199,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, dashboardPVPopup, detachedDashboardPVPopup, menuBarPVPopup, detachedPVPopup, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, dashboardPVPopup, detachedDashboardPVPopup, menuBarPVPopup, detachedPVPopup, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, warnPerPVDipButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -277,10 +278,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         modePopup.removeAllItems()
         modePopup.addItems(withTitles: [
             "Demo",
+            LocalizedText.text("Demo (Warnungs-Test)", "Demo (warning test)"),
             LocalizedText.text("Lokaler JSON-Befehl", "Local JSON command"),
             "JSON-URL"
         ])
         if modeIndex >= 0 { modePopup.selectItem(at: modeIndex) }
+        modePopup.toolTip = LocalizedText.text(
+            "Legt fest, woher SolixBar die Werte lädt. \"Demo (Warnungs-Test)\" spielt ein gerafftes Szenario ab (Akku fällt, PV-Eingang stirbt, kompletter Einbruch), damit aktivierte Warnungen innerhalb weniger Minuten wirklich feuern.",
+            "Controls where SolixBar loads its values from. \"Demo (warning test)\" plays an accelerated scenario (battery drops, one PV input dies, full collapse) so enabled warnings actually fire within a few minutes."
+        )
         let appearanceIndex = appearancePopup.indexOfSelectedItem
         appearancePopup.removeAllItems()
         appearancePopup.addItems(withTitles: [
@@ -329,6 +335,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         warnPerPVButton.toolTip = LocalizedText.text(
             "Warnt, wenn ein PV-Eingang dauerhaft 0 W liefert, während die anderen Eingänge erzeugen. Braucht eine Solarbank, die ihre MPPT-Kanäle einzeln meldet (Solarbank 2/3).",
             "Warns when one PV input stays at 0 W while the other inputs are producing. Requires a Solarbank that reports its MPPT channels individually (Solarbank 2/3)."
+        )
+        warnPerPVDipButton.title = LocalizedText.text("Einbruch je PV-Eingang melden", "Report a dip per PV input")
+        warnPerPVDipButton.toolTip = LocalizedText.text(
+            "Warnt, wenn ein Eingang einbricht, der kurz zuvor selbst noch erzeugt hat — auch ohne Vergleich mit den anderen Eingängen. So fällt ein defektes Modul oder Kabel auf, selbst wenn mehrere Eingänge gleichzeitig betroffen sind. Nachts still.",
+            "Warns when an input collapses after it was recently producing itself — without comparing to the other inputs. Catches a defective panel or cable even when several inputs are affected at once. Silent at night."
         )
         warnBatteryThresholdField.toolTip = LocalizedText.text("Warnschwelle in Prozent (5–95).", "Warning threshold in percent (5–95).")
         warnPVMinutesField.toolTip = LocalizedText.text(
@@ -833,6 +844,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
         let channelsTitle = sectionTitle(LocalizedText.text("PV-Eingänge", "PV Inputs"))
         let perPVWarnRow = settingRow(warnPerPVButton, help: warnPerPVButton.toolTip ?? "")
+        let perPVDipRow = settingRow(warnPerPVDipButton, help: warnPerPVDipButton.toolTip ?? "")
 
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
             "Warnungen erscheinen als macOS-Mitteilung (beim ersten Mal fragt das System um Erlaubnis) und zusätzlich oben im SolixBar-Menü, solange die Bedingung anhält.",
@@ -849,7 +861,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let stack = NSStackView(views: [
             batteryTitle, batteryRow, batteryThresholdRow,
             pvTitle, pvStallRow, pvMinutesRow, pvWattsRow, pvWindowRow, windowFieldsRow,
-            channelsTitle, perPVWarnRow,
+            channelsTitle, perPVWarnRow, perPVDipRow,
             hint
         ])
         stack.orientation = .vertical
@@ -857,7 +869,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         stack.spacing = 10
         stack.setCustomSpacing(20, after: batteryThresholdRow)
         stack.setCustomSpacing(20, after: windowFieldsRow)
-        stack.setCustomSpacing(18, after: perPVWarnRow)
+        stack.setCustomSpacing(18, after: perPVDipRow)
         stack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(stack)
 
@@ -1115,10 +1127,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         switch settings.dataSourceMode {
         case .demo:
             modePopup.selectItem(at: 0)
-        case .command:
+        case .demoWarnings:
             modePopup.selectItem(at: 1)
-        case .url:
+        case .command:
             modePopup.selectItem(at: 2)
+        case .url:
+            modePopup.selectItem(at: 3)
         }
         switch settings.appearanceMode {
         case .system:
@@ -1194,6 +1208,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         warnPVWindowStartField.stringValue = String(settings.warnPVWindowStart)
         warnPVWindowEndField.stringValue = String(settings.warnPVWindowEnd)
         warnPerPVButton.state = settings.warnPerPVEnabled ? .on : .off
+        warnPerPVDipButton.state = settings.warnPerPVDipEnabled ? .on : .off
         refreshAutostartState()
         updateDataSourceFieldVisibility()
         updateMenuBarPreview()
@@ -1214,8 +1229,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func applyControlsToSettings() {
         switch modePopup.indexOfSelectedItem {
         case 1:
-            settings.dataSourceMode = .command
+            settings.dataSourceMode = .demoWarnings
         case 2:
+            settings.dataSourceMode = .command
+        case 3:
             settings.dataSourceMode = .url
         default:
             settings.dataSourceMode = .demo
@@ -1280,6 +1297,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             settings.warnPVWindowEnd = end
         }
         settings.warnPerPVEnabled = warnPerPVButton.state == .on
+        settings.warnPerPVDipEnabled = warnPerPVDipButton.state == .on
         settings.detachedShowIcon = detachedIconButton.state == .on
         settings.detachedShowLabels = detachedLabelsButton.state == .on
         settings.detachedShowSymbols = detachedSymbolsButton.state == .on
@@ -1303,11 +1321,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func updateDataSourceFieldVisibility() {
         switch modePopup.indexOfSelectedItem {
-        case 1:
+        case 2:
             commandRow.isHidden = false
             urlRow.isHidden = true
             setSolixRowsHidden(false)
-        case 2:
+        case 3:
             commandRow.isHidden = true
             urlRow.isHidden = false
             setSolixRowsHidden(true)

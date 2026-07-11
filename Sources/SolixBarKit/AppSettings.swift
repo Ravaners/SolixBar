@@ -2,6 +2,9 @@ import Foundation
 
 enum DataSourceMode: String {
     case demo
+    /// Gerafftes Test-Szenario, damit aktivierte Warnungen innerhalb
+    /// weniger Minuten wirklich feuern.
+    case demoWarnings = "demo-warnings"
     case command
     case url
 }
@@ -249,6 +252,7 @@ struct AppSettingsSnapshot: Equatable {
     var warnPVWindowStart: Int
     var warnPVWindowEnd: Int
     var warnPerPVEnabled: Bool
+    var warnPerPVDipEnabled: Bool
 }
 
 @MainActor
@@ -677,6 +681,11 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "warnPerPVEnabled") }
     }
 
+    var warnPerPVDipEnabled: Bool {
+        get { followBool("warnPerPVDipEnabled", fallback: false) }
+        set { defaults.set(newValue, forKey: "warnPerPVDipEnabled") }
+    }
+
     func warningConfig() -> WarningEngine.Config {
         WarningEngine.Config(
             batteryLowEnabled: warnBatteryLowEnabled,
@@ -687,7 +696,8 @@ final class AppSettings {
             pvWindowEnabled: warnPVWindowEnabled,
             pvWindowStartHour: warnPVWindowStart,
             pvWindowEndHour: warnPVWindowEnd,
-            perPVEnabled: warnPerPVEnabled
+            perPVEnabled: warnPerPVEnabled,
+            perPVDipEnabled: warnPerPVDipEnabled
         )
     }
 
@@ -749,7 +759,8 @@ final class AppSettings {
             warnPVWindowEnabled: warnPVWindowEnabled,
             warnPVWindowStart: warnPVWindowStart,
             warnPVWindowEnd: warnPVWindowEnd,
-            warnPerPVEnabled: warnPerPVEnabled
+            warnPerPVEnabled: warnPerPVEnabled,
+            warnPerPVDipEnabled: warnPerPVDipEnabled
         )
     }
 
@@ -803,5 +814,6 @@ final class AppSettings {
         warnPVWindowStart = snapshot.warnPVWindowStart
         warnPVWindowEnd = snapshot.warnPVWindowEnd
         warnPerPVEnabled = snapshot.warnPerPVEnabled
+        warnPerPVDipEnabled = snapshot.warnPerPVDipEnabled
     }
 }
