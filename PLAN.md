@@ -99,7 +99,8 @@ visueller Abnahme.
 - [x] Warnungen (opt-in, eigener Tab): Akku-Schwelle mit Hysterese, PV-Einbruch-Heuristik (nachts still), optionales Tagesfenster, tote MPPT-Kanäle; Mitteilung + ⚠-Menüeinträge. Reine `WarningEngine` mit 8 Szenario-Tests (intervallunabhängig).
 - [x] Vier Metrik-Listen mit Drag & Drop: Auswahl + Reihenfolge je Leiste und je Ansicht (einzeilig/kompakt); Kompakt folgt einzeilig bis zur Entkopplung; keine Reihenfolge-Normalisierung mehr beim Speichern; Leisten-Tabs zweispaltig.
 - [x] Version automatisch: `VERSION`-Datei → Info.plist beim Packen (PlistBuddy, Build-Nummer aus Commit-Zähler); CI verweigert Tags, die nicht zur `VERSION` passen.
-- [ ] Live-Abnahme durch Nutzer; danach PR #4 + Issue #3 aktualisieren, Tag v0.4.2.
+- [x] Nachträge aus der Live-Abnahme: "PV-Anzeige" (Gesamt/Einzeln/Beides) getrennt für Menü-Dashboard, abgedocktes Fenster, Menüleiste und abgedockte Leiste; Graph-Linien fehlten beim ersten Menü-Öffnen (Animations-Timer lief nicht im Menü-Tracking-Modus → .common); Demo simuliert den PV-Kanal-Ausfall nur noch bei aktiver Pro-PV-Warnung; Refresh-Log enthält pvWatts.
+- [x] Live-Abnahme durch Nutzer erfolgt; PR #4 + Issue #3 aktualisiert, Tag v0.4.2.
 
 ## Teststrategie (Querschnitt)
 
