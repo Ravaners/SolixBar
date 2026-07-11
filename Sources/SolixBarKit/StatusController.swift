@@ -45,12 +45,19 @@ final class StatusController: NSObject {
                 self?.openDetachedMenuBar()
             }
         }
+        if settings.isLargeGraphActive {
+            AppLogger.info("Restoring detached graph window from previous session.")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.openLargeGraph()
+            }
+        }
         scheduleRefreshTimer()
     }
 
     func prepareForTermination() {
         isTerminating = true
         settings.isDetachedMenuBarActive = isMenuBarDetached
+        settings.isLargeGraphActive = largeGraphWindow != nil
         AppLogger.info("Persisted detached slim bar state: \(isMenuBarDetached ? "active" : "inactive").")
     }
 
@@ -336,6 +343,13 @@ final class StatusController: NSObject {
             "menubar.rectangle"
         ))
         menu.addItem(action(LocalizedText.text("Dashboard abdocken", "Detach dashboard"), #selector(openDetachedDashboard), "macwindow.on.rectangle"))
+        menu.addItem(action(
+            largeGraphWindow == nil
+                ? LocalizedText.text("Verlauf abdocken", "Detach history graph")
+                : LocalizedText.text("Verlaufsfenster schließen", "Close history window"),
+            #selector(toggleLargeGraph),
+            "chart.xyaxis.line"
+        ))
         menu.addItem(action(LocalizedText.text("Einstellungen ...", "Settings ..."), #selector(openSettings), "gearshape"))
         menu.addItem(action(LocalizedText.text("Logdatei anzeigen", "Show log file"), #selector(showLogFile), "doc.text.magnifyingglass"))
         menu.addItem(NSMenuItem.separator())
@@ -593,11 +607,29 @@ final class StatusController: NSObject {
     private func openLargeGraph() {
         AppLogger.info("Large graph window requested.")
         if largeGraphWindow == nil {
-            largeGraphWindow = LargeGraphWindowController(graphProvider: { [weak self] in self?.graphSamples() ?? [] })
+            largeGraphWindow = LargeGraphWindowController(
+                graphProvider: { [weak self] in self?.graphSamples() ?? [] },
+                onClose: { [weak self] in
+                    guard let self, !self.isTerminating, self.largeGraphWindow != nil else { return }
+                    self.largeGraphWindow = nil
+                    self.settings.isLargeGraphActive = false
+                    self.rebuildMenu()
+                }
+            )
         }
+        settings.isLargeGraphActive = true
         largeGraphWindow?.rebuild()
         largeGraphWindow?.showWindow(nil)
+        rebuildMenu()
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func toggleLargeGraph() {
+        if let open = largeGraphWindow {
+            open.close()
+        } else {
+            openLargeGraph()
+        }
     }
 
     @objc private func openDetachedDashboard() {
@@ -709,6 +741,8 @@ final class StatusController: NSObject {
         rebuildMenu()
         detachedMenuBarWindow?.rebuild()
         detachedDashboardWindow?.rebuild()
+        largeGraphWindow?.applyWindowLevel()
+        largeGraphWindow?.rebuild()
         if refreshNow {
             refresh()
         }

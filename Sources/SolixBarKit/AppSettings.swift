@@ -213,6 +213,7 @@ struct AppSettingsSnapshot: Equatable {
     var detachedMenuBarFrame: String
     var detachedBarLevel: WindowLevelMode
     var dashboardWindowLevel: WindowLevelMode
+    var graphWindowLevel: WindowLevelMode
 }
 
 @MainActor
@@ -485,6 +486,18 @@ final class AppSettings {
         set { defaults.set(newValue.rawValue, forKey: "dashboardWindowLevel") }
     }
 
+    /// Abgedocktes Verlaufsfenster: verhält sich standardmäßig wie ein
+    /// normales Fenster (vorn wenn aktiv, sonst dahinter).
+    var graphWindowLevel: WindowLevelMode {
+        get { WindowLevelMode(rawValue: defaults.string(forKey: "graphWindowLevel") ?? "") ?? .normal }
+        set { defaults.set(newValue.rawValue, forKey: "graphWindowLevel") }
+    }
+
+    var isLargeGraphActive: Bool {
+        get { defaults.bool(forKey: "isLargeGraphActive") }
+        set { defaults.set(newValue, forKey: "isLargeGraphActive") }
+    }
+
     func snapshot() -> AppSettingsSnapshot {
         AppSettingsSnapshot(
             dataSourceMode: dataSourceMode,
@@ -518,7 +531,8 @@ final class AppSettings {
             isDetachedMenuBarActive: isDetachedMenuBarActive,
             detachedMenuBarFrame: detachedMenuBarFrame,
             detachedBarLevel: detachedBarLevel,
-            dashboardWindowLevel: dashboardWindowLevel
+            dashboardWindowLevel: dashboardWindowLevel,
+            graphWindowLevel: graphWindowLevel
         )
     }
 
@@ -555,5 +569,6 @@ final class AppSettings {
         detachedMenuBarFrame = snapshot.detachedMenuBarFrame
         detachedBarLevel = snapshot.detachedBarLevel
         dashboardWindowLevel = snapshot.dashboardWindowLevel
+        graphWindowLevel = snapshot.graphWindowLevel
     }
 }

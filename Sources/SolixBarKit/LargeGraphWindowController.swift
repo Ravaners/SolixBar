@@ -2,14 +2,16 @@ import AppKit
 
 /// Großes Verlaufsfenster: nutzt dieselbe Chip-Kopfzeile wie das Dashboard.
 @MainActor
-final class LargeGraphWindowController: NSWindowController {
+final class LargeGraphWindowController: NSWindowController, NSWindowDelegate {
     private let settings = AppSettings.shared
     private let graphProvider: () -> [SolixHistorySample]
     private let graphContainer = NSView()
     private var header: GraphControlHeader?
+    private let onClose: (() -> Void)?
 
-    init(graphProvider: @escaping () -> [SolixHistorySample]) {
+    init(graphProvider: @escaping () -> [SolixHistorySample], onClose: (() -> Void)? = nil) {
         self.graphProvider = graphProvider
+        self.onClose = onClose
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 480),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -19,13 +21,24 @@ final class LargeGraphWindowController: NSWindowController {
         window.title = LocalizedText.text("SOLIX Verlauf", "SOLIX History")
         window.minSize = NSSize(width: 620, height: 400)
         window.center()
+        window.setFrameAutosaveName("SolixBar.LargeGraphWindow")
         super.init(window: window)
+        window.delegate = self
+        window.level = settings.graphWindowLevel.nsWindowLevel
         window.contentView = buildView()
         rebuild()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func applyWindowLevel() {
+        window?.level = settings.graphWindowLevel.nsWindowLevel
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onClose?()
     }
 
     func rebuild() {

@@ -51,6 +51,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let languagePopup = NSPopUpButton()
     private let detachedLevelPopup = NSPopUpButton()
     private let dashboardLevelPopup = NSPopUpButton()
+    private let graphLevelPopup = NSPopUpButton()
     private var metricButtons: [BarMetric: NSButton] = [:]
     private var detachedMetricButtons: [BarMetric: NSButton] = [:]
     private var originalSettings: AppSettingsSnapshot?
@@ -134,7 +135,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -244,7 +245,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showFlowColorsButton.title = LocalizedText.text("Farbige Werte anzeigen", "Show colored values")
         lockDetachedMenuBarButton.title = LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar")
         autostartButton.title = LocalizedText.text("Beim Login automatisch starten", "Start automatically at login")
-        for popup in [detachedLevelPopup, dashboardLevelPopup] {
+        for popup in [detachedLevelPopup, dashboardLevelPopup, graphLevelPopup] {
             let index = popup.indexOfSelectedItem
             popup.removeAllItems()
             popup.addItems(withTitles: WindowLevelMode.allCases.map(\.title))
@@ -257,6 +258,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         dashboardLevelPopup.toolTip = LocalizedText.text(
             "Gilt für das abgedockte Dashboard-Fenster: über allen Fenstern schwebend, normal eingereiht oder hinter allen Fenstern auf dem Schreibtisch.",
             "Applies to the detached dashboard window: floating above all windows, ordered like a normal window, or on the desktop behind everything."
+        )
+        graphLevelPopup.toolTip = LocalizedText.text(
+            "Gilt für das abgedockte Verlaufsfenster: über allen Fenstern schwebend, normal eingereiht oder hinter allen Fenstern auf dem Schreibtisch.",
+            "Applies to the detached history window: floating above all windows, ordered like a normal window, or on the desktop behind everything."
         )
     }
 
@@ -518,6 +523,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         dashboardLevelRow.orientation = .horizontal
         dashboardLevelRow.spacing = 12
         dashboardLevelRow.alignment = .centerY
+        let graphLevelRow = NSStackView(views: [
+            label(LocalizedText.text("Verlaufsfenster", "History window")),
+            graphLevelPopup,
+            helpButton(graphLevelPopup.toolTip ?? "")
+        ])
+        graphLevelRow.orientation = .horizontal
+        graphLevelRow.spacing = 12
+        graphLevelRow.alignment = .centerY
         let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
         let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
@@ -526,7 +539,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, dashboardLevelRow, startTitle, autostartRow, autostartStatus, hint] {
+        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, dashboardLevelRow, graphLevelRow, startTitle, autostartRow, autostartStatus, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -553,7 +566,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             dashboardLevelRow.topAnchor.constraint(equalTo: customRangeRow.bottomAnchor, constant: 10),
             dashboardLevelRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            startTitle.topAnchor.constraint(equalTo: dashboardLevelRow.bottomAnchor, constant: 24),
+            graphLevelRow.topAnchor.constraint(equalTo: dashboardLevelRow.bottomAnchor, constant: 10),
+            graphLevelRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            startTitle.topAnchor.constraint(equalTo: graphLevelRow.bottomAnchor, constant: 24),
             startTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             autostartRow.topAnchor.constraint(equalTo: startTitle.bottomAnchor, constant: 12),
@@ -829,6 +845,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         customRangeUnitPopup.selectItem(at: unitIndex)
         detachedLevelPopup.selectItem(at: WindowLevelMode.allCases.firstIndex(of: settings.detachedBarLevel) ?? 0)
         dashboardLevelPopup.selectItem(at: WindowLevelMode.allCases.firstIndex(of: settings.dashboardWindowLevel) ?? 0)
+        graphLevelPopup.selectItem(at: WindowLevelMode.allCases.firstIndex(of: settings.graphWindowLevel) ?? 0)
         detachedIconButton.state = settings.detachedShowIcon ? .on : .off
         detachedLabelsButton.state = settings.detachedShowLabels ? .on : .off
         detachedSymbolsButton.state = settings.detachedShowSymbols ? .on : .off
@@ -904,6 +921,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let levelModes = WindowLevelMode.allCases
         settings.detachedBarLevel = levelModes[max(0, min(levelModes.count - 1, detachedLevelPopup.indexOfSelectedItem))]
         settings.dashboardWindowLevel = levelModes[max(0, min(levelModes.count - 1, dashboardLevelPopup.indexOfSelectedItem))]
+        settings.graphWindowLevel = levelModes[max(0, min(levelModes.count - 1, graphLevelPopup.indexOfSelectedItem))]
         settings.detachedShowIcon = detachedIconButton.state == .on
         settings.detachedShowLabels = detachedLabelsButton.state == .on
         settings.detachedShowSymbols = detachedSymbolsButton.state == .on
