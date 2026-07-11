@@ -3,17 +3,20 @@ import AppKit
 @MainActor
 final class DetachedDashboardWindowController: NSWindowController {
     private let snapshotProvider: () -> SolixSnapshot?
+    private let previousProvider: () -> SolixSnapshot?
     private let graphProvider: () -> [SolixHistorySample]
     private let onRangeChange: () -> Void
     private let onOpenLarge: () -> Void
 
     init(
         snapshotProvider: @escaping () -> SolixSnapshot?,
+        previousProvider: @escaping () -> SolixSnapshot? = { nil },
         graphProvider: @escaping () -> [SolixHistorySample],
         onRangeChange: @escaping () -> Void,
         onOpenLarge: @escaping () -> Void
     ) {
         self.snapshotProvider = snapshotProvider
+        self.previousProvider = previousProvider
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
@@ -66,6 +69,7 @@ final class DetachedDashboardWindowController: NSWindowController {
         if let snapshot = snapshotProvider() {
             view = SolixMenuDashboardView(
                 snapshot: snapshot,
+                previous: previousProvider(),
                 style: .window,
                 graphProvider: graphProvider,
                 onRangeChange: onRangeChange,

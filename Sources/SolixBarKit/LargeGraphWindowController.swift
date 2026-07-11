@@ -40,6 +40,7 @@ final class LargeGraphWindowController: NSWindowController {
             showsHeader: false,
             size: NSSize(width: 680, height: 360)
         )
+        graph.isInteractive = true
         graph.translatesAutoresizingMaskIntoConstraints = false
         graphContainer.addSubview(graph)
 

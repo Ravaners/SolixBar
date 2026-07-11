@@ -11,6 +11,7 @@ final class SolixMenuDashboardView: NSView {
     }
 
     private let snapshot: SolixSnapshot
+    private let previous: SolixSnapshot?
     private let style: Style
     private let graphProvider: () -> [SolixHistorySample]
     private let onRangeChange: () -> Void
@@ -22,12 +23,14 @@ final class SolixMenuDashboardView: NSView {
 
     init(
         snapshot: SolixSnapshot,
+        previous: SolixSnapshot? = nil,
         style: Style = .menu,
         graphProvider: @escaping () -> [SolixHistorySample],
         onRangeChange: @escaping () -> Void,
         onOpenLarge: @escaping () -> Void
     ) {
         self.snapshot = snapshot
+        self.previous = previous
         self.style = style
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
@@ -91,14 +94,20 @@ final class SolixMenuDashboardView: NSView {
 
         let battery = primaryMetricPanel(
             LocalizedText.text("Akku", "Battery"),
-            snapshot.batteryPercent.map { "\($0) %" },
+            withTrend(
+                snapshot.batteryPercent.map { "\($0) %" },
+                arrow: trendArrow(current: snapshot.batteryPercent, previous: previous?.batteryPercent, threshold: 1)
+            ),
             "battery.100percent",
             batteryColor,
             plateColor: Theme.vivid(Theme.battery(percent: snapshot.batteryPercent))
         )
         let solar = primaryMetricPanel(
             "Solar",
-            snapshot.solarWatts.map { "\($0) W" },
+            withTrend(
+                snapshot.solarWatts.map { "\($0) W" },
+                arrow: trendArrow(current: snapshot.solarWatts, previous: previous?.solarWatts, threshold: 5)
+            ),
             "sun.max.fill",
             solarColor,
             plateColor: Theme.vivid(.solar)
@@ -110,9 +119,24 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.distribution = .fillEqually
 
         var detailRows = [
-            compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", Theme.vivid(.load)),
-            compactMetricRow(LocalizedText.text("Netzbezug", "Grid Import"), signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
-            compactMetricRow(LocalizedText.text("Akku-Fluss", "Battery Flow"), signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
+            compactMetricRow(
+                LocalizedText.text("Hauslast", "Home Load"),
+                withTrend(snapshot.homeWatts.map { "\($0) W" }, arrow: trendArrow(current: snapshot.homeWatts, previous: previous?.homeWatts, threshold: 5)),
+                "house.fill",
+                Theme.vivid(.load)
+            ),
+            compactMetricRow(
+                LocalizedText.text("Netzbezug", "Grid Import"),
+                withTrend(signedWatts(snapshot.gridWatts), arrow: trendArrow(current: snapshot.gridWatts, previous: previous?.gridWatts, threshold: 5)),
+                "powerplug.fill",
+                gridColor
+            ),
+            compactMetricRow(
+                LocalizedText.text("Akku-Fluss", "Battery Flow"),
+                withTrend(signedWatts(snapshot.batteryWatts), arrow: trendArrow(current: snapshot.batteryWatts, previous: previous?.batteryWatts, threshold: 5)),
+                "bolt.fill",
+                batteryFlowColor
+            ),
             compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", Theme.vivid(.yieldToday))
         ]
         if let totalKWh = snapshot.totalKWh {
@@ -370,6 +394,21 @@ final class SolixMenuDashboardView: NSView {
         guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
         let configured = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: pointSize, weight: .bold)) ?? image
         return configured.tinted(color)
+    }
+
+    /// Trend gegenüber dem vorherigen Messwert: ▲/▼ ab kleiner Schwelle,
+    /// sonst nil (kein Rauschen anzeigen).
+    private func trendArrow(current: Int?, previous: Int?, threshold: Int) -> String? {
+        guard let current, let previous else { return nil }
+        if current - previous >= threshold { return "▲" }
+        if previous - current >= threshold { return "▼" }
+        return nil
+    }
+
+    private func withTrend(_ value: String?, arrow: String?) -> String? {
+        guard let value else { return nil }
+        guard let arrow else { return value }
+        return "\(value) \(arrow)"
     }
 
     private func signedWatts(_ value: Int?) -> String? {

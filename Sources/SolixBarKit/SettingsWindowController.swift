@@ -54,6 +54,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private var isSaving = false
     private var isLoading = false
     private var previewDebounce: Timer?
+    private let menuBarPreview = NSImageView()
+    private let previewFormatter = MenuBarFormatter()
 
     init(onPreview: @escaping () -> Void, onSave: @escaping () -> Void, onReset: @escaping () -> Void) {
         self.onPreview = onPreview
@@ -99,6 +101,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         urlField.placeholderString = "http://127.0.0.1:8787/solix.json"
         urlField.toolTip = "Lädt die Werte von einer JSON-Adresse."
         intervalField.placeholderString = "300"
+        let intervalNumbers = NumberFormatter()
+        intervalNumbers.allowsFloats = false
+        intervalNumbers.minimum = 60
+        intervalNumbers.maximum = 86_400
+        intervalField.formatter = intervalNumbers
+        let rangeNumbers = NumberFormatter()
+        rangeNumbers.allowsFloats = false
+        rangeNumbers.minimum = 1
+        rangeNumbers.maximum = 365
+        customRangeField.formatter = rangeNumbers
         intervalField.toolTip = "Zeit zwischen zwei Aktualisierungen in Sekunden."
         solixEmailField.placeholderString = "mail@example.com"
         solixEmailField.toolTip = "E-Mail-Adresse deines Anker/SOLIX-Kontos."
@@ -228,6 +240,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func menuBarPane() -> NSView {
         let container = NSView()
+        let previewTitle = sectionTitle(LocalizedText.text("Vorschau", "Preview"))
+        menuBarPreview.imageScaling = .scaleNone
+        menuBarPreview.wantsLayer = true
+        menuBarPreview.layer?.cornerRadius = Theme.radiusChip
+        menuBarPreview.layer?.masksToBounds = true
+
         let metricTitle = sectionTitle(LocalizedText.text("Angezeigte Werte", "Visible Values"))
         let metricGrid = buildMetricGrid(for: .menuBar)
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
@@ -244,13 +262,20 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleValue.alignment = .right
         scaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, scaleRow] {
+        for view in [previewTitle, menuBarPreview, metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, scaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
 
         NSLayoutConstraint.activate([
-            metricTitle.topAnchor.constraint(equalTo: container.topAnchor, constant: 22),
+            previewTitle.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
+            previewTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            menuBarPreview.topAnchor.constraint(equalTo: previewTitle.bottomAnchor, constant: 8),
+            menuBarPreview.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            menuBarPreview.heightAnchor.constraint(equalToConstant: 62),
+
+            metricTitle.topAnchor.constraint(equalTo: menuBarPreview.bottomAnchor, constant: 18),
             metricTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             metricGrid.topAnchor.constraint(equalTo: metricTitle.bottomAnchor, constant: 10),
@@ -780,6 +805,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
         refreshAutostartState()
         updateDataSourceFieldVisibility()
+        updateMenuBarPreview()
         isLoading = false
     }
 
@@ -897,7 +923,58 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleValue.stringValue = "\(Int(round(scaleSlider.doubleValue * 100))) %"
         detachedScaleValue.stringValue = "\(Int(round(detachedScaleSlider.doubleValue * 100))) %"
         applyControlsToSettings()
+        updateMenuBarPreview()
         onPreview()
+    }
+
+    /// Live-Vorschau der Menüleisten-Anzeige (Demo-Werte) in heller und
+    /// dunkler Menüleiste — nutzt exakt dieselbe Formatter-Engine wie die App.
+    private func updateMenuBarPreview() {
+        let snapshot = SolixSnapshot.demo
+        let options = MenuBarDisplayOptions(
+            metrics: settings.barMetrics,
+            showLabels: settings.showMetricLabels,
+            showSymbols: settings.showMenuBarMetricSymbols,
+            showArrows: settings.showEnergyFlowArrows
+        )
+        let stripWidth: CGFloat = 560
+        let stripHeight: CGFloat = 28
+        let image = NSImage(size: NSSize(width: stripWidth, height: stripHeight * 2 + 6), flipped: false) { [self] _ in
+            let strips: [(NSAppearance.Name, NSColor, CGFloat)] = [
+                (.darkAqua, NSColor(calibratedWhite: 0.13, alpha: 1), 0),
+                (.aqua, NSColor(calibratedWhite: 0.93, alpha: 1), stripHeight + 6)
+            ]
+            for (appearanceName, background, y) in strips {
+                NSAppearance(named: appearanceName)?.performAsCurrentDrawingAppearance {
+                    let strip = NSRect(x: 0, y: y, width: stripWidth, height: stripHeight)
+                    background.setFill()
+                    NSBezierPath(roundedRect: strip, xRadius: 6, yRadius: 6).fill()
+                    if settings.menuBarStacked {
+                        let entries = previewFormatter.stackedEntries(for: snapshot, options: options)
+                        if entries.count >= 2,
+                           let stacked = StackedMenuBarRenderer.image(
+                               entries: entries,
+                               scale: settings.menuBarScale,
+                               showWarning: false
+                           ) {
+                            stacked.draw(
+                                in: NSRect(x: 12, y: y + (stripHeight - 22) / 2, width: stacked.size.width, height: 22),
+                                from: .zero,
+                                operation: .sourceOver,
+                                fraction: 1
+                            )
+                            return
+                        }
+                    }
+                    let text = previewFormatter.attributedTitle(for: snapshot, scale: settings.menuBarScale, options: options)
+                    let size = text.size()
+                    text.draw(at: NSPoint(x: 12, y: y + (stripHeight - size.height) / 2))
+                }
+            }
+            return true
+        }
+        menuBarPreview.image = image
+        menuBarPreview.widthAnchor.constraint(equalToConstant: stripWidth).isActive = true
     }
 
     @objc private func cancelSettings() {
@@ -927,6 +1004,28 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             Task { @MainActor in
                 self?.applyPreview()
             }
+        }
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard !isSaving, let originalSettings, settings.snapshot() != originalSettings else { return true }
+        let alert = NSAlert()
+        alert.messageText = LocalizedText.text("Änderungen speichern?", "Save changes?")
+        alert.informativeText = LocalizedText.text(
+            "Die Vorschau-Änderungen gehen sonst verloren.",
+            "Otherwise the previewed changes will be lost."
+        )
+        alert.addButton(withTitle: LocalizedText.text("Speichern", "Save"))
+        alert.addButton(withTitle: LocalizedText.text("Verwerfen", "Discard"))
+        alert.addButton(withTitle: LocalizedText.text("Abbrechen", "Cancel"))
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            saveSettings()
+            return false
+        case .alertSecondButtonReturn:
+            return true
+        default:
+            return false
         }
     }
 

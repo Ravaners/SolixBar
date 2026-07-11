@@ -168,7 +168,7 @@ enum GraphMetric: String, CaseIterable {
     }
 }
 
-struct AppSettingsSnapshot {
+struct AppSettingsSnapshot: Equatable {
     var dataSourceMode: DataSourceMode
     var command: String
     var urlString: String

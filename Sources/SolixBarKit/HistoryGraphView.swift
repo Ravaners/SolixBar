@@ -12,6 +12,12 @@ final class HistoryGraphView: NSView {
     private var animationTimer: Timer?
     private let animationStart = Date()
     var onClick: (() -> Void)?
+    /// Hover-Inspektion (vertikale Linie + Wertebox); nur im großen Fenster aktiv.
+    var isInteractive = false {
+        didSet { updateTrackingAreas() }
+    }
+    private var hoverX: CGFloat?
+    private var lastPlotRect: NSRect = .zero
 
     @MainActor private var batteryColor: NSColor { Theme.accent(.batteryHigh) }
     @MainActor private var solarColor: NSColor { Theme.accent(.solar) }
@@ -51,6 +57,30 @@ final class HistoryGraphView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         onClick?()
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        guard isInteractive else { return }
+        addTrackingArea(NSTrackingArea(
+            rect: bounds,
+            options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        ))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard isInteractive else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        hoverX = lastPlotRect.contains(NSPoint(x: point.x, y: lastPlotRect.midY)) ? point.x : nil
+        needsDisplay = true
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        hoverX = nil
+        needsDisplay = true
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -100,6 +130,68 @@ final class HistoryGraphView: NSView {
         // Grundlinie zuletzt: Kurven auf 0 (z. B. Netz nachts) sollen die
         // Achse nicht verdecken.
         drawAxes(in: plot)
+        lastPlotRect = plot
+        drawHoverInspector(in: plot)
+    }
+
+    /// Vertikale Inspektionslinie mit Wertebox am Mauszeiger.
+    private func drawHoverInspector(in rect: NSRect) {
+        guard isInteractive, let hoverX, samples.count >= 2 else { return }
+        let domain = timeDomain()
+        let span = domain.end.timeIntervalSince(domain.start)
+        guard span > 0 else { return }
+        let progress = Double((hoverX - rect.minX) / rect.width)
+        let date = domain.start.addingTimeInterval(span * min(1, max(0, progress)))
+        guard let sample = samples.min(by: {
+            abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
+        }) else { return }
+
+        let line = NSBezierPath()
+        line.move(to: NSPoint(x: hoverX, y: rect.minY))
+        line.line(to: NSPoint(x: hoverX, y: rect.maxY))
+        NSColor.secondaryLabelColor.withAlphaComponent(0.55).setStroke()
+        line.lineWidth = 1
+        line.stroke()
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: AppSettings.shared.appLanguage == .english ? "en_US" : "de_DE")
+        formatter.dateFormat = span > 26 * 3600 ? "dd.MM. HH:mm" : "HH:mm"
+
+        var linesOut: [(String, NSColor)] = [(formatter.string(from: sample.date), .secondaryLabelColor)]
+        if visibleMetrics.contains(.battery), let percent = sample.batteryPercent {
+            linesOut.append((LocalizedText.text("Akku \(percent)%", "Battery \(percent)%"), batteryColor))
+        }
+        if visibleMetrics.contains(.solar), let watts = sample.solarWatts {
+            linesOut.append(("Solar \(watts)W", solarColor))
+        }
+        if visibleMetrics.contains(.grid), let watts = sample.gridWatts {
+            linesOut.append((LocalizedText.text("Netz \(watts)W", "Grid \(watts)W"), gridColor))
+        }
+
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+        let lineHeight: CGFloat = 15
+        let boxWidth = linesOut.map { (($0.0 as NSString).size(withAttributes: [.font: font]).width) }.max().map { $0 + 20 } ?? 80
+        let boxHeight = CGFloat(linesOut.count) * lineHeight + 12
+        var boxX = hoverX + 10
+        if boxX + boxWidth > rect.maxX { boxX = hoverX - boxWidth - 10 }
+        let box = NSRect(x: boxX, y: rect.maxY - boxHeight - 4, width: boxWidth, height: boxHeight)
+
+        let boxPath = NSBezierPath(roundedRect: box, xRadius: 8, yRadius: 8)
+        (NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(calibratedWhite: 0.08, alpha: 0.94)
+                : NSColor(calibratedWhite: 1.0, alpha: 0.96)
+        }).setFill()
+        boxPath.fill()
+
+        for (index, entry) in linesOut.enumerated() {
+            drawText(
+                entry.0,
+                at: NSPoint(x: box.minX + 10, y: box.maxY - CGFloat(index + 1) * lineHeight - 4),
+                font: font,
+                color: entry.1
+            )
+        }
     }
 
     private func startLineAnimation() {

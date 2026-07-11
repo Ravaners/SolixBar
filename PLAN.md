@@ -43,7 +43,7 @@ visueller Abnahme.
 - [x] `SMAppService` statt LaunchAgent-Plist (inkl. Aufräumen des Alt-Plists).
 - [x] CI: GitHub Actions (macos-15) — Tests, Universal-Build, ad-hoc-signiertes App-Bundle als Artifact, Release-Upload bei `v*`-Tags, Render-PNGs als Artifact.
 - [x] CHANGELOG/VERSION → 0.4.0.
-- [ ] Offen (bewusst verschoben): String-Katalog statt `LocalizedText`-Paare; Zerlegung des `StatusController` (~1200 Zeilen) in Formatter/MenuBuilder/WindowCoordinator; klickbare "?"-Popovers; Eingabevalidierung mit Feedback.
+- [x] Nachgezogen (2026-07-11, Runde 2): `MenuBarFormatter` aus dem StatusController extrahiert (~470 Zeilen; Controller jetzt ~770); Metrik-Namen zentral in `MetricLocalization.swift` (echter String-Katalog folgt der System-Locale und kollidiert mit dem In-App-Sprachschalter — bewusst dagegen entschieden); Live-Vorschau der Menüleiste in den Einstellungen (hell+dunkel, echte Engine); Trend-Pfeile (▲/▼) im Dashboard; Hover-Inspektor im großen Graphen; Doppelstart-Schutz; Speichern-Nachfrage beim Schließen ungespeicherter Einstellungen; NumberFormatter-Validierung (Intervall, eig. Zeitraum); toter Code entfernt (energyFlowArrow-Kette, CenteredTextFieldCell).
 
 ## Unterwegs gefunden (Selbst-Checks)
 
