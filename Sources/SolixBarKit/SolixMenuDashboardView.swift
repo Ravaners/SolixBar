@@ -121,9 +121,8 @@ final class SolixMenuDashboardView: NSView {
         let details = NSStackView(views: detailRows)
         details.orientation = .vertical
         details.spacing = 8
-        details.wantsLayer = true
-        details.layer?.cornerRadius = Theme.radiusCard
-        details.layer?.backgroundColor = panelColor.cgColor
+        // Kein eigener Container-Hintergrund: die Lücken zwischen den Reihen
+        // zeigen den App-Hintergrund statt eines helleren Zwischentons.
         detailsContainer = details
 
         let graph = HistoryGraphMenuView(
