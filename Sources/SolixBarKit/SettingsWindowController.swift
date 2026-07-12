@@ -19,13 +19,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
     private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
-    private let solixHint = NSTextField(wrappingLabelWithString: "Nur für den vorbereiteten SOLIX-Befehl. Das Passwort liegt im macOS-Schlüsselbund, Mail und Land in einer lokalen Datei.")
+    private let solixHint = NSTextField(wrappingLabelWithString: "SolixBar fragt die Werte direkt mit der mitgelieferten Laufzeit ab. Das Passwort liegt im macOS-Schlüsselbund, Mail und Land in einer lokalen Datei.")
     private let solixEmailRow = NSStackView()
     private let solixPasswordRow = NSStackView()
     private let solixCountryRow = NSStackView()
     private let solixTodayBaseRow = NSStackView()
     private let solixTotalBaseRow = NSStackView()
     private let graphFitButton = NSButton(checkboxWithTitle: "Graph an vorhandene Daten anpassen", target: nil, action: nil)
+    private let graphSmoothButton = NSButton(checkboxWithTitle: "Kurven glätten", target: nil, action: nil)
+    private let fillBatteryButton = NSButton(checkboxWithTitle: "Akku", target: nil, action: nil)
+    private let fillSolarButton = NSButton(checkboxWithTitle: "Solar", target: nil, action: nil)
+    private let fillGridButton = NSButton(checkboxWithTitle: "Netzbezug", target: nil, action: nil)
     private let customRangeField = NSTextField()
     private let customRangeUnitPopup = NSPopUpButton()
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
@@ -126,7 +130,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func buildView() -> NSView {
         let container = NSView()
 
-        modePopup.addItems(withTitles: ["Demo", "Demo (Warnungs-Test)", "Lokaler JSON-Befehl", "JSON-URL"])
+        modePopup.addItems(withTitles: ["SOLIX-Konto (direkt)", "Demo", "Demo (Warnungs-Test)", "Lokaler JSON-Befehl", "JSON-URL"])
         appearancePopup.addItems(withTitles: ["Automatisch", "Hell", "Dunkel"])
         languagePopup.addItems(withTitles: ["Deutsch", "English"])
         applyLocalizedControlTitles()
@@ -199,7 +203,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, dashboardPVPopup, detachedDashboardPVPopup, menuBarPVPopup, detachedPVPopup, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, warnPerPVDipButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, dashboardPVPopup, detachedDashboardPVPopup, menuBarPVPopup, detachedPVPopup, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, warnPerPVDipButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, graphSmoothButton, fillBatteryButton, fillSolarButton, fillGridButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -212,6 +216,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         stackedButton.toolTip = "Zeigt die Werte in zwei kompakten Zeilen übereinander — halbe Breite bei gleicher Information, praktisch auf MacBooks mit Notch."
         stackedDetachedButton.toolTip = "Nutzt die zweizeilige Kompaktanzeige auch in der abgedockten Leiste — macht sie etwa halb so lang."
         graphFitButton.toolTip = "Blendet leere Zeiträume im Verlaufsgraphen aus: Die Zeitachse beginnt bei der ersten vorhandenen Messung statt beim Kalenderanfang des Zeitraums."
+        graphSmoothButton.toolTip = LocalizedText.text(
+            "Zeichnet die Verlaufskurven weich statt eckig — die Kurve läuft weiter exakt durch alle Messpunkte.",
+            "Draws the history curves smoothly instead of angular — the curve still passes exactly through every measurement."
+        )
+        let fillTooltip = LocalizedText.text(
+            "Füllt die Fläche unter der jeweiligen Kurve dezent ein — je Kurve wählbar.",
+            "Subtly fills the area under the respective curve — selectable per curve."
+        )
+        fillBatteryButton.toolTip = fillTooltip
+        fillSolarButton.toolTip = fillTooltip
+        fillGridButton.toolTip = fillTooltip
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
         showEnergyFlowArrowsButton.toolTip = "Zeigt Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen; Wattwerte erscheinen dann ohne Vorzeichen."
@@ -277,6 +292,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let modeIndex = modePopup.indexOfSelectedItem
         modePopup.removeAllItems()
         modePopup.addItems(withTitles: [
+            LocalizedText.text("SOLIX-Konto (direkt)", "SOLIX account (direct)"),
             "Demo",
             LocalizedText.text("Demo (Warnungs-Test)", "Demo (warning test)"),
             LocalizedText.text("Lokaler JSON-Befehl", "Local JSON command"),
@@ -284,8 +300,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ])
         if modeIndex >= 0 { modePopup.selectItem(at: modeIndex) }
         modePopup.toolTip = LocalizedText.text(
-            "Legt fest, woher SolixBar die Werte lädt. \"Demo (Warnungs-Test)\" spielt ein gerafftes Szenario ab (Akku fällt, PV-Eingang stirbt, kompletter Einbruch), damit aktivierte Warnungen innerhalb weniger Minuten wirklich feuern.",
-            "Controls where SolixBar loads its values from. \"Demo (warning test)\" plays an accelerated scenario (battery drops, one PV input dies, full collapse) so enabled warnings actually fire within a few minutes."
+            "Legt fest, woher SolixBar die Werte lädt. \"SOLIX-Konto (direkt)\" fragt Anker mit Mail und Passwort direkt ab. \"Demo (Warnungs-Test)\" spielt ein gerafftes Szenario ab (Akku fällt, PV-Eingang stirbt, kompletter Einbruch), damit aktivierte Warnungen innerhalb weniger Minuten wirklich feuern.",
+            "Controls where SolixBar loads its values from. \"SOLIX account (direct)\" queries Anker directly with email and password. \"Demo (warning test)\" plays an accelerated scenario (battery drops, one PV input dies, full collapse) so enabled warnings actually fire within a few minutes."
+        )
+        solixTitle.stringValue = LocalizedText.text("SOLIX Login", "SOLIX login")
+        solixHint.stringValue = LocalizedText.text(
+            "SolixBar fragt die Werte direkt mit der mitgelieferten Laufzeit ab. Das Passwort liegt im macOS-Schlüsselbund, Mail und Land in einer lokalen Datei.",
+            "SolixBar queries the values directly using the bundled runtime. The password lives in the macOS Keychain; email and country in a local file."
         )
         let appearanceIndex = appearancePopup.indexOfSelectedItem
         appearancePopup.removeAllItems()
@@ -309,6 +330,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         detachedFlowColorsButton.title = LocalizedText.text("Farbige Werte anzeigen", "Show colored values")
         detachedFlowColorsButton.toolTip = LocalizedText.text("Färbt Werte und Symbole der Leiste nach ihrer Bedeutung.", "Colors the bar's values and symbols by meaning.")
         graphFitButton.title = LocalizedText.text("Graph an vorhandene Daten anpassen", "Fit graph to available data")
+        graphSmoothButton.title = LocalizedText.text("Kurven glätten", "Smooth curves")
+        fillBatteryButton.title = LocalizedText.text("Akku", "Battery")
+        fillSolarButton.title = LocalizedText.text("Solar", "Solar")
+        fillGridButton.title = LocalizedText.text("Netzbezug", "Grid import")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
         showEnergyFlowArrowsButton.title = LocalizedText.text("Flussrichtung anzeigen", "Show flow direction")
@@ -663,6 +688,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let languageRow = formRow(labelText: LocalizedText.text("Sprache", "Language"), control: languagePopup)
         let dashboardTitle = sectionTitle(LocalizedText.text("Dashboard", "Dashboard"))
         let graphFitRow = settingRow(graphFitButton, help: graphFitButton.toolTip ?? "")
+        let graphSmoothRow = settingRow(graphSmoothButton, help: graphSmoothButton.toolTip ?? "")
+        let fillChecks = NSStackView(views: [fillBatteryButton, fillSolarButton, fillGridButton])
+        fillChecks.orientation = .horizontal
+        fillChecks.spacing = 10
+        let fillRow = NSStackView(views: [
+            label(LocalizedText.text("Flächen füllen", "Fill areas")),
+            fillChecks,
+            helpButton(fillSolarButton.toolTip ?? "")
+        ])
+        fillRow.orientation = .horizontal
+        fillRow.spacing = 12
+        fillRow.alignment = .centerY
         customRangeField.alignment = .center
         customRangeField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
         customRangeField.target = self
@@ -733,7 +770,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, perPVRow, detachedDashboardPVRow, customRangeRow, dashboardLevelRow, graphLevelRow, startTitle, autostartRow, autostartStatus, updateCheckRow, hint] {
+        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, graphSmoothRow, fillRow, perPVRow, detachedDashboardPVRow, customRangeRow, dashboardLevelRow, graphLevelRow, startTitle, autostartRow, autostartStatus, updateCheckRow, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -754,7 +791,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             graphFitRow.topAnchor.constraint(equalTo: dashboardTitle.bottomAnchor, constant: 10),
             graphFitRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            perPVRow.topAnchor.constraint(equalTo: graphFitRow.bottomAnchor, constant: 10),
+            graphSmoothRow.topAnchor.constraint(equalTo: graphFitRow.bottomAnchor, constant: 10),
+            graphSmoothRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            fillRow.topAnchor.constraint(equalTo: graphSmoothRow.bottomAnchor, constant: 10),
+            fillRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            perPVRow.topAnchor.constraint(equalTo: fillRow.bottomAnchor, constant: 10),
             perPVRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             detachedDashboardPVRow.topAnchor.constraint(equalTo: perPVRow.bottomAnchor, constant: 10),
@@ -1060,30 +1103,46 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }()
 
     @objc private func showHelpPopover(_ sender: NSButton) {
-        guard let text = sender.toolTip, !text.isEmpty else { return }
-        let label = NSTextField(wrappingLabelWithString: text)
-        label.font = .systemFont(ofSize: 12)
-        label.textColor = .labelColor
-        label.preferredMaxLayoutWidth = 260
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        let container = NSView()
-        container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
-            label.widthAnchor.constraint(lessThanOrEqualToConstant: 260)
-        ])
-
+        guard let shortText = sender.toolTip, !shortText.isEmpty else { return }
+        // Klick zeigt den ausführlichen Text aus dem Hilfe-Katalog; der
+        // Hover-Tooltip bleibt der kurze Hinweis.
+        let text = SettingsHelp.extended(for: shortText) ?? shortText
+        let (container, size) = Self.helpPopoverContent(for: text)
         let controller = NSViewController()
         controller.view = container
         let popover = NSPopover()
         popover.behavior = .transient
         popover.contentViewController = controller
-        popover.contentSize = container.fittingSize
+        popover.contentSize = size
         popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
+    }
+
+    /// Baut den Popover-Inhalt mit expliziten Frames und misst die Höhe
+    /// selbst. Der frühere Autolayout-Weg lieferte über fittingSize eine
+    /// 0-Grösse (Container ohne translatesAutoresizingMask-Abschaltung) —
+    /// das Popover erschien als leere Sprechblase.
+    static func helpPopoverContent(for text: String) -> (view: NSView, size: NSSize) {
+        let font = NSFont.systemFont(ofSize: 12)
+        let textWidth: CGFloat = 300
+        let padding = NSSize(width: 14, height: 12)
+
+        let measured = NSAttributedString(string: text, attributes: [.font: font])
+            .boundingRect(
+                with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]
+            )
+        let textHeight = ceil(measured.height)
+        let size = NSSize(width: textWidth + padding.width * 2, height: textHeight + padding.height * 2)
+
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.font = font
+        label.textColor = .labelColor
+        label.isSelectable = false
+        label.frame = NSRect(x: padding.width, y: padding.height, width: textWidth, height: textHeight)
+
+        let container = NSView(frame: NSRect(origin: .zero, size: size))
+        container.addSubview(label)
+        return (container, size)
     }
 
     private func labelTooltip(_ text: String) -> String {
@@ -1093,7 +1152,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case "Abgedockt", "Detached":
             return "Passt nur die Größe der abgedockten Menüleistenleiste an."
         case "Modus", "Mode":
-            return "Wählt Demo, lokalen JSON-Befehl oder JSON-URL."
+            return "Legt fest, woher SolixBar die Werte lädt."
         case "Mail", "Email":
             return "E-Mail-Adresse deines Anker/SOLIX-Kontos."
         case "Passwort", "Password":
@@ -1125,14 +1184,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func loadSettings() {
         isLoading = true
         switch settings.dataSourceMode {
-        case .demo:
+        case .solix:
             modePopup.selectItem(at: 0)
-        case .demoWarnings:
+        case .demo:
             modePopup.selectItem(at: 1)
-        case .command:
+        case .demoWarnings:
             modePopup.selectItem(at: 2)
-        case .url:
+        case .command:
             modePopup.selectItem(at: 3)
+        case .url:
+            modePopup.selectItem(at: 4)
         }
         switch settings.appearanceMode {
         case .system:
@@ -1151,6 +1212,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         stackedButton.state = settings.menuBarStacked ? .on : .off
         stackedDetachedButton.state = settings.detachedBarStacked ? .on : .off
         graphFitButton.state = settings.graphFitsData ? .on : .off
+        graphSmoothButton.state = settings.graphSmoothing ? .on : .off
+        fillBatteryButton.state = settings.graphFilledMetrics.contains(.battery) ? .on : .off
+        fillSolarButton.state = settings.graphFilledMetrics.contains(.solar) ? .on : .off
+        fillGridButton.state = settings.graphFilledMetrics.contains(.grid) ? .on : .off
         customRangeField.stringValue = String(
             HistoryGraphMenuView.customValue(days: settings.customHistoryDays, unit: settings.customHistoryUnit)
         )
@@ -1228,11 +1293,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func applyControlsToSettings() {
         switch modePopup.indexOfSelectedItem {
-        case 1:
-            settings.dataSourceMode = .demoWarnings
+        case 0:
+            settings.dataSourceMode = .solix
         case 2:
-            settings.dataSourceMode = .command
+            settings.dataSourceMode = .demoWarnings
         case 3:
+            settings.dataSourceMode = .command
+        case 4:
             settings.dataSourceMode = .url
         default:
             settings.dataSourceMode = .demo
@@ -1263,6 +1330,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.menuBarStacked = stackedButton.state == .on
         settings.detachedBarStacked = stackedDetachedButton.state == .on
         settings.graphFitsData = graphFitButton.state == .on
+        settings.graphSmoothing = graphSmoothButton.state == .on
+        var filledMetrics: [GraphMetric] = []
+        if fillBatteryButton.state == .on { filledMetrics.append(.battery) }
+        if fillSolarButton.state == .on { filledMetrics.append(.solar) }
+        if fillGridButton.state == .on { filledMetrics.append(.grid) }
+        settings.graphFilledMetrics = filledMetrics
         let unitKeys = ["hours", "days", "weeks", "months"]
         let selectedUnit = unitKeys[max(0, min(unitKeys.count - 1, customRangeUnitPopup.indexOfSelectedItem))]
         settings.customHistoryUnit = selectedUnit
@@ -1310,22 +1383,20 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.lockDetachedMenuBar = lockDetachedMenuBarButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
         settings.detachedMenuBarScale = detachedScaleSlider.doubleValue
-        if settings.dataSourceMode == .command && shouldUseSolixHelper {
-            settings.dataSourceMode = .command
-            settings.command = solixHelperCommand
-            commandField.stringValue = solixHelperCommand
-            modePopup.selectItem(at: 1)
-        }
         updateDataSourceFieldVisibility()
     }
 
     private func updateDataSourceFieldVisibility() {
         switch modePopup.indexOfSelectedItem {
-        case 2:
-            commandRow.isHidden = false
+        case 0:
+            commandRow.isHidden = true
             urlRow.isHidden = true
             setSolixRowsHidden(false)
         case 3:
+            commandRow.isHidden = false
+            urlRow.isHidden = true
+            setSolixRowsHidden(true)
+        case 4:
             commandRow.isHidden = true
             urlRow.isHidden = false
             setSolixRowsHidden(true)
@@ -1434,12 +1505,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     @objc private func saveSettings() {
         isSaving = true
         applyControlsToSettings()
-        if settings.dataSourceMode == .command {
+        if settings.dataSourceMode == .solix {
             saveSolixCredentialsIfNeeded()
-            if shouldUseSolixHelper {
-                settings.command = solixHelperCommand
-                commandField.stringValue = solixHelperCommand
-            }
         }
         onSave()
         window?.close()
@@ -1484,7 +1551,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         restoreOriginalSettings()
     }
 
-    private var shouldUseSolixHelper: Bool {
+    /// Nichts speichern, solange alle Felder leer sind — sonst würde ein
+    /// blosses Öffnen der Einstellungen gespeicherte Zugangsdaten leeren.
+    private var hasSolixCredentialInput: Bool {
         !solixEmailField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !solixPasswordField.stringValue.isEmpty
             || !solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1510,7 +1579,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private func saveSolixCredentialsIfNeeded() {
-        guard shouldUseSolixHelper else { return }
+        guard hasSolixCredentialInput else { return }
         let email = solixEmailField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let password = solixPasswordField.stringValue
         let country = solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

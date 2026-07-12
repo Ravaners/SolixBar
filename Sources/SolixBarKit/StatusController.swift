@@ -18,6 +18,7 @@ final class StatusController: NSObject {
     private var isMenuBarDetached = false
     private var isTerminating = false
     private var isRefreshing = false
+    private var consecutiveRefreshFailures = 0
     private var displayLevel: MenuBarDisplayLevel = .full
     private var lastDisplaySignature = ""
     private let formatter = MenuBarFormatter()
@@ -32,6 +33,7 @@ final class StatusController: NSObject {
     func start() {
         settings.migrateMenuBarGridMetricIfNeeded()
         settings.migrateFlowMetricIfNeeded()
+        settings.migrateSolixCommandIfNeeded()
         applyAppearance()
         updateMenuBarIcon()
         setStatusTitle("SOLIX")
@@ -56,7 +58,8 @@ final class StatusController: NSObject {
                 self?.openLargeGraph()
             }
         }
-        scheduleRefreshTimer()
+        // Kein scheduleRefreshTimer() hier: refresh() plant den nächsten
+        // Abruf nach Abschluss selbst (Einmal-Timer mit Fehler-Backoff).
         scheduleUpdateChecks()
     }
 
@@ -234,6 +237,8 @@ final class StatusController: NSObject {
             demoWarningsStart = nil
         }
         switch settings.dataSourceMode {
+        case .solix:
+            return BundledSolixDataProvider(credentials: .stored())
         case .demo:
             return DemoSolixDataProvider()
         case .demoWarnings:
@@ -274,6 +279,9 @@ final class StatusController: NSObject {
             defer {
                 isRefreshing = false
                 stopRefreshAnimation()
+                // Nächsten Abruf erst nach Abschluss planen — so verlängert
+                // das Backoff bei Fehlern automatisch den Abstand.
+                scheduleRefreshTimer()
             }
             do {
                 var snapshot = try await provider().fetchSnapshot()
@@ -287,6 +295,7 @@ final class StatusController: NSObject {
                 lastSnapshot = snapshot
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
+                consecutiveRefreshFailures = 0
                 historyStore.record(
                     snapshot,
                     sourceKey: settings.dataSourceMode.rawValue,
@@ -299,13 +308,20 @@ final class StatusController: NSObject {
                 // Letzten gültigen Snapshot behalten: ein transienter Fehler
                 // soll die Anzeige nicht leeren, nur als veraltet markieren.
                 lastError = error.localizedDescription
+                consecutiveRefreshFailures += 1
                 AppLogger.error("Refresh failed (keeping last snapshot): \(Self.describeError(error))")
             }
             updateTitle()
             rebuildMenu()
-            detachedDashboardWindow?.rebuild()
+            // Unsichtbare Fenster nicht neu aufbauen — beim Öffnen wird
+            // ohnehin frisch gerendert (showBelowMenuBar/openLargeGraph).
+            if detachedDashboardWindow?.window?.isVisible == true {
+                detachedDashboardWindow?.rebuild()
+            }
             detachedMenuBarWindow?.rebuild()
-            largeGraphWindow?.rebuild()
+            if largeGraphWindow?.window?.isVisible == true {
+                largeGraphWindow?.rebuild()
+            }
         }
     }
 
@@ -350,18 +366,37 @@ final class StatusController: NSObject {
         timer?.invalidate()
         // Warnungs-Test: fester 30-Sekunden-Takt, damit das geraffte
         // Szenario zügig durchläuft.
-        let interval = settings.dataSourceMode == .demoWarnings
+        let baseInterval = settings.dataSourceMode == .demoWarnings
             ? 30
             : max(60, settings.refreshInterval)
-        let newTimer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+        let interval = Self.backoffInterval(
+            base: baseInterval,
+            consecutiveFailures: consecutiveRefreshFailures
+        )
+        // Einmal-Timer: der nächste Abruf wird erst nach Abschluss des
+        // laufenden geplant, damit sich Fehler-Backoff und langsame Abrufe
+        // nicht mit einem festen Takt überlappen.
+        let newTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
             Task { @MainActor in
+                self?.timer = nil
                 self?.refresh()
             }
         }
         newTimer.tolerance = min(5, interval * 0.1)
         RunLoop.main.add(newTimer, forMode: .common)
         timer = newTimer
-        AppLogger.info("Refresh timer scheduled every \(Int(interval)) seconds in common run loop modes.")
+        if consecutiveRefreshFailures > 0 {
+            AppLogger.info("Next refresh in \(Int(interval)) seconds (backoff after \(consecutiveRefreshFailures) failures).")
+        } else {
+            AppLogger.info("Next refresh scheduled in \(Int(interval)) seconds.")
+        }
+    }
+
+    /// Fehler-Backoff: Basisintervall × 2^Fehler, gedeckelt auf 30 Minuten.
+    /// So hämmert die App bei toter API nicht die ganze Nacht durch.
+    nonisolated static func backoffInterval(base: TimeInterval, consecutiveFailures: Int) -> TimeInterval {
+        let multiplier = pow(2.0, Double(min(4, max(0, consecutiveFailures))))
+        return min(30 * 60, base * multiplier)
     }
 
     private func updateTitle() {
@@ -967,7 +1002,6 @@ final class StatusController: NSObject {
             lastDisplaySignature = signature
             displayLevel = .full
         }
-        scheduleRefreshTimer()
         scheduleUpdateChecks()
         applyAppearance()
         updateMenuBarIcon()
@@ -979,7 +1013,12 @@ final class StatusController: NSObject {
         largeGraphWindow?.applyWindowLevel()
         largeGraphWindow?.rebuild()
         if refreshNow {
+            // Quellenwechsel: alter Fehlerzähler soll die neue Quelle
+            // nicht ausbremsen; refresh() plant den Timer anschliessend.
+            consecutiveRefreshFailures = 0
             refresh()
+        } else {
+            scheduleRefreshTimer()
         }
     }
 
@@ -1016,6 +1055,11 @@ final class StatusController: NSObject {
 
     private var isCurrentDataSourceConfigured: Bool {
         switch settings.dataSourceMode {
+        case .solix:
+            {
+                let credentials = BundledSolixDataProvider.Credentials.stored()
+                return !credentials.email.isEmpty && !credentials.password.isEmpty
+            }()
         case .demo, .demoWarnings:
             true
         case .command:
@@ -1027,6 +1071,10 @@ final class StatusController: NSObject {
 
     private func configurationMessage() -> String? {
         switch settings.dataSourceMode {
+        case .solix:
+            isCurrentDataSourceConfigured
+                ? LocalizedText.text("Noch keine SOLIX-Daten geladen.", "No SOLIX data loaded yet.")
+                : LocalizedText.text("SOLIX-Mail und Passwort fehlen.", "SOLIX email and password are missing.")
         case .demo, .demoWarnings:
             nil
         case .command:

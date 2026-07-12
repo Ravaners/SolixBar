@@ -17,6 +17,16 @@ enum SolixPaths {
         appSupportDirectory.appendingPathComponent("history.json")
     }
 
+    /// Ertragszustand des Python-Helpers (Tages-/Gesamt-Akkumulator).
+    static var energyStateFileURL: URL {
+        appSupportDirectory.appendingPathComponent("energy.json")
+    }
+
+    /// API-Antwort-Cache des Python-Helpers (Tages-/Gesamtstatistik).
+    static var apiCacheFileURL: URL {
+        appSupportDirectory.appendingPathComponent("api-cache.json")
+    }
+
     /// Findet das SOLIX-Hilfsscript: bevorzugt im App-Bundle, sonst im
     /// Arbeitsverzeichnis (Entwicklung mit `swift run`).
     static func helperScriptURL() -> URL? {

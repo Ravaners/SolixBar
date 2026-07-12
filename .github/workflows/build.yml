@@ -42,10 +42,16 @@ jobs:
       - name: Build release binary (universal)
         run: swift build -c release --arch arm64 --arch x86_64
 
+      # Portable Python-Laufzeit für den direkten SOLIX-Modus. Die Laufzeit
+      # ist arm64-only (wie die Runner); auf Intel-Macs bleiben Demo-,
+      # Befehl- und URL-Modus voll nutzbar.
+      - name: Prepare SOLIX runtime
+        run: sh scripts/prepare_solix_runtime.sh
+
       - name: Package app bundle
         run: |
           SOLIXBAR_BIN=".build/apple/Products/Release/SolixBar" sh scripts/package_app.sh
-          codesign --force --deep -s - outputs/SolixBar.app
+          sh scripts/verify_release.sh outputs/SolixBar.app
           ditto -c -k --sequesterRsrc --keepParent outputs/SolixBar.app SolixBar-macOS.zip
 
       - name: Upload render snapshots

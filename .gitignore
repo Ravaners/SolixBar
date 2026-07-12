@@ -5,3 +5,5 @@ work/
 .DS_Store
 *.xcodeproj
 renders/
+__pycache__/
+*.pyc

@@ -1,6 +1,9 @@
 import Foundation
 
 enum DataSourceMode: String {
+    /// Direkter SOLIX-Abruf über die mitgelieferte Python-Laufzeit —
+    /// funktioniert ohne konfigurierten Befehl und ohne lokale Installation.
+    case solix
     case demo
     /// Gerafftes Test-Szenario, damit aktivierte Warnungen innerhalb
     /// weniger Minuten wirklich feuern.
@@ -253,6 +256,8 @@ struct AppSettingsSnapshot: Equatable {
     var warnPVWindowEnd: Int
     var warnPerPVEnabled: Bool
     var warnPerPVDipEnabled: Bool
+    var graphSmoothing: Bool
+    var graphFilledMetrics: [GraphMetric]
 }
 
 @MainActor
@@ -395,6 +400,18 @@ final class AppSettings {
         }
     }
 
+    /// Wer bisher den vorbereiteten SOLIX-Befehl im Modus "Lokaler
+    /// JSON-Befehl" nutzte, wechselt auf den direkten SOLIX-Modus — die
+    /// Zugangsdaten (Env-Datei + Schlüsselbund) bleiben dieselben.
+    func migrateSolixCommandIfNeeded() {
+        let key = "didMigrateSolixCommand043"
+        guard defaults.bool(forKey: key) == false else { return }
+        defaults.set(true, forKey: key)
+        if dataSourceMode == .command, command.contains("run_solix_snapshot.sh") {
+            dataSourceMode = .solix
+        }
+    }
+
     /// Kompaktanzeige ist Standard: informationsdicht und notch-sicher.
     var menuBarStacked: Bool {
         get {
@@ -531,6 +548,26 @@ final class AppSettings {
             let metrics = newValue.isEmpty ? GraphMetric.allCases : newValue
             defaults.set(metrics.map(\.rawValue), forKey: "graphMetrics")
         }
+    }
+
+    /// Zeichnet die Verlaufskurven als weiche Kurven (monotone Interpolation
+    /// ohne Überschwingen) statt als Geradenzüge. Reine Darstellung — die
+    /// gespeicherten Messwerte bleiben unverändert.
+    var graphSmoothing: Bool {
+        get { defaults.bool(forKey: "graphSmoothing") }
+        set { defaults.set(newValue, forKey: "graphSmoothing") }
+    }
+
+    /// Welche Kurven eine Flächenfüllung unter der Linie bekommen.
+    /// Standard: nur Solar (bisheriges Verhalten).
+    var graphFilledMetrics: [GraphMetric] {
+        get {
+            guard let values = defaults.array(forKey: "graphFilledMetrics") as? [String] else {
+                return [.solar]
+            }
+            return values.compactMap(GraphMetric.init(rawValue:))
+        }
+        set { defaults.set(newValue.map(\.rawValue), forKey: "graphFilledMetrics") }
     }
 
     var isDetachedMenuBarActive: Bool {
@@ -760,7 +797,9 @@ final class AppSettings {
             warnPVWindowStart: warnPVWindowStart,
             warnPVWindowEnd: warnPVWindowEnd,
             warnPerPVEnabled: warnPerPVEnabled,
-            warnPerPVDipEnabled: warnPerPVDipEnabled
+            warnPerPVDipEnabled: warnPerPVDipEnabled,
+            graphSmoothing: graphSmoothing,
+            graphFilledMetrics: graphFilledMetrics
         )
     }
 
@@ -815,5 +854,7 @@ final class AppSettings {
         warnPVWindowEnd = snapshot.warnPVWindowEnd
         warnPerPVEnabled = snapshot.warnPerPVEnabled
         warnPerPVDipEnabled = snapshot.warnPerPVDipEnabled
+        graphSmoothing = snapshot.graphSmoothing
+        graphFilledMetrics = snapshot.graphFilledMetrics
     }
 }

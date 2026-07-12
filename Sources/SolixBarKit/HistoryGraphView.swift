@@ -8,6 +8,11 @@ final class HistoryGraphView: NSView {
     private let visibleMetrics: [GraphMetric]
     private let showsHeader: Bool
     private let fitsData: Bool
+    private let smoothing: Bool
+    private let filledMetrics: Set<GraphMetric>
+    /// Y-Grenzen der Plotfläche, auf die die Glättung geklemmt wird (während
+    /// des Zeichnens gesetzt). Verhindert Überschwingen aus dem Chart heraus.
+    private var curveClampBounds: ClosedRange<CGFloat>?
     private var animationProgress: CGFloat = 0
     private var animationTimer: Timer?
     private let animationStart = Date()
@@ -31,6 +36,8 @@ final class HistoryGraphView: NSView {
         visibleMetrics: [GraphMetric] = AppSettings.shared.graphMetrics,
         showsHeader: Bool = true,
         fitsData: Bool = AppSettings.shared.graphFitsData,
+        smoothing: Bool = AppSettings.shared.graphSmoothing,
+        filledMetrics: Set<GraphMetric> = Set(AppSettings.shared.graphFilledMetrics),
         size: NSSize = NSSize(width: 320, height: 170)
     ) {
         self.samples = samples.sorted { $0.date < $1.date }
@@ -39,6 +46,8 @@ final class HistoryGraphView: NSView {
         self.rangeDuration = rangeDuration
         self.showsHeader = showsHeader
         self.fitsData = fitsData
+        self.smoothing = smoothing
+        self.filledMetrics = filledMetrics
         self.visibleMetrics = visibleMetrics.isEmpty ? GraphMetric.allCases : visibleMetrics
         super.init(frame: NSRect(origin: .zero, size: size))
         wantsLayer = true
@@ -116,16 +125,27 @@ final class HistoryGraphView: NSView {
             return
         }
 
-        // Nur Solar bekommt eine Flächenfüllung — mehrere überlagerte
-        // Füllungen mischten sich zu einem undefinierbaren Oliv.
+        // Flächenfüllung je Kurve wählbar (Standard: nur Solar). Alle
+        // Füllungen zuerst, dann alle Linien — so bleiben die Linien auch
+        // bei überlappenden (bewusst blassen) Füllungen knackig.
+        var curves: [(points: [NSPoint], color: NSColor, metric: GraphMetric)] = []
         if visibleMetrics.contains(.battery) {
-            drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 3.1, baseline: plot.minY, filled: false)
+            curves.append((animatedPoints(batteryPoints(in: plot)), batteryColor, .battery))
         }
         if visibleMetrics.contains(.solar) {
-            drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 3.1, baseline: plot.minY, filled: true)
+            curves.append((animatedPoints(solarPoints(in: plot, maxPower: maxPower)), solarColor, .solar))
         }
         if visibleMetrics.contains(.grid) {
-            drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 3.1, baseline: plot.minY, filled: false)
+            curves.append((animatedPoints(gridPoints(in: plot, maxPower: maxPower)), gridColor, .grid))
+        }
+        // Glättung darf die Kurve nicht aus der Plotfläche schieben — sonst
+        // zeigte ein weicher Bogen z. B. negative Watt unter der Nulllinie.
+        curveClampBounds = plot.minY...plot.maxY
+        for curve in curves where filledMetrics.contains(curve.metric) {
+            drawFill(values: curve.points, color: curve.color, baseline: plot.minY)
+        }
+        for curve in curves {
+            drawLine(values: curve.points, color: curve.color, width: 3.1)
         }
         // Grundlinie zuletzt: Kurven auf 0 (z. B. Netz nachts) sollen die
         // Achse nicht verdecken.
@@ -487,27 +507,81 @@ final class HistoryGraphView: NSView {
         return formatter.string(from: date)
     }
 
-    private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat, baseline: CGFloat, filled: Bool) {
-        guard points.count >= 2 else { return }
-        if filled {
-            let fillPath = NSBezierPath()
-            fillPath.move(to: NSPoint(x: points[0].x, y: baseline))
-            for point in points {
-                fillPath.line(to: point)
-            }
-            if let last = points.last {
-                fillPath.line(to: NSPoint(x: last.x, y: baseline))
-            }
-            fillPath.close()
-            color.withAlphaComponent(0.12).setFill()
-            fillPath.fill()
-        }
+    private func drawFill(values points: [NSPoint], color: NSColor, baseline: CGFloat) {
+        guard points.count >= 2, let first = points.first, let last = points.last else { return }
+        let fillPath = linePath(through: points)
+        fillPath.line(to: NSPoint(x: last.x, y: baseline))
+        fillPath.line(to: NSPoint(x: first.x, y: baseline))
+        fillPath.close()
+        color.withAlphaComponent(0.12).setFill()
+        fillPath.fill()
+    }
 
+    /// Pfad durch die Messpunkte: Geradenzug oder — bei aktivierter
+    /// Glättung — eine weiche Kurve (auf die Plotfläche geklemmt).
+    private func linePath(through points: [NSPoint]) -> NSBezierPath {
+        smoothing
+            ? Self.smoothPath(through: points, clampingY: curveClampBounds)
+            : Self.straightPath(through: points)
+    }
+
+    static func straightPath(through points: [NSPoint]) -> NSBezierPath {
         let path = NSBezierPath()
-        path.move(to: points[0])
+        guard let first = points.first else { return path }
+        path.move(to: first)
         for point in points.dropFirst() {
             path.line(to: point)
         }
+        return path
+    }
+
+    /// Weiche Kurve durch alle Messpunkte (Catmull-Rom, in kubische Béziers
+    /// überführt). Fliesst sichtbar runder durch die Punkte als eine
+    /// monotone Interpolation. Damit ein Bogen die Kurve nicht aus dem Chart
+    /// schiebt (z. B. scheinbar negative Watt unter der Nulllinie), werden
+    /// die Kontrollpunkte auf die Plotfläche geklemmt: Da eine Bézier-Kurve
+    /// stets in der konvexen Hülle ihrer Kontrollpunkte liegt, bleibt die
+    /// ganze Kurve dann garantiert innerhalb dieser Grenzen.
+    static func smoothPath(through points: [NSPoint], clampingY yBounds: ClosedRange<CGFloat>?) -> NSBezierPath {
+        let path = NSBezierPath()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        guard points.count > 2 else {
+            for point in points.dropFirst() {
+                path.line(to: point)
+            }
+            return path
+        }
+
+        func clampY(_ y: CGFloat) -> CGFloat {
+            guard let yBounds else { return y }
+            return min(max(y, yBounds.lowerBound), yBounds.upperBound)
+        }
+
+        let count = points.count
+        for index in 0..<(count - 1) {
+            let p0 = points[index == 0 ? 0 : index - 1]
+            let p1 = points[index]
+            let p2 = points[index + 1]
+            let p3 = points[index + 2 < count ? index + 2 : count - 1]
+
+            // Catmull-Rom → Bézier-Kontrollpunkte (Standard-Tension 1/6).
+            var c1 = NSPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            var c2 = NSPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            // X im Segment halten (kein Rückwärtsschlaufen bei ungleichen
+            // Abständen), Y auf die Plotfläche klemmen.
+            c1.x = min(max(c1.x, p1.x), p2.x)
+            c2.x = min(max(c2.x, p1.x), p2.x)
+            c1.y = clampY(c1.y)
+            c2.y = clampY(c2.y)
+            path.curve(to: p2, controlPoint1: c1, controlPoint2: c2)
+        }
+        return path
+    }
+
+    private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat) {
+        guard points.count >= 2 else { return }
+        let path = linePath(through: points)
         let shadow = NSShadow()
         shadow.shadowColor = color.withAlphaComponent(0.24)
         shadow.shadowBlurRadius = 5

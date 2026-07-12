@@ -32,8 +32,9 @@ Einstellungen mit sortierbarer Werte-Auswahl und optionalen Warnungen: / Setting
 ## Funktionen / Features
 
 - Native AppKit-Menueleisten-App. / Native AppKit menu bar app.
+- Direkter SOLIX-Abruf mit Mail und Passwort — die mitgelieferte Python-Laufzeit macht jede lokale Installation überflüssig. / Direct SOLIX access with email and password — the bundled Python runtime removes any local installation.
 - Demo-Modus zum Testen ohne Zugangsdaten. / Demo data mode for testing without credentials.
-- Live-Daten ueber lokalen JSON-Befehl oder JSON-URL. / Live data via local JSON command or JSON URL.
+- Live-Daten alternativ über lokalen JSON-Befehl oder JSON-URL. / Live data alternatively via local JSON command or JSON URL.
 - Frei waehlbare Menueleistenwerte, Bezeichnungen, Symbole, App-Symbol und Skalierung. / Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
 - Optionale farbige Energiefluss-Pfeile in der Menueleiste. / Optional colored energy-flow arrows in the menu bar.
 - Abgedockte schmale Leiste mit Andocken-Funktion, Fixieren gegen versehentliches Verschieben und gespeichertem Zustand. / Detachable slim bar with dock action, optional movement lock, and restored state.
@@ -82,11 +83,13 @@ open outputs/SolixBar.app
 
 ## Datenquellen / Data Source Modes
 
-SolixBar unterstuetzt drei Modi. / SolixBar supports three modes:
+SolixBar unterstützt fünf Modi. / SolixBar supports five modes:
 
-- `Demo`: erzeugte Beispieldaten zum Testen der Oberflaeche. / Generated sample data for testing the UI.
-- `Lokaler JSON-Befehl`: fuehrt einen lokalen Befehl aus und liest JSON aus stdout. / Runs a local command and reads JSON from stdout.
-- `JSON-URL`: laedt JSON von einer lokalen oder entfernten HTTP-Adresse. / Fetches JSON from a local or remote HTTP endpoint.
+- `SOLIX-Konto (direkt)`: fragt Anker direkt mit Mail und Passwort ab — empfohlener Modus, keine Installation nötig (Release-Bundle für Apple Silicon). / Queries Anker directly with email and password — recommended mode, no installation needed (release bundle for Apple Silicon).
+- `Demo`: erzeugte Beispieldaten zum Testen der Oberfläche. / Generated sample data for testing the UI.
+- `Demo (Warnungs-Test)`: gerafftes Szenario, mit dem aktivierte Warnungen in Minuten feuern. / Accelerated scenario that makes enabled warnings fire within minutes.
+- `Lokaler JSON-Befehl`: führt einen lokalen Befehl aus und liest JSON aus stdout. / Runs a local command and reads JSON from stdout.
+- `JSON-URL`: lädt JSON von einer lokalen oder entfernten HTTP-Adresse. / Fetches JSON from a local or remote HTTP endpoint.
 
 Das JSON sollte so aussehen. / The JSON should look like this:
 
@@ -111,27 +114,48 @@ Anker stellt keine stabile oeffentliche SOLIX API bereit. Dieses Projekt enthael
 
 English: Anker does not provide a stable public SOLIX API. This project includes a helper script prepared for the unofficial community library `thomluther/anker-solix-api`.
 
-Empfohlener lokaler Befehl fuer SolixBar (wird von der App automatisch vorgeschlagen; das Script liegt im Repo und in der gepackten App). / Recommended local command (suggested automatically by the app; the script ships in the repo and the packaged app):
+Empfohlener Weg: Öffne `Einstellungen` -> `Datenquelle`, wähle
+`SOLIX-Konto (direkt)`, trage Mail, Passwort und Land unter `SOLIX Login` ein
+und drücke `Speichern`. Das Release-Bundle bringt die nötige Python-Laufzeit
+samt SOLIX-Modulen mit — es ist keine Installation nötig. Die Zugangsdaten
+gehen als stdin-JSON an den Helper, teure Statistik-Abfragen werden 10 bzw.
+15 Minuten zwischengespeichert, und nach Fehlern verlängert sich das
+Abrufintervall automatisch (maximal 30 Minuten).
+
+English: Recommended path: open `Einstellungen` -> `Datenquelle`, choose
+`SOLIX-Konto (direkt)`, enter email, password, and country under `SOLIX
+Login`, then press `Speichern`. The release bundle ships the required Python
+runtime with the SOLIX modules — no installation needed. Credentials are
+passed to the helper as stdin JSON, expensive statistics calls are cached for
+10 and 15 minutes, and after failures the refresh interval backs off
+automatically (capped at 30 minutes).
+
+Wer selbst baut, bereitet die portable Laufzeit einmalig vor (lädt
+python-build-standalone und installiert `requirements-solix.txt`); danach
+bettet `package_app.sh` sie automatisch ein. / If you build from source,
+prepare the portable runtime once (downloads python-build-standalone and
+installs `requirements-solix.txt`); `package_app.sh` then embeds it
+automatically:
+
+```bash
+sh scripts/prepare_solix_runtime.sh
+```
+
+Alternativ bleibt der Befehls-Modus erhalten (Script liegt im Repo und in der
+gepackten App). / Alternatively the command mode remains available (the
+script ships in the repo and the packaged app):
 
 ```bash
 scripts/run_solix_snapshot.sh
 ```
 
-Die App kann die lokale ignorierte Zugangsdaten-Datei fuer dich erstellen. Oeffne
-`Einstellungen` -> `Datenquelle`, waehle `Lokaler JSON-Befehl`, trage Mail,
-Passwort und Land unter `SOLIX Login` ein und druecke `Speichern`.
-
-English: The app can create the local ignored credentials file for you. Open
-`Einstellungen` -> `Datenquelle`, choose `Lokaler JSON-Befehl`, enter email,
-password, and country under `SOLIX Login`, then press `Speichern`.
-
 Du kannst jederzeit zu `Demo` oder `JSON-URL` wechseln; SolixBar zeigt nur die
-Felder an, die fuer den gewaehlten Modus notwendig sind.
+Felder an, die für den gewählten Modus notwendig sind.
 
 English: You can still switch back to `Demo` or `JSON-URL`; SolixBar only shows
 the fields needed for the selected mode.
 
-Das Passwort liegt im macOS-Schluesselbund. SolixBar schreibt zusaetzlich diese lokale Datei (`~/Library/Application Support/SolixBar/solixbar.env`, Rechte 0600, ohne Secrets) und uebergibt das Passwort dem Befehl nur als Umgebungsvariable. / The password lives in the macOS Keychain. SolixBar additionally writes this local file (mode 0600, no secrets) and passes the password to the command only as an environment variable:
+Das Passwort liegt im macOS-Schlüsselbund. SolixBar schreibt zusätzlich diese lokale Datei (`~/Library/Application Support/SolixBar/solixbar.env`, Rechte 0600, ohne Secrets). / The password lives in the macOS Keychain. SolixBar additionally writes this local file (mode 0600, no secrets):
 
 ```bash
 ANKER_SOLIX_USER='you@example.com'

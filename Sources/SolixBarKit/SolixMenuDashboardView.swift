@@ -93,12 +93,13 @@ final class SolixMenuDashboardView: NSView {
             color: isDemo ? .systemBlue : statusColor
         )
 
+        let batteryValue = withTrend(
+            snapshot.batteryPercent.map { "\($0) %" },
+            arrow: trendArrow(current: snapshot.batteryPercent, previous: previous?.batteryPercent, threshold: 1)
+        ) ?? "-"
         let battery = primaryMetricPanel(
             LocalizedText.text("Akku", "Battery"),
-            withTrend(
-                snapshot.batteryPercent.map { "\($0) %" },
-                arrow: trendArrow(current: snapshot.batteryPercent, previous: previous?.batteryPercent, threshold: 1)
-            ),
+            [batteryValue],
             "battery.100percent",
             batteryColor,
             plateColor: Theme.vivid(Theme.battery(percent: snapshot.batteryPercent))
@@ -111,18 +112,13 @@ final class SolixMenuDashboardView: NSView {
             ? AppSettings.shared.detachedDashboardPVDisplay
             : AppSettings.shared.dashboardPVDisplay
         let pvChannels = (snapshot.pvWatts?.count ?? 0) > 1 ? snapshot.pvWatts : nil
-        let solarValue: String?
-        if pvMode == .perInput, let pvChannels {
-            solarValue = pvChannels.map(String.init).joined(separator: " · ") + " W"
-        } else {
-            solarValue = snapshot.solarWatts.map { "\($0) W" }
-        }
+        let solarArrow = trendArrow(current: snapshot.solarWatts, previous: previous?.solarWatts, threshold: 5)
+        let solarLines = Self.solarValueLines(
+            pvMode: pvMode, channels: pvChannels, totalWatts: snapshot.solarWatts, arrow: solarArrow
+        )
         let solar = primaryMetricPanel(
             "Solar",
-            withTrend(
-                solarValue,
-                arrow: trendArrow(current: snapshot.solarWatts, previous: previous?.solarWatts, threshold: 5)
-            ),
+            solarLines,
             "sun.max.fill",
             solarColor,
             plateColor: Theme.vivid(.solar)
@@ -291,9 +287,9 @@ final class SolixMenuDashboardView: NSView {
         return LocalizedText.text("vor \(days) Tagen", "\(days) days ago")
     }
 
-    private func primaryMetricPanel(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor, plateColor: NSColor) -> NSView {
+    private func primaryMetricPanel(_ title: String, _ valueLines: [String], _ symbol: String, _ color: NSColor, plateColor: NSColor) -> NSView {
         let panel = AnimatedPanelView()
-        panel.toolTip = tooltip(for: title, value: value)
+        panel.toolTip = tooltip(for: title, value: valueLines.joined(separator: "  "))
         panel.wantsLayer = true
         panel.layer?.cornerRadius = Theme.radiusCard
         panel.baseColor = panelBackground(for: color, strength: 0.22)
@@ -306,18 +302,19 @@ final class SolixMenuDashboardView: NSView {
         titleLabel.font = .systemFont(ofSize: 15, weight: .bold)
         titleLabel.textColor = .labelColor
 
-        let valueLabel = NSTextField(labelWithString: value ?? "-")
-        valueLabel.font = .monospacedDigitSystemFont(ofSize: 23, weight: .bold)
+        let valueLabel = FittingValueLabel()
         valueLabel.textColor = color
-        valueLabel.lineBreakMode = .byTruncatingTail
+        valueLabel.setLines(valueLines)
 
         for view in [iconPlate, titleLabel, valueLabel] {
             view.translatesAutoresizingMaskIntoConstraints = false
             panel.addSubview(view)
         }
 
-        // Stat-Tile-Aufbau: Icon vertikal zentriert, Titel und Wert an einer
-        // gemeinsamen linken Kante — eine Ausrichtungsachse statt drei.
+        // Titel oben, Wert direkt darunter (kompaktes Stat-Tile). Ein
+        // zweizeiliger PV-Wert wächst nach unten; ein einzeiliger Akku-Wert
+        // steht dann auf Höhe der ersten PV-Zeile — die Titel bleiben auf
+        // gleicher Höhe.
         NSLayoutConstraint.activate([
             iconPlate.centerYAnchor.constraint(equalTo: panel.centerYAnchor),
             iconPlate.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 14),
@@ -445,6 +442,34 @@ final class SolixMenuDashboardView: NSView {
         guard let value else { return nil }
         guard let arrow else { return value }
         return "\(value) \(arrow)"
+    }
+
+    /// Wertezeilen für die Solar-Kachel. Bei bis zu zwei PV-Eingängen (oder
+    /// Summenanzeige) eine Zeile; ab drei Eingängen ein 2×2-Raster auf zwei
+    /// Zeilen, damit die Werte nicht in einer überlangen Zeile abgeschnitten
+    /// werden. Der Trend-Pfeil (bezieht sich auf die Summe) sitzt am Ende der
+    /// letzten Zeile — konsistent mit den übrigen Feldern.
+    nonisolated static func solarValueLines(pvMode: PVDisplayMode, channels: [Int]?, totalWatts: Int?, arrow: String?) -> [String] {
+        func withArrow(_ text: String) -> String {
+            guard let arrow else { return text }
+            return "\(text) \(arrow)"
+        }
+
+        guard pvMode == .perInput, let channels, channels.count > 1 else {
+            guard let totalWatts else { return ["-"] }
+            return [withArrow("\(totalWatts) W")]
+        }
+
+        if channels.count <= 2 {
+            return [withArrow(channels.map(String.init).joined(separator: " · ") + " W")]
+        }
+
+        // Drei bis vier Eingänge: obere Hälfte, untere Hälfte (Einheit + Pfeil
+        // an die zweite Zeile).
+        let half = (channels.count + 1) / 2
+        let topLine = channels[..<half].map(String.init).joined(separator: " · ")
+        let bottomLine = channels[half...].map(String.init).joined(separator: " · ")
+        return [topLine, withArrow(bottomLine + " W")]
     }
 
     private func signedWatts(_ value: Int?) -> String? {

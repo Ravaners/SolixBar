@@ -7,9 +7,12 @@ Requirements:
   - ANKER_SOLIX_USER, ANKER_SOLIX_PASSWORD and ANKER_SOLIX_COUNTRY env vars
 """
 
+import argparse
 import asyncio
 import json
 import os
+import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -123,7 +126,52 @@ def _energy_total(statistics, stat_type="1"):
 
 
 def _state_path():
+    configured = os.environ.get("SOLIXBAR_STATE_PATH")
+    if configured:
+        return Path(configured)
     return Path(__file__).resolve().parents[1] / "work" / "solixbar-energy.json"
+
+
+def _cache_path():
+    configured = os.environ.get("SOLIXBAR_CACHE_PATH")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[1] / "work" / "solixbar-api-cache.json"
+
+
+def _write_private_json(path, value):
+    """Atomar schreiben mit 0600: Zustand/Cache liegen im Klartext auf Platte."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(path)
+
+
+def _load_cache():
+    try:
+        return json.loads(_cache_path().read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_cache(cache):
+    _write_private_json(_cache_path(), cache)
+
+
+def _fresh_cached_value(cache, key, max_age_seconds):
+    item = cache.get(key)
+    if not isinstance(item, dict):
+        return None
+    timestamp = _first_number(item.get("timestamp"))
+    if timestamp is None or time.time() - timestamp > max_age_seconds:
+        return None
+    return _first_number(item.get("value"))
+
+
+def _store_cached_value(cache, key, value):
+    if value is not None:
+        cache[key] = {"timestamp": time.time(), "value": value}
 
 
 def _load_energy_state():
@@ -134,9 +182,7 @@ def _load_energy_state():
 
 
 def _save_energy_state(state):
-    path = _state_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
+    _write_private_json(_state_path(), state)
 
 
 def _local_energy_totals(solar_watts, now):
@@ -191,7 +237,30 @@ def _local_energy_totals(solar_watts, now):
     return current_today, current_total, has_manual_total
 
 
+def _load_stdin_configuration():
+    """Zugangsdaten per stdin-JSON statt Umgebungsvariablen.
+
+    Umgebungsvariablen sind für gleichnamige Nutzerprozesse via `ps e`
+    sichtbar; die App übergibt Mail/Passwort daher als eine JSON-Zeile.
+    """
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--stdin-config", action="store_true")
+    args, _ = parser.parse_known_args()
+    if not args.stdin_config:
+        return
+    request = json.loads(sys.stdin.readline())
+    os.environ["ANKER_SOLIX_USER"] = str(request.get("email") or "")
+    os.environ["ANKER_SOLIX_PASSWORD"] = str(request.get("password") or "")
+    os.environ["ANKER_SOLIX_COUNTRY"] = str(request.get("country") or "DE")
+    if request.get("todayBaseKWh") is not None:
+        os.environ["SOLIXBAR_TODAY_KWH_BASE"] = str(request["todayBaseKWh"])
+        os.environ["SOLIXBAR_TODAY_KWH_DATE"] = datetime.now().astimezone().date().isoformat()
+    if request.get("totalBaseKWh") is not None:
+        os.environ["SOLIXBAR_TOTAL_KWH_BASE"] = str(request["totalBaseKWh"])
+
+
 async def main():
+    _load_stdin_configuration()
     user = os.environ["ANKER_SOLIX_USER"]
     password = os.environ["ANKER_SOLIX_PASSWORD"]
     country = os.environ.get("ANKER_SOLIX_COUNTRY", "DE")
@@ -201,9 +270,16 @@ async def main():
         await client.update_sites()
         await client.update_device_details()
 
-        today_kwh = None
+        cache = _load_cache()
         site = next(iter(client.sites.values()), {})
         site_id = next(iter(client.sites.keys()), "")
+        cache_namespace = site_id or "default-site"
+        today_key = datetime.now().astimezone().date().isoformat()
+        today_cache_key = f"{cache_namespace}:todayKWh:{today_key}"
+        statistics_cache_key = f"{cache_namespace}:statisticsTotalKWh"
+        # Teure Statistik-Abfragen drosseln: Tages-kWh 10 min, Gesamt 15 min.
+        # Die Live-Leistungswerte kommen weiterhin bei jedem Abruf frisch.
+        today_kwh = _fresh_cached_value(cache, today_cache_key, 10 * 60)
         devices = list(client.devices.values())
         solarbank = _first_solarbank(devices)
         device_sn = solarbank.get("device_sn") or ""
@@ -212,30 +288,35 @@ async def main():
         solarbank_list = solarbank_info.get("solarbank_list") or []
         first_solarbank = solarbank_list[0] if solarbank_list else {}
 
-        try:
-            energy = await client.energy_daily(
-                siteId=site_id,
-                deviceSn=device_sn,
-                startDay=datetime.today(),
-                numDays=1,
-                dayTotals=True,
-                devTypes={"solarbank"},
-            )
-            today = energy.get(datetime.today().strftime("%Y-%m-%d"), {})
-            today_kwh = _first_number(today.get("solar_production"))
-        except Exception:
-            today_kwh = None
+        if today_kwh is None:
+            try:
+                energy = await client.energy_daily(
+                    siteId=site_id,
+                    deviceSn=device_sn,
+                    startDay=datetime.today(),
+                    numDays=1,
+                    dayTotals=True,
+                    devTypes={"solarbank"},
+                )
+                today = energy.get(datetime.today().strftime("%Y-%m-%d"), {})
+                today_kwh = _first_number(today.get("solar_production"))
+                _store_cached_value(cache, today_cache_key, today_kwh)
+            except Exception:
+                today_kwh = None
 
-        api_statistics_total = None
-        try:
-            energy_stats = await client.energy_statistics(
-                siteId=site_id,
-                rangeType="year",
-                sourceType="solar",
-            )
-            api_statistics_total = _energy_total(energy_stats.get("statistics"))
-        except Exception:
-            api_statistics_total = None
+        api_statistics_total = _fresh_cached_value(cache, statistics_cache_key, 15 * 60)
+        if api_statistics_total is None:
+            try:
+                energy_stats = await client.energy_statistics(
+                    siteId=site_id,
+                    rangeType="year",
+                    sourceType="solar",
+                )
+                api_statistics_total = _energy_total(energy_stats.get("statistics"))
+                _store_cached_value(cache, statistics_cache_key, api_statistics_total)
+            except Exception:
+                api_statistics_total = None
+        _save_cache(cache)
 
         battery_watts = _signed_battery_watts(solarbank_info, solarbank, first_solarbank)
         now = datetime.now(timezone.utc)

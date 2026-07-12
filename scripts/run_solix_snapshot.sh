@@ -25,6 +25,11 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
+# Ertragszustand und API-Cache neben die Env-Datei legen — nie ins
+# (signierte) App-Bundle, aus dem das Script laufen kann.
+export SOLIXBAR_STATE_PATH="${SOLIXBAR_STATE_PATH:-$(dirname "$ENV_FILE")/energy.json}"
+export SOLIXBAR_CACHE_PATH="${SOLIXBAR_CACHE_PATH:-$(dirname "$ENV_FILE")/api-cache.json}"
+
 : "${ANKER_SOLIX_USER:?ANKER_SOLIX_USER fehlt in $ENV_FILE}"
 : "${ANKER_SOLIX_PASSWORD:?ANKER_SOLIX_PASSWORD fehlt in $ENV_FILE}"
 : "${ANKER_SOLIX_COUNTRY:=DE}"
