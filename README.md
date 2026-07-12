@@ -22,7 +22,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 - Native AppKit-Menueleisten-App. / Native AppKit menu bar app.
 - Demo-Modus zum Testen ohne Zugangsdaten. / Demo data mode for testing without credentials.
-- Live-Daten ueber lokalen JSON-Befehl oder JSON-URL. / Live data via local JSON command or JSON URL.
+- Direkter SOLIX-Login sowie Live-Daten ueber lokalen JSON-Befehl oder JSON-URL. / Direct SOLIX login plus live data via local JSON command or JSON URL.
 - Frei waehlbare Menueleistenwerte, Bezeichnungen, Symbole, App-Symbol und Skalierung. / Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
 - Optionale farbige Energiefluss-Pfeile in der Menueleiste. / Optional colored energy-flow arrows in the menu bar.
 - Abgedockte schmale Leiste mit Andocken-Funktion, Fixieren gegen versehentliches Verschieben und gespeichertem Zustand. / Detachable slim bar with dock action, optional movement lock, and restored state.
@@ -37,15 +37,15 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.3.20`
+Aktuelle Version / Current version: `0.4.0`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Voraussetzungen / Requirements
 
 - macOS 14 oder neuer. / macOS 14 or newer.
-- Swift-Toolchain oder Xcode Command Line Tools fuer lokale Builds. / Swift toolchain or Xcode command line tools for building locally.
-- Optional: Anker SOLIX Hilfsbefehl mit JSON-Ausgabe oder lokaler JSON-Endpunkt fuer Live-Daten. / Optional: a JSON-producing Anker SOLIX helper command or local JSON endpoint for live data.
+- Das fertige Release benoetigt weder Python noch Xcode. / The packaged release requires neither Python nor Xcode.
+- Nur fuer lokale Quellcode-Builds: Swift-Toolchain oder Xcode Command Line Tools. / Source builds only: Swift toolchain or Xcode Command Line Tools.
 
 ## Bauen und Starten / Build and Run
 
@@ -59,13 +59,17 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
+unzip outputs/SolixBar-0.4.0-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
+Das Paket-Skript erwartet die lokale, nicht eingecheckte Python-Laufzeit unter `work/`; die veroeffentlichte ZIP-Datei enthaelt sie bereits. / The packaging script expects the local, untracked Python runtime below `work/`; the published ZIP already includes it.
+
 ## Datenquellen / Data Source Modes
 
-SolixBar unterstuetzt drei Modi. / SolixBar supports three modes:
+SolixBar unterstuetzt vier Modi. / SolixBar supports four modes:
 
+- `SOLIX Login`: direkter Abruf mit in der macOS-Keychain gespeicherten Zugangsdaten. / Direct fetch with credentials stored in the macOS Keychain.
 - `Demo`: erzeugte Beispieldaten zum Testen der Oberflaeche. / Generated sample data for testing the UI.
 - `Lokaler JSON-Befehl`: fuehrt einen lokalen Befehl aus und liest JSON aus stdout. / Runs a local command and reads JSON from stdout.
 - `JSON-URL`: laedt JSON von einer lokalen oder entfernten HTTP-Adresse. / Fetches JSON from a local or remote HTTP endpoint.
@@ -89,23 +93,19 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. Dieses Projekt enthaelt ein vorbereitetes Hilfsscript fuer die inoffizielle Community-Bibliothek `thomluther/anker-solix-api`.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.4.0 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
 
-English: Anker does not provide a stable public SOLIX API. This project includes a helper script prepared for the unofficial community library `thomluther/anker-solix-api`.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.4.0 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
 
-Empfohlener lokaler Befehl fuer SolixBar. / Recommended local command for SolixBar:
+Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
+Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden in der
+macOS-Keychain gespeichert. Verlauf, API-Cache und lokale Ertragswerte liegen
+im Application-Support-Ordner der App.
 
-```bash
-/Users/holger/Documents/Codex/2026-07-06/bi/scripts/run_solix_snapshot.sh
-```
-
-Die App kann die lokale ignorierte Zugangsdaten-Datei fuer dich erstellen. Oeffne
-`Einstellungen` -> `Datenquelle`, waehle `Lokaler JSON-Befehl`, trage Mail,
-Passwort und Land unter `SOLIX Login` ein und druecke `Speichern`.
-
-English: The app can create the local ignored credentials file for you. Open
-`Einstellungen` -> `Datenquelle`, choose `Lokaler JSON-Befehl`, enter email,
-password, and country under `SOLIX Login`, then press `Speichern`.
+English: Open `Settings` -> `Data Source`, choose `SOLIX Login`, enter email,
+password, and country, then press `Save`. Email and password are stored in the
+macOS Keychain. History, API cache, and local yield state live in the app's
+Application Support folder.
 
 Du kannst jederzeit zu `Demo` oder `JSON-URL` wechseln; SolixBar zeigt nur die
 Felder an, die fuer den gewaehlten Modus notwendig sind.
@@ -113,31 +113,9 @@ Felder an, die fuer den gewaehlten Modus notwendig sind.
 English: You can still switch back to `Demo` or `JSON-URL`; SolixBar only shows
 the fields needed for the selected mode.
 
-SolixBar schreibt diese lokale Datei. / SolixBar writes this local file:
+Der separate Modus `Lokaler JSON-Befehl` bleibt fuer fortgeschrittene eigene Datenquellen erhalten.
 
-```bash
-ANKER_SOLIX_USER='you@example.com'
-ANKER_SOLIX_PASSWORD='your-password'
-ANKER_SOLIX_COUNTRY='DE'
-```
-
-Manueller Beispielbefehl nach Ersetzen der Zugangsdaten. / Manual example command after replacing credentials:
-
-```bash
-ANKER_SOLIX_USER="you@example.com" \
-ANKER_SOLIX_PASSWORD="..." \
-ANKER_SOLIX_COUNTRY="DE" \
-/path/to/python \
-scripts/solix_snapshot.py
-```
-
-Trage den Befehl nur dann unter `Lokaler JSON-Befehl` ein, wenn du die eingebauten SOLIX-Login-Felder nicht nutzt.
-
-English: Put the command into SolixBar settings under `Lokaler JSON-Befehl` only if you do not use the built-in SOLIX login fields.
-
-Aus Sicherheitsgruenden keine Zugangsdaten committen. Eine spaetere Verbesserung sollte Zugangsdaten im macOS-Schluesselbund speichern.
-
-English: For security, avoid committing credentials. A future improvement should store credentials in the macOS Keychain.
+English: The separate `Local JSON Command` mode remains available for advanced custom data sources.
 
 ## Repository-Hinweise / Repository Notes
 

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-07-12
+
+- DE: Der direkte SOLIX-Modus ist portabel: Die App verwendet keine persoenlichen Projektpfade mehr und das Release-Bundle enthaelt Helper, Python-Laufzeit und benoetigte Module.
+- EN: Direct SOLIX mode is portable: the app no longer uses personal project paths, and the release bundle includes the helper, Python runtime, and required modules.
+- DE: SOLIX-Mail und Passwort werden ausschliesslich in der macOS-Keychain gespeichert; die bisherige Klartextdatei wird nicht mehr verwendet.
+- EN: SOLIX email and password are stored exclusively in the macOS Keychain; the former plaintext credentials file is no longer used.
+- DE: Teure Tages- und Gesamtstatistiken werden fuer 10 beziehungsweise 15 Minuten zwischengespeichert. Wiederholte Fehler verlaengern das Abrufintervall automatisch bis maximal 30 Minuten.
+- EN: Expensive daily and total statistics are cached for 10 and 15 minutes respectively. Repeated failures automatically increase the refresh interval up to 30 minutes.
+- DE: Verlauf und Ertragsakkumulatoren liegen jetzt als atomar gespeicherte Dateien im Application-Support-Ordner statt in UserDefaults; bestehende Daten werden einmalig migriert.
+- EN: History and yield accumulators now use atomically written files in Application Support instead of UserDefaults; existing data is migrated once.
+- DE: Unsichtbare Zusatzfenster werden nach einem Abruf nicht mehr unnoetig neu aufgebaut, und das Logging verwendet einen wiederverwendeten Zeitformatierer.
+- EN: Hidden auxiliary windows are no longer rebuilt unnecessarily after a refresh, and logging reuses its timestamp formatter.
+- DE: Der Release-Prozess baut optimiert, bindet die portable SOLIX-Laufzeit ein, signiert das gesamte Bundle ad hoc, prueft Version und Python-Module und erzeugt das versionierte ARM64-Archiv automatisch.
+- EN: The release process builds with optimization, embeds the portable SOLIX runtime, ad-hoc signs the complete bundle, validates version and Python modules, and creates the versioned ARM64 archive automatically.
+- DE: Automatische Kernpruefungen testen Ertragsintegration und Zeitluecken; die CI validiert zusaetzlich Build, Helper-Syntax und Release-Metadaten. Homepage, Dokumentation und Screenshots wurden fuer 0.4.0 aktualisiert.
+- EN: Automated core checks test yield integration and time gaps; CI additionally validates the build, helper syntax, and release metadata. Homepage, documentation, and screenshots were updated for 0.4.0.
+
 ## 0.3.20 - 2026-07-10
 
 - DE: Das Schliesskreuz der abgedockten Leiste wird ausgeblendet, sobald die Leiste fixiert ist. Beim Entfixieren erscheint es sofort wieder; die Leistenbreite passt sich jeweils automatisch an.

@@ -1,6 +1,7 @@
 import Foundation
 
 enum DataSourceMode: String {
+    case solix
     case demo
     case command
     case url
@@ -172,6 +173,9 @@ struct AppSettingsSnapshot {
     var dataSourceMode: DataSourceMode
     var command: String
     var urlString: String
+    var solixCountry: String
+    var solixTodayBaseKWh: Double?
+    var solixTotalBaseKWh: Double?
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
     var showMenuBarIcon: Bool
@@ -198,7 +202,14 @@ final class AppSettings {
     private let defaultBarMetrics: [BarMetric] = [.battery, .solar, .grid]
 
     var dataSourceMode: DataSourceMode {
-        get { DataSourceMode(rawValue: defaults.string(forKey: "dataSourceMode") ?? "") ?? .demo }
+        get {
+            let stored = DataSourceMode(rawValue: defaults.string(forKey: "dataSourceMode") ?? "") ?? .demo
+            if stored == .command,
+               command.contains("run_solix_snapshot.sh") {
+                return .solix
+            }
+            return stored
+        }
         set { defaults.set(newValue.rawValue, forKey: "dataSourceMode") }
     }
 
@@ -210,6 +221,24 @@ final class AppSettings {
     var urlString: String {
         get { defaults.string(forKey: "urlString") ?? "" }
         set { defaults.set(newValue, forKey: "urlString") }
+    }
+
+    var solixCountry: String {
+        get {
+            let value = defaults.string(forKey: "solixCountry")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return value.isEmpty ? "DE" : value.uppercased()
+        }
+        set { defaults.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(), forKey: "solixCountry") }
+    }
+
+    var solixTodayBaseKWh: Double? {
+        get { optionalDouble(forKey: "solixTodayBaseKWh") }
+        set { setOptionalDouble(newValue, forKey: "solixTodayBaseKWh") }
+    }
+
+    var solixTotalBaseKWh: Double? {
+        get { optionalDouble(forKey: "solixTotalBaseKWh") }
+        set { setOptionalDouble(newValue, forKey: "solixTotalBaseKWh") }
     }
 
     var refreshInterval: TimeInterval {
@@ -352,6 +381,9 @@ final class AppSettings {
             dataSourceMode: dataSourceMode,
             command: command,
             urlString: urlString,
+            solixCountry: solixCountry,
+            solixTodayBaseKWh: solixTodayBaseKWh,
+            solixTotalBaseKWh: solixTotalBaseKWh,
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
             showMenuBarIcon: showMenuBarIcon,
@@ -375,6 +407,9 @@ final class AppSettings {
         dataSourceMode = snapshot.dataSourceMode
         command = snapshot.command
         urlString = snapshot.urlString
+        solixCountry = snapshot.solixCountry
+        solixTodayBaseKWh = snapshot.solixTodayBaseKWh
+        solixTotalBaseKWh = snapshot.solixTotalBaseKWh
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
         showMenuBarIcon = snapshot.showMenuBarIcon
@@ -391,5 +426,18 @@ final class AppSettings {
         graphMetrics = snapshot.graphMetrics
         isDetachedMenuBarActive = snapshot.isDetachedMenuBarActive
         detachedMenuBarFrame = snapshot.detachedMenuBarFrame
+    }
+
+    private func optionalDouble(forKey key: String) -> Double? {
+        guard defaults.object(forKey: key) != nil else { return nil }
+        return defaults.double(forKey: key)
+    }
+
+    private func setOptionalDouble(_ value: Double?, forKey key: String) {
+        if let value {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
     }
 }
