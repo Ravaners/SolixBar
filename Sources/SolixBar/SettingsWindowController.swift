@@ -19,7 +19,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
     private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
-    private let solixHint = NSTextField(wrappingLabelWithString: "Nur fuer den vorbereiteten SOLIX-Befehl. Mail und Passwort werden lokal gespeichert.")
+    private let solixHint = NSTextField(wrappingLabelWithString: LocalizedText.text(
+        "Direkter SOLIX-Zugriff. Das Passwort bleibt ausschließlich in der macOS-Keychain.",
+        "Direct SOLIX access. The password remains exclusively in the macOS Keychain."
+    ))
     private let solixEmailRow = NSStackView()
     private let solixPasswordRow = NSStackView()
     private let solixCountryRow = NSStackView()
@@ -76,14 +79,19 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func buildView() -> NSView {
         let container = NSView()
 
-        modePopup.addItems(withTitles: ["Demo", "Lokaler JSON-Befehl", "JSON-URL"])
+        modePopup.addItems(withTitles: [
+            LocalizedText.text("SOLIX Login", "SOLIX Login"),
+            "Demo",
+            LocalizedText.text("Lokaler JSON-Befehl", "Local JSON Command"),
+            "JSON-URL"
+        ])
         appearancePopup.addItems(withTitles: ["Automatisch", "Hell", "Dunkel"])
         languagePopup.addItems(withTitles: ["Deutsch", "English"])
         applyLocalizedControlTitles()
         modePopup.toolTip = "Legt fest, woher SolixBar die Werte lädt."
         appearancePopup.toolTip = "Waehlt helle Darstellung, dunkle Darstellung oder automatisch passend zum macOS-System."
         languagePopup.toolTip = "Waehlt die Sprache fuer sichtbare App-Texte."
-        commandField.placeholderString = solixHelperCommand
+        commandField.placeholderString = "/path/to/command-that-prints-json"
         commandField.toolTip = "Führt einen lokalen Befehl aus und liest dessen JSON-Ausgabe."
         urlField.placeholderString = "http://127.0.0.1:8787/solix.json"
         urlField.toolTip = "Lädt die Werte von einer JSON-Adresse."
@@ -92,7 +100,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixEmailField.placeholderString = "mail@example.com"
         solixEmailField.toolTip = "E-Mail-Adresse deines Anker/SOLIX-Kontos."
         solixPasswordField.placeholderString = "Passwort"
-        solixPasswordField.toolTip = "Passwort deines Anker/SOLIX-Kontos. Wird lokal in work/solixbar.env gespeichert und nicht hochgeladen."
+        solixPasswordField.toolTip = LocalizedText.text(
+            "Passwort deines Anker/SOLIX-Kontos. Es wird ausschließlich in der macOS-Keychain gespeichert.",
+            "Your Anker/SOLIX password. It is stored exclusively in the macOS Keychain."
+        )
         solixCountryField.placeholderString = "DE"
         solixCountryField.toolTip = "Land deines Anker-Kontos, normalerweise DE."
         solixTodayBaseField.placeholderString = "z.B. 7.2"
@@ -552,12 +563,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func loadSettings() {
         isLoading = true
         switch settings.dataSourceMode {
-        case .demo:
+        case .solix:
             modePopup.selectItem(at: 0)
-        case .command:
+        case .demo:
             modePopup.selectItem(at: 1)
-        case .url:
+        case .command:
             modePopup.selectItem(at: 2)
+        case .url:
+            modePopup.selectItem(at: 3)
         }
         switch settings.appearanceMode {
         case .system:
@@ -604,9 +617,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func applyControlsToSettings() {
         switch modePopup.indexOfSelectedItem {
-        case 1:
-            settings.dataSourceMode = .command
+        case 0:
+            settings.dataSourceMode = .solix
         case 2:
+            settings.dataSourceMode = .command
+        case 3:
             settings.dataSourceMode = .url
         default:
             settings.dataSourceMode = .demo
@@ -631,22 +646,23 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.lockDetachedMenuBar = lockDetachedMenuBarButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
         settings.detachedMenuBarScale = detachedScaleSlider.doubleValue
-        if settings.dataSourceMode == .command && shouldUseSolixHelper {
-            settings.dataSourceMode = .command
-            settings.command = solixHelperCommand
-            commandField.stringValue = solixHelperCommand
-            modePopup.selectItem(at: 1)
-        }
+        settings.solixCountry = solixCountryField.stringValue
+        settings.solixTodayBaseKWh = parsedOptionalDouble(solixTodayBaseField.stringValue)
+        settings.solixTotalBaseKWh = parsedOptionalDouble(solixTotalBaseField.stringValue)
         updateDataSourceFieldVisibility()
     }
 
     private func updateDataSourceFieldVisibility() {
         switch modePopup.indexOfSelectedItem {
-        case 1:
-            commandRow.isHidden = false
+        case 0:
+            commandRow.isHidden = true
             urlRow.isHidden = true
             setSolixRowsHidden(false)
         case 2:
+            commandRow.isHidden = false
+            urlRow.isHidden = true
+            setSolixRowsHidden(true)
+        case 3:
             commandRow.isHidden = true
             urlRow.isHidden = false
             setSolixRowsHidden(true)
@@ -702,11 +718,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     @objc private func saveSettings() {
         isSaving = true
         applyControlsToSettings()
-        if settings.dataSourceMode == .command {
-            saveSolixCredentialsIfNeeded()
-            if shouldUseSolixHelper {
-                settings.command = solixHelperCommand
-                commandField.stringValue = solixHelperCommand
+        if settings.dataSourceMode == .solix {
+            do {
+                try KeychainCredentialStore.save(
+                    SolixCredentials(
+                        email: solixEmailField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
+                        password: solixPasswordField.stringValue
+                    )
+                )
+            } catch {
+                isSaving = false
+                NSAlert(error: error).runModal()
+                return
             }
         }
         onSave()
@@ -722,97 +745,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         restoreOriginalSettings()
     }
 
-    private var shouldUseSolixHelper: Bool {
-        !solixEmailField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !solixPasswordField.stringValue.isEmpty
-            || !solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var solixHelperCommand: String {
-        "/Users/holger/Documents/Codex/2026-07-06/bi/scripts/run_solix_snapshot.sh"
-    }
-
-    private var solixEnvURL: URL {
-        URL(fileURLWithPath: "/Users/holger/Documents/Codex/2026-07-06/bi/work/solixbar.env")
-    }
-
     private func loadSolixCredentials() {
-        let values = readSolixEnv()
-        solixEmailField.stringValue = values["ANKER_SOLIX_USER"] ?? ""
-        solixPasswordField.stringValue = values["ANKER_SOLIX_PASSWORD"] ?? ""
-        solixCountryField.stringValue = values["ANKER_SOLIX_COUNTRY"] ?? "DE"
-        solixTodayBaseField.stringValue = values["SOLIXBAR_TODAY_KWH_BASE"] ?? ""
-        solixTotalBaseField.stringValue = values["SOLIXBAR_TOTAL_KWH_BASE"] ?? ""
+        let credentials = KeychainCredentialStore.load()
+        solixEmailField.stringValue = credentials.email
+        solixPasswordField.stringValue = credentials.password
+        solixCountryField.stringValue = settings.solixCountry
+        solixTodayBaseField.stringValue = settings.solixTodayBaseKWh.map { String(format: "%.3f", $0) } ?? ""
+        solixTotalBaseField.stringValue = settings.solixTotalBaseKWh.map { String(format: "%.3f", $0) } ?? ""
     }
 
-    private func saveSolixCredentialsIfNeeded() {
-        guard shouldUseSolixHelper else { return }
-        let email = solixEmailField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        let password = solixPasswordField.stringValue
-        let country = solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? "DE"
-            : solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        let todayBase = solixTodayBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        let totalBase = solixTotalBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        var lines = [
-            "ANKER_SOLIX_USER=\(shellQuoted(email))",
-            "ANKER_SOLIX_PASSWORD=\(shellQuoted(password))",
-            "ANKER_SOLIX_COUNTRY=\(shellQuoted(country))"
-        ]
-        if !todayBase.isEmpty {
-            lines.append("SOLIXBAR_TODAY_KWH_BASE=\(shellQuoted(todayBase.replacingOccurrences(of: ",", with: ".")))")
-            lines.append("SOLIXBAR_TODAY_KWH_DATE=\(shellQuoted(Self.todayKey()))")
-        }
-        if !totalBase.isEmpty {
-            lines.append("SOLIXBAR_TOTAL_KWH_BASE=\(shellQuoted(totalBase.replacingOccurrences(of: ",", with: ".")))")
-        }
-        let text = lines.joined(separator: "\n") + "\n"
-
-        do {
-            try FileManager.default.createDirectory(at: solixEnvURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try text.write(to: solixEnvURL, atomically: true, encoding: .utf8)
-        } catch {
-            NSAlert(error: error).runModal()
-        }
-    }
-
-    private func readSolixEnv() -> [String: String] {
-        guard let text = try? String(contentsOf: solixEnvURL, encoding: .utf8) else { return [:] }
-        var values: [String: String] = [:]
-        for rawLine in text.components(separatedBy: .newlines) {
-            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !line.isEmpty, !line.hasPrefix("#"), let equals = line.firstIndex(of: "=") else { continue }
-            let key = String(line[..<equals])
-            let value = String(line[line.index(after: equals)...])
-            values[key] = unquoteShellValue(value)
-        }
-        return values
-    }
-
-    private func shellQuoted(_ value: String) -> String {
-        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
-    }
-
-    private static func todayKey() -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
-    }
-
-    private func unquoteShellValue(_ value: String) -> String {
-        var value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.hasPrefix("'"), value.hasSuffix("'"), value.count >= 2 {
-            value.removeFirst()
-            value.removeLast()
-            return value.replacingOccurrences(of: "'\\''", with: "'")
-        }
-        if value.hasPrefix("\""), value.hasSuffix("\""), value.count >= 2 {
-            value.removeFirst()
-            value.removeLast()
-        }
-        return value
+    private func parsedOptionalDouble(_ text: String) -> Double? {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
+        return value.isEmpty ? nil : Double(value)
     }
 }

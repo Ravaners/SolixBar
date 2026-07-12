@@ -3,6 +3,11 @@ import Foundation
 enum AppLogger {
     private static let lock = NSLock()
     private static let maxLogSize = 512 * 1024
+    nonisolated(unsafe) private static let formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 
     static var logURL: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -54,8 +59,6 @@ enum AppLogger {
     }
 
     private static func timestamp() -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: Date())
     }
 }

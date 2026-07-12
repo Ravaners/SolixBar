@@ -34,6 +34,7 @@ final class StatusController: NSObject {
     private var isRefreshing = false
     private var refreshAnimationTimer: Timer?
     private var refreshAnimationFrame = 0
+    private var consecutiveRefreshFailures = 0
     private let refreshFrames = ["↻", "↺"]
 
     func start() {
@@ -49,7 +50,6 @@ final class StatusController: NSObject {
                 self?.openDetachedMenuBar()
             }
         }
-        scheduleRefreshTimer()
     }
 
     func prepareForTermination() {
@@ -60,6 +60,12 @@ final class StatusController: NSObject {
 
     private func provider() -> SolixDataProvider {
         switch settings.dataSourceMode {
+        case .solix:
+            BundledSolixDataProvider(
+                country: settings.solixCountry,
+                todayBaseKWh: settings.solixTodayBaseKWh,
+                totalBaseKWh: settings.solixTotalBaseKWh
+            )
         case .demo:
             DemoSolixDataProvider()
         case .command:
@@ -82,6 +88,7 @@ final class StatusController: NSObject {
             defer {
                 isRefreshing = false
                 stopRefreshAnimation()
+                scheduleRefreshTimer()
             }
             do {
                 var snapshot = try await provider().fetchSnapshot()
@@ -93,19 +100,25 @@ final class StatusController: NSObject {
                 lastSnapshot = snapshot
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
+                consecutiveRefreshFailures = 0
                 historyStore.record(snapshot)
                 AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
             } catch {
                 lastSnapshot = nil
                 lastSnapshotMode = nil
                 lastError = error.localizedDescription
+                consecutiveRefreshFailures += 1
                 AppLogger.error("Refresh failed: \(error.localizedDescription)")
             }
             updateTitle()
             rebuildMenu()
-            detachedDashboardWindow?.rebuild()
+            if detachedDashboardWindow?.window?.isVisible == true {
+                detachedDashboardWindow?.rebuild()
+            }
             detachedMenuBarWindow?.rebuild()
-            largeGraphWindow?.rebuild()
+            if largeGraphWindow?.window?.isVisible == true {
+                largeGraphWindow?.rebuild()
+            }
         }
     }
 
@@ -132,16 +145,19 @@ final class StatusController: NSObject {
 
     private func scheduleRefreshTimer() {
         timer?.invalidate()
-        let interval = max(60, settings.refreshInterval)
-        let newTimer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+        let baseInterval = max(60, settings.refreshInterval)
+        let multiplier = pow(2.0, Double(min(4, consecutiveRefreshFailures)))
+        let interval = min(30 * 60, baseInterval * multiplier)
+        let newTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
             Task { @MainActor in
+                self?.timer = nil
                 self?.refresh()
             }
         }
         newTimer.tolerance = min(5, interval * 0.1)
         RunLoop.main.add(newTimer, forMode: .common)
         timer = newTimer
-        AppLogger.info("Refresh timer scheduled every \(Int(interval)) seconds in common run loop modes.")
+        AppLogger.info("Next refresh scheduled in \(Int(interval)) seconds (failures=\(consecutiveRefreshFailures)).")
     }
 
     private func updateTitle() {
@@ -1014,7 +1030,6 @@ final class StatusController: NSObject {
     }
 
     private func applyCurrentSettings(refreshNow: Bool) {
-        scheduleRefreshTimer()
         applyAppearance()
         updateMenuBarIcon()
         clearStaleSnapshotIfNeeded()
@@ -1023,6 +1038,8 @@ final class StatusController: NSObject {
         detachedMenuBarWindow?.rebuild()
         if refreshNow {
             refresh()
+        } else {
+            scheduleRefreshTimer()
         }
     }
 
@@ -1059,6 +1076,8 @@ final class StatusController: NSObject {
 
     private var isCurrentDataSourceConfigured: Bool {
         switch settings.dataSourceMode {
+        case .solix:
+            KeychainCredentialStore.load().isComplete
         case .demo:
             true
         case .command:
@@ -1070,6 +1089,10 @@ final class StatusController: NSObject {
 
     private func configurationMessage() -> String? {
         switch settings.dataSourceMode {
+        case .solix:
+            isCurrentDataSourceConfigured
+                ? LocalizedText.text("Noch keine SOLIX-Daten geladen.", "No SOLIX data loaded yet.")
+                : LocalizedText.text("SOLIX-Mail und Passwort fehlen.", "SOLIX email and password are missing.")
         case .demo:
             nil
         case .command:

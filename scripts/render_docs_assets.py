@@ -227,20 +227,29 @@ def render_detached():
     base = gradient((1600, 760), [(248, 255, 249, 255), (237, 247, 243, 255), (255, 240, 227, 255)])
     d = ImageDraw.Draw(base)
     text(d, (90, 76), "Abgedockte Leiste", INK, F["h2"])
-    text(d, (92, 148), "Die schmale Anzeige bleibt separat skalierbar und kann wieder angedockt werden.", MUTED, F["body"])
-    shadow(base, (130, 320, 1470, 430), radius=36, blur=34)
-    rounded(d, (130, 320, 1470, 430), 36, (22, 29, 25), (130, 150, 140), 3)
-    paste_icon(base, (170, 348, 222, 400))
-    text(d, (250, 362), "Akku 88%", (125, 255, 153), F["menu"])
-    text(d, (455, 362), "↓", (125, 255, 153), F["menu"])
-    d.ellipse((510, 367, 534, 391), fill=(255, 217, 77))
-    text(d, (550, 362), "PV 496 W", (255, 217, 77), F["menu"])
-    d.rounded_rectangle((790, 367, 814, 391), radius=5, fill=(117, 219, 255))
-    text(d, (830, 362), "Hauslast 352 W", (117, 219, 255), F["menu"])
-    d.ellipse((1145, 367, 1169, 391), fill=(214, 176, 255))
-    text(d, (1185, 362), "Netz → 86 W", (214, 176, 255), F["menu"])
-    text(d, (1445, 362), "×", (255, 255, 255), F["h3"])
+    text(d, (92, 148), "Fixiert ohne Schliesskreuz, entfixiert mit direkter Schliessmoeglichkeit.", MUTED, F["body"])
+    detached_bar(base, d, 130, 275, locked=True)
+    text(d, (130, 245), "Fixiert · Locked", MUTED, F["small"])
+    detached_bar(base, d, 130, 500, locked=False)
+    text(d, (130, 470), "Entfixiert · Unlocked", MUTED, F["small"])
     save(base, "detached-bar-shot.png")
+
+
+def detached_bar(base, d, x, y, locked):
+    right = 1420 if locked else 1470
+    shadow(base, (x, y, right, y + 110), radius=36, blur=28)
+    rounded(d, (x, y, right, y + 110), 36, (22, 29, 25), (130, 150, 140), 3)
+    paste_icon(base, (x + 40, y + 29, x + 92, y + 81))
+    text(d, (x + 120, y + 43), "Akku 88%", (125, 255, 153), F["menu"])
+    text(d, (x + 325, y + 43), "↓", (125, 255, 153), F["menu"])
+    d.ellipse((x + 380, y + 48, x + 404, y + 72), fill=(255, 217, 77))
+    text(d, (x + 420, y + 43), "PV 496 W", (255, 217, 77), F["menu"])
+    d.rounded_rectangle((x + 660, y + 48, x + 684, y + 72), radius=5, fill=(117, 219, 255))
+    text(d, (x + 700, y + 43), "Hauslast 352 W", (117, 219, 255), F["menu"])
+    d.ellipse((x + 1015, y + 48, x + 1039, y + 72), fill=(214, 176, 255))
+    text(d, (x + 1055, y + 43), "Netz 86 W", (214, 176, 255), F["menu"])
+    if not locked:
+        text(d, (x + 1280, y + 38), "×", (255, 255, 255), F["h3"])
 
 
 def render_graph():
@@ -294,7 +303,7 @@ def render_settings():
     rounded(d, (360, 230, 1240, 900), 28, PANEL, (160, 170, 164), 3)
     text(d, (420, 290), "SolixBar Einstellungen", INK, F["h3"])
     rows = [
-        ("Datenquelle", "SOLIX Login", "Mail, Passwort und Land fuer Live-Daten."),
+        ("Datenquelle", "SOLIX Login", "Passwort sicher in der macOS-Keychain."),
         ("Menueleiste", "Akku, PV, Netz, Flow", "Werte, Labels, Symbole und Skalierung."),
         ("Abgedockte Leiste", "Aktiv, skalieren, fixieren", "Separate schmale Anzeige unter der Menueleiste."),
         ("Darstellung", "System, Hell, Dunkel", "Optik passend zum Mac oder fest gewaehlt."),

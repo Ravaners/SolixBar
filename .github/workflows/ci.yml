@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build optimized app
+        run: swift build -c release --product SolixBar
+      - name: Run core checks
+        run: swift run -c release SolixBarCoreChecks
+      - name: Validate helper syntax
+        run: python3 -m py_compile scripts/solix_snapshot.py scripts/render_docs_assets.py
+      - name: Check release metadata
+        run: |
+          test "$(cat VERSION)" = "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Bundle/Info.plist)"
+          git diff --check
