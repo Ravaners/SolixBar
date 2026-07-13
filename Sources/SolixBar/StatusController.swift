@@ -1,5 +1,13 @@
 import AppKit
 
+private enum WakeRefreshError: LocalizedError {
+    case deviceStillOffline
+
+    var errorDescription: String? {
+        "SOLIX ist nach dem Aufwachen noch nicht erreichbar. / SOLIX is not reachable yet after wake."
+    }
+}
+
 private func menuBarUsesDarkBackground(_ appearance: NSAppearance) -> Bool {
     var label: NSColor?
     appearance.performAsCurrentDrawingAppearance {
@@ -32,12 +40,21 @@ final class StatusController: NSObject {
     private var isMenuBarDetached = false
     private var isTerminating = false
     private var isRefreshing = false
+    private var refreshRequestedWhileBusy = false
     private var refreshAnimationTimer: Timer?
+    private var wakeRefreshTimer: Timer?
+    private var wakeRefreshAttemptsRemaining = 0
     private var refreshAnimationFrame = 0
     private var consecutiveRefreshFailures = 0
     private let refreshFrames = ["↻", "↺"]
 
     func start() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(workspaceDidWake(_:)),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
         settings.migrateMenuBarGridMetricIfNeeded()
         applyAppearance()
         updateMenuBarIcon()
@@ -54,6 +71,9 @@ final class StatusController: NSObject {
 
     func prepareForTermination() {
         isTerminating = true
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        timer?.invalidate()
+        wakeRefreshTimer?.invalidate()
         settings.isDetachedMenuBarActive = isMenuBarDetached
         AppLogger.info("Persisted detached slim bar state: \(isMenuBarDetached ? "active" : "inactive").")
     }
@@ -77,6 +97,7 @@ final class StatusController: NSObject {
 
     private func refresh() {
         guard !isRefreshing else {
+            refreshRequestedWhileBusy = true
             AppLogger.info("Refresh skipped because a previous refresh is still running.")
             return
         }
@@ -88,10 +109,19 @@ final class StatusController: NSObject {
             defer {
                 isRefreshing = false
                 stopRefreshAnimation()
-                scheduleRefreshTimer()
+                if refreshRequestedWhileBusy {
+                    refreshRequestedWhileBusy = false
+                    scheduleWakeRefresh(after: 2, reason: "queued while another refresh was running")
+                } else if wakeRefreshTimer == nil {
+                    scheduleRefreshTimer()
+                }
             }
             do {
                 var snapshot = try await provider().fetchSnapshot()
+                if wakeRefreshAttemptsRemaining > 0,
+                   snapshot.status?.localizedCaseInsensitiveContains("offline") == true {
+                    throw WakeRefreshError.deviceStillOffline
+                }
                 snapshot.updatedAt = Date()
                 snapshot.totalKWh = historyStore.cumulativeSolarKWh(
                     recording: snapshot,
@@ -101,14 +131,23 @@ final class StatusController: NSObject {
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
                 consecutiveRefreshFailures = 0
+                wakeRefreshAttemptsRemaining = 0
                 historyStore.record(snapshot)
                 AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
             } catch {
-                lastSnapshot = nil
-                lastSnapshotMode = nil
+                let keepsLastWakeSnapshot = wakeRefreshAttemptsRemaining > 0 && currentSnapshot() != nil
+                if !keepsLastWakeSnapshot {
+                    lastSnapshot = nil
+                    lastSnapshotMode = nil
+                }
                 lastError = error.localizedDescription
                 consecutiveRefreshFailures += 1
                 AppLogger.error("Refresh failed: \(error.localizedDescription)")
+                if wakeRefreshAttemptsRemaining > 0 {
+                    let delay: TimeInterval = wakeRefreshAttemptsRemaining == 2 ? 8 : 20
+                    wakeRefreshAttemptsRemaining -= 1
+                    scheduleWakeRefresh(after: delay, reason: "network not ready after wake")
+                }
             }
             updateTitle()
             rebuildMenu()
@@ -120,6 +159,29 @@ final class StatusController: NSObject {
                 largeGraphWindow?.rebuild()
             }
         }
+    }
+
+    @objc private func workspaceDidWake(_ notification: Notification) {
+        AppLogger.info("Mac woke from sleep; scheduling network-aware refresh retries.")
+        consecutiveRefreshFailures = 0
+        wakeRefreshAttemptsRemaining = 2
+        scheduleWakeRefresh(after: 3, reason: "macOS wake notification")
+    }
+
+    private func scheduleWakeRefresh(after delay: TimeInterval, reason: String) {
+        timer?.invalidate()
+        timer = nil
+        wakeRefreshTimer?.invalidate()
+        let wakeTimer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.wakeRefreshTimer = nil
+                self.refresh()
+            }
+        }
+        RunLoop.main.add(wakeTimer, forMode: .common)
+        wakeRefreshTimer = wakeTimer
+        AppLogger.info("Wake refresh scheduled in \(Int(delay)) seconds (\(reason)).")
     }
 
     private func startRefreshAnimation() {
