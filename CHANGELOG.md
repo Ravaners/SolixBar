@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.4.1 - 2026-07-13
+
+- DE: Nach dem Aufwachen des Macs wartet SolixBar kurz auf die Netzwerkverbindung und wiederholt einen fehlgeschlagenen Abruf automatisch nach 8 und 20 Sekunden.
+- EN: After the Mac wakes, SolixBar briefly waits for networking and automatically retries a failed fetch after 8 and 20 seconds.
+- DE: Waehrend der automatischen Wiederherstellung nach dem Aufwachen loescht ein voruebergehender Abruffehler nicht mehr die letzten gueltigen Messwerte. Nach allen erfolglosen Wiederholungen wird ein echter Offline-Zustand weiterhin angezeigt.
+- EN: During automatic recovery after wake, a temporary fetch failure no longer clears the last valid measurement. A genuine offline state is still shown after all retries fail.
+- DE: Aktualisierungswuensche waehrend eines bereits laufenden Abrufs werden vorgemerkt und anschliessend automatisch ausgefuehrt.
+- EN: Refresh requests received while another fetch is running are queued and executed automatically afterwards.
+
 ## 0.4.0 - 2026-07-12
 
 - DE: Der direkte SOLIX-Modus ist portabel: Die App verwendet keine persoenlichen Projektpfade mehr und das Release-Bundle enthaelt Helper, Python-Laufzeit und benoetigte Module.
