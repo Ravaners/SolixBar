@@ -8,7 +8,9 @@ struct SolixSnapshot: Codable, Sendable {
     var gridWatts: Int?
     var batteryWatts: Int?
     var todayKWh: Double?
+    var todayKWhIsAuthoritative: Bool? = nil
     var totalKWh: Double?
+    var totalKWhIsAuthoritative: Bool? = nil
     var status: String?
     var updatedAt: Date
 

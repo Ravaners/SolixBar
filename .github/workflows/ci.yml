@@ -15,7 +15,9 @@ jobs:
       - name: Run core checks
         run: swift run -c release SolixBarCoreChecks
       - name: Validate helper syntax
-        run: python3 -m py_compile scripts/solix_snapshot.py scripts/render_docs_assets.py
+        run: python3 -m py_compile scripts/solix_snapshot.py scripts/solix_snapshot_checks.py scripts/render_docs_assets.py
+      - name: Run snapshot helper checks
+        run: python3 scripts/solix_snapshot_checks.py
       - name: Check release metadata
         run: |
           test "$(cat VERSION)" = "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Bundle/Info.plist)"

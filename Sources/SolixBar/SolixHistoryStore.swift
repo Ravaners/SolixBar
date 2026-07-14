@@ -8,11 +8,7 @@ struct SolixHistorySample: Codable, Sendable, Equatable {
     var gridWatts: Int?
 }
 
-struct SolixEnergyAccumulator: Codable, Sendable, Equatable {
-    var totalKWh: Double = 0
-    var lastDate: Date?
-    var lastSolarWatts: Int?
-}
+typealias SolixEnergyAccumulator = SolixCumulativeEnergyState
 
 @MainActor
 final class SolixHistoryStore {
@@ -39,25 +35,85 @@ final class SolixHistoryStore {
         migrateLegacyDefaultsIfNeeded()
     }
 
-    func cumulativeSolarKWh(recording snapshot: SolixSnapshot, sourceKey: String) -> Double {
-        var accumulator = cachedAccumulators[sourceKey] ?? SolixEnergyAccumulator()
-        if let lastDate = accumulator.lastDate,
-           let lastSolarWatts = accumulator.lastSolarWatts,
-           let solarWatts = snapshot.solarWatts {
-            accumulator.totalKWh += SolixEnergyCalculator.measuredKWh(
-                from: lastSolarWatts,
-                to: solarWatts,
-                seconds: snapshot.updatedAt.timeIntervalSince(lastDate)
-            )
-        }
-        if let providerTotal = snapshot.totalKWh, providerTotal > accumulator.totalKWh {
-            accumulator.totalKWh = providerTotal
-        }
-        accumulator.lastDate = snapshot.updatedAt
-        accumulator.lastSolarWatts = snapshot.solarWatts
-        cachedAccumulators[sourceKey] = accumulator
+    func cumulativeSolarKWh(
+        recording snapshot: SolixSnapshot,
+        sourceKey: String,
+        configuredManualBaseKWh: Double?
+    ) -> Double {
+        let accumulatorKey = sourceKey == DataSourceMode.demo.rawValue ? "demo" : "live"
+        var accumulator = migratedAccumulator(
+            forKey: accumulatorKey,
+            sourceKey: sourceKey,
+            configuredManualBaseKWh: configuredManualBaseKWh
+        )
+        accumulator = SolixCumulativeEnergyCalculator.recording(
+            state: accumulator,
+            solarWatts: snapshot.solarWatts,
+            providerTotalKWh: snapshot.totalKWh,
+            providerTotalIsAuthoritative: snapshot.totalKWhIsAuthoritative == true,
+            configuredManualBaseKWh: configuredManualBaseKWh,
+            tracksManualBase: sourceKey == DataSourceMode.solix.rawValue,
+            sourceKey: sourceKey,
+            date: snapshot.updatedAt
+        )
+        cachedAccumulators[accumulatorKey] = accumulator
         save(cachedAccumulators, to: accumulatorsURL)
         return accumulator.totalKWh
+    }
+
+    private func migratedAccumulator(
+        forKey accumulatorKey: String,
+        sourceKey: String,
+        configuredManualBaseKWh: Double?
+    ) -> SolixEnergyAccumulator {
+        if let existing = cachedAccumulators[accumulatorKey] {
+            return existing
+        }
+
+        let legacyKeys = accumulatorKey == "demo" ? ["demo"] : ["solix", "command", "url"]
+        let legacy = legacyKeys.compactMap { key in
+            cachedAccumulators[key].map { (key: key, value: $0) }
+        }
+        guard !legacy.isEmpty else {
+            return SolixEnergyAccumulator()
+        }
+
+        var migrated = SolixCumulativeEnergyCalculator.mergingLegacyStates(
+            legacy.map { (sourceKey: $0.key, state: $0.value) }
+        )
+        if accumulatorKey == "live",
+           legacy.count > 1,
+           let firstSourceTransition = legacy.compactMap({ $0.value.lastDate }).min() {
+            migrated.totalKWh += recoveredSolarGapKWh(since: firstSourceTransition)
+        }
+        if sourceKey == DataSourceMode.solix.rawValue,
+           migrated.manualBaseKWh == nil,
+           let configuredManualBaseKWh {
+            // Existing installations already applied this base before the state gained a marker.
+            migrated.manualBaseKWh = configuredManualBaseKWh
+        }
+        legacyKeys.filter { $0 != accumulatorKey }.forEach { cachedAccumulators.removeValue(forKey: $0) }
+        cachedAccumulators[accumulatorKey] = migrated
+        return migrated
+    }
+
+    private func recoveredSolarGapKWh(since startDate: Date) -> Double {
+        let samples = cachedSamples.filter { $0.date >= startDate }.sorted { $0.date < $1.date }
+        return zip(samples, samples.dropFirst()).reduce(0) { total, pair in
+            guard let firstWatts = pair.0.solarWatts,
+                  let secondWatts = pair.1.solarWatts,
+                  Calendar.current.isDate(pair.0.date, inSameDayAs: pair.1.date) else {
+                return total
+            }
+            let seconds = pair.1.date.timeIntervalSince(pair.0.date)
+            guard seconds > 30 * 60 else { return total }
+            return total + SolixEnergyCalculator.cumulativeKWh(
+                from: firstWatts,
+                to: secondWatts,
+                seconds: seconds,
+                maximumGap: 8 * 60 * 60
+            )
+        }
     }
 
     func record(_ snapshot: SolixSnapshot) {
@@ -88,10 +144,12 @@ final class SolixHistoryStore {
         guard samples.count >= 2 else { return 0 }
         return zip(samples, samples.dropFirst()).reduce(0) { total, pair in
             guard let firstWatts = pair.0.solarWatts, let secondWatts = pair.1.solarWatts else { return total }
-            return total + SolixEnergyCalculator.measuredKWh(
+            let isSameDay = Calendar.current.isDate(pair.0.date, inSameDayAs: pair.1.date)
+            return total + SolixEnergyCalculator.cumulativeKWh(
                 from: firstWatts,
                 to: secondWatts,
-                seconds: pair.1.date.timeIntervalSince(pair.0.date)
+                seconds: pair.1.date.timeIntervalSince(pair.0.date),
+                maximumGap: isSameDay ? 8 * 60 * 60 : 30 * 60
             )
         }
     }

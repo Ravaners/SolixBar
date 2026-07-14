@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.5.2 - 2026-07-14
+
+- DE: „Heute“ verwendet jetzt vorrangig den echten Tagesertrag aus der SOLIX-Energieanalyse. API-Nullwerte werden nicht mehr zwischengespeichert und verdecken keine späteren gültigen Werte mehr.
+- EN: “Today” now prioritizes the real daily yield from SOLIX energy analysis. Zero API responses are no longer cached and can no longer mask later valid values.
+- DE: Der bisher irrtümlich verwendete Gesamtstatistik-Aufruf wurde durch den passenden PV-Gesamt-Endpunkt ersetzt. Ein echter Gesamtwert darf den bisherigen lokalen Schätzwert beim ersten Abruf auch nach unten korrigieren; manuelle Startwerte bleiben ausdrücklich vorrangig.
+- EN: The previously incorrect total-statistics call has been replaced with the proper PV lifetime-total endpoint. On first retrieval, a real total may also correct the previous local estimate downward; explicit manual starting values continue to take priority.
+- DE: Direkter SOLIX-Login, lokaler JSON-Befehl und JSON-URL führen denselben realen Gesamtertrag jetzt gemeinsam fort. Beim Update werden nacheinander entstandene reale Zählersegmente addiert und eindeutige Lücken seit dem Datenquellenwechsel nachgetragen; Demo-Daten bleiben vollständig getrennt.
+- EN: Direct SOLIX login, local JSON command, and JSON URL now continue the same real cumulative yield. The update adds consecutive real counter segments and recovers unambiguous gaps since the data-source transition, while demo data remains completely separate.
+- DE: Eindeutige Messlücken innerhalb desselben Tages werden bei vorhandener Solarleistung bis maximal acht Stunden vorsichtig rekonstruiert. „Heute“ verwendet bei fehlendem API-Wert zusätzlich den lokalen Verlauf; Nacht-, Sonnenaufgangs- und noch längere Lücken bleiben ausgeschlossen.
+- EN: Unambiguous measurement gaps within the same day are conservatively reconstructed for up to eight hours when solar generation is present. “Today” additionally uses local history when the API value is unavailable; overnight, sunrise, and longer gaps remain excluded.
+- DE: Oberfläche, adaptive Farben und vorhandene Screenshots bleiben unverändert, da dieses Update ausschließlich die Ertragsberechnung korrigiert.
+- EN: The interface, adaptive colors, and existing screenshots remain unchanged because this update only corrects yield calculation.
+
 ## 0.5.1 - 2026-07-14
 
 - DE: Die normale macOS-Menüleiste bleibt jetzt auch bei geöffneter abgedockter Leiste vollständig konfigurierbar. Häkchen und Reihenfolge aus dem Reiter „Menüleiste“ werden sofort sichtbar, während der Reiter „Abgedockt“ weiterhin ausschließlich die abgedockte Leiste steuert.
