@@ -301,7 +301,7 @@ def render_settings():
     text(d, (92, 148), "Menueleiste und abgedockte Leiste unabhaengig und direkt sortierbar.", MUTED, F["body"])
     shadow(base, (360, 230, 1240, 900), radius=34, blur=34)
     rounded(d, (360, 230, 1240, 900), 28, PANEL, (160, 170, 164), 3)
-    text(d, (410, 278), "SOLIX Bar 0.5.0", INK, F["h3"])
+    text(d, (410, 278), "SOLIX Bar 0.5.1", INK, F["h3"])
     tabs = ["Menueleiste", "Abgedockt", "Warnungen", "Datenquelle", "App", "Start"]
     xx = 405
     for index, label in enumerate(tabs):
@@ -330,6 +330,7 @@ def render_settings():
         rounded(d, (1130, yy + 10, 1168, yy + 50), 9, (237, 242, 239), (198, 207, 202), 2)
         text(d, (1103, yy + 13), "↑", MUTED, F["small"], anchor="ma")
         text(d, (1149, yy + 13), "↓", MUTED, F["small"], anchor="ma")
+        text(d, (1182, yy + 13), "?", MUTED, F["small"], anchor="ma")
         yy += 68
     text(d, (420, 810), "Live-Vorschau", INK, F["body_bold"])
     rounded(d, (420, 848, 1180, 884), 10, (34, 40, 39), (74, 86, 81), 2)
@@ -345,7 +346,7 @@ def render_warnings():
     shadow(base, (290, 225, 1310, 920), radius=34, blur=34)
     rounded(d, (290, 225, 1310, 920), 28, PANEL, (160, 170, 164), 3)
     text(d, (345, 275), "Warnungen", INK, F["h3"])
-    headers = [("Aktiv", 350), ("Warnung", 455), ("Schwelle", 820), ("Dauer", 1040)]
+    headers = [("Aktiv", 350), ("Warnung", 455), ("Schwelle", 820), ("Dauer", 1040), ("Info", 1208)]
     for label, xx in headers:
         text(d, (xx, 340), label, MUTED, F["small"])
     rows = [
@@ -366,6 +367,7 @@ def render_warnings():
         text(d, (455, yy + 13), title, INK if enabled else MUTED, F["body_bold"])
         text(d, (820, yy + 13), threshold, GREEN if enabled else MUTED, F["body_bold"])
         text(d, (1040, yy + 13), duration, INK if enabled else MUTED, F["body"])
+        text(d, (1218, yy + 13), "?", MUTED, F["body_bold"], anchor="ma")
         yy += 64
     rounded(d, (335, 850, 1265, 892), 12, (237, 245, 240), (211, 224, 216), 2)
     text(d, (355, 858), "Solar: hoechster Wert der letzten 30 Minuten; unter 100 W keine Nachtwarnung.", MUTED, F["tiny"])

@@ -26,7 +26,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 - Demo-Modus zum Testen ohne Zugangsdaten. / Demo data mode for testing without credentials.
 - Direkter SOLIX-Login sowie Live-Daten ueber lokalen JSON-Befehl oder JSON-URL. / Direct SOLIX login plus live data via local JSON command or JSON URL.
 - Frei waehlbare Menueleistenwerte, Bezeichnungen, Symbole, App-Symbol und Skalierung. / Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
-- Getrennte Auswahl und Reihenfolge fuer Menueleiste und abgedockte Leiste mit sofortiger Live-Vorschau. / Independent selection and ordering for the menu bar and detached bar with instant live preview.
+- Getrennte Auswahl und Reihenfolge fuer Menueleiste und abgedockte Leiste mit sofortiger Live-Vorschau; beide Anzeigen bleiben auch beim Abdocken parallel konfigurierbar. / Independent selection and ordering for the menu bar and detached bar with instant live preview; both displays remain configurable in parallel while detached.
 - Optionale farbige Energiefluss-Pfeile in der Menueleiste. / Optional colored energy-flow arrows in the menu bar.
 - Abgedockte schmale Leiste mit Andocken-Funktion, Fixieren gegen versehentliches Verschieben und gespeichertem Zustand. / Detachable slim bar with dock action, optional movement lock, and restored state.
 - Individuelle macOS-Warnungen fuer Akku, Solar-Einbruch, Hauslast, Netzbezug, Einspeisung sowie Akku-Ladung und -Entladung. / Individual macOS warnings for battery, solar drop, home load, grid import, grid export, battery charging, and battery discharging.
@@ -36,12 +36,12 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 - Aufklapp-Dashboard mit Akku, PV, Hauslast, Netzbezug, Akku-Fluss, Tagesertrag, Gesamtertrag und Status. / Dropdown dashboard with battery, solar, home load, grid import, battery flow, daily yield, total yield, and status.
 - Animierter Verlaufsgraf fuer Akku, Solar und Netzbezug. / Animated history graph for battery, solar, and grid import.
 - Zeitraeume: Aktuell, 24 Stunden, 7 Tage, 30 Tage und individuell. / Graph ranges: current, 24 hours, 7 days, 30 days, and custom.
-- Sichtbare Fragezeichen-Hilfen in den Einstellungen. / Visible question-mark help controls in settings.
+- Sichtbare Fragezeichen-Hilfen fuer jeden Messwert, jede Warnung und weitere Einstellungen. / Visible question-mark help controls for every metric, every warning, and additional settings.
 - Lokale Logdatei fuer Fehleranalyse: `~/Library/Application Support/SolixBar/SolixBar.log`. / Local log file for troubleshooting.
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.5.0`
+Aktuelle Version / Current version: `0.5.1`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -63,7 +63,7 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
-unzip outputs/SolixBar-0.5.0-macOS-arm64.zip -d outputs
+unzip outputs/SolixBar-0.5.1-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
@@ -97,9 +97,9 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.0 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.1 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
 
-English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.0 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.1 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
 
 Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
 Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden ohne

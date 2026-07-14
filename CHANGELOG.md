@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.5.1 - 2026-07-14
+
+- DE: Die normale macOS-Menüleiste bleibt jetzt auch bei geöffneter abgedockter Leiste vollständig konfigurierbar. Häkchen und Reihenfolge aus dem Reiter „Menüleiste“ werden sofort sichtbar, während der Reiter „Abgedockt“ weiterhin ausschließlich die abgedockte Leiste steuert.
+- EN: The regular macOS menu bar now remains fully configurable while the detached bar is open. Checkboxes and ordering from the Menu Bar tab are reflected immediately, while the Detached tab continues to control only the detached bar.
+- DE: Jeder auswählbare Messwert und jede individuelle Warnung besitzt jetzt ein sichtbares Fragezeichen mit einer verständlichen deutschen oder englischen Funktionsbeschreibung.
+- EN: Every selectable metric and individual warning now has a visible question-mark control with a clear German or English explanation.
+- DE: Die bestehende adaptive Farbgebung und alle Semantikfarben wurden unverändert beibehalten.
+- EN: The existing adaptive color scheme and all semantic colors remain unchanged.
+
 ## 0.5.0 - 2026-07-14
 
 - DE: Menüleiste und abgedockte Leiste besitzen jetzt getrennte Einstellungen für Auswahl und Reihenfolge aller Messwerte. Pfeiltasten verschieben Einträge direkt, und jede Änderung erscheint sofort in einer Live-Vorschau sowie in der aktiven Leiste.
