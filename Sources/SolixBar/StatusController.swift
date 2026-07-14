@@ -133,9 +133,17 @@ final class StatusController: NSObject {
                     throw WakeRefreshError.deviceStillOffline
                 }
                 snapshot.updatedAt = Date()
+                if snapshot.todayKWhIsAuthoritative != true {
+                    let startOfDay = Calendar.current.startOfDay(for: snapshot.updatedAt)
+                    let measuredToday = historyStore.estimatedSolarKWh(since: startOfDay)
+                    snapshot.todayKWh = max(snapshot.todayKWh ?? 0, measuredToday)
+                }
                 snapshot.totalKWh = historyStore.cumulativeSolarKWh(
                     recording: snapshot,
-                    sourceKey: settings.dataSourceMode.rawValue
+                    sourceKey: settings.dataSourceMode.rawValue,
+                    configuredManualBaseKWh: settings.dataSourceMode == .solix
+                        ? settings.solixTotalBaseKWh
+                        : nil
                 )
                 lastSnapshot = snapshot
                 lastSnapshotMode = settings.dataSourceMode
@@ -144,7 +152,13 @@ final class StatusController: NSObject {
                 wakeRefreshAttemptsRemaining = 0
                 historyStore.record(snapshot)
                 warningMonitor.process(snapshot: snapshot, rules: settings.warningRules)
-                AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
+                AppLogger.info(
+                    "Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, "
+                        + "solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, "
+                        + "grid=\(snapshot.gridWatts.map(String.init) ?? "-")W, "
+                        + "today=\(snapshot.todayKWh.map { String(format: "%.3f", $0) } ?? "-")kWh, "
+                        + "total=\(snapshot.totalKWh.map { String(format: "%.3f", $0) } ?? "-")kWh."
+                )
             } catch {
                 let keepsLastWakeSnapshot = wakeRefreshAttemptsRemaining > 0 && currentSnapshot() != nil
                 if !keepsLastWakeSnapshot {
