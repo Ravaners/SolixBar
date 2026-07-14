@@ -8,6 +8,13 @@ private enum WakeRefreshError: LocalizedError {
     }
 }
 
+private struct BarDisplayStyle {
+    var metrics: [BarMetric]
+    var showLabels: Bool
+    var showSymbols: Bool
+    var showFlow: Bool
+}
+
 private func menuBarUsesDarkBackground(_ appearance: NSAppearance) -> Bool {
     var label: NSColor?
     appearance.performAsCurrentDrawingAppearance {
@@ -29,6 +36,7 @@ final class StatusController: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let settings = AppSettings.shared
     private let historyStore = SolixHistoryStore.shared
+    private let warningMonitor = WarningMonitor()
     private var timer: Timer?
     private var lastSnapshot: SolixSnapshot?
     private var lastSnapshotMode: DataSourceMode?
@@ -56,10 +64,12 @@ final class StatusController: NSObject {
             object: nil
         )
         settings.migrateMenuBarGridMetricIfNeeded()
+        settings.migrateDetachedBarSettingsIfNeeded()
         applyAppearance()
         updateMenuBarIcon()
         setStatusTitle("SOLIX")
         rebuildMenu()
+        warningMonitor.activateIfNeeded(rules: settings.warningRules)
         refresh()
         if settings.isDetachedMenuBarActive {
             AppLogger.info("Restoring detached slim bar from previous session.")
@@ -133,6 +143,7 @@ final class StatusController: NSObject {
                 consecutiveRefreshFailures = 0
                 wakeRefreshAttemptsRemaining = 0
                 historyStore.record(snapshot)
+                warningMonitor.process(snapshot: snapshot, rules: settings.warningRules)
                 AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
             } catch {
                 let keepsLastWakeSnapshot = wakeRefreshAttemptsRemaining > 0 && currentSnapshot() != nil
@@ -240,11 +251,12 @@ final class StatusController: NSObject {
         }
 
         let battery = snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
-        if settings.showMenuBarMetricSymbols || settings.showEnergyFlowArrows || settings.barMetrics.contains(.flow) {
-            setStatusAttributedTitle(barAttributedText(for: snapshot, scale: settings.menuBarScale))
+        let style = menuBarStyle
+        if style.showSymbols || style.showFlow || style.metrics.contains(.flow) {
+            setStatusAttributedTitle(barAttributedText(for: snapshot, scale: settings.menuBarScale, style: style))
         } else {
-            let parts = visibleBarMetrics(for: snapshot).map { metric in
-                barText(for: metric, snapshot: snapshot)
+            let parts = visibleBarMetrics(for: snapshot, style: style).map { metric in
+                barText(for: metric, snapshot: snapshot, style: style)
             }
             let title = parts.isEmpty ? battery : parts.joined(separator: separator())
             setStatusTitle(title)
@@ -418,6 +430,24 @@ final class StatusController: NSObject {
         settings.showMenuBarIcon || isMenuBarDetached
     }
 
+    private var menuBarStyle: BarDisplayStyle {
+        BarDisplayStyle(
+            metrics: settings.barMetrics,
+            showLabels: settings.showMetricLabels,
+            showSymbols: settings.showMenuBarMetricSymbols,
+            showFlow: settings.showEnergyFlowArrows
+        )
+    }
+
+    private var detachedBarStyle: BarDisplayStyle {
+        BarDisplayStyle(
+            metrics: settings.detachedBarMetrics,
+            showLabels: settings.showDetachedMetricLabels,
+            showSymbols: settings.showDetachedMetricSymbols,
+            showFlow: settings.showDetachedEnergyFlowArrows
+        )
+    }
+
     private func menuBarIcon() -> NSImage? {
         let appIcon = Bundle.main.url(forResource: "SolixBar", withExtension: "png")
             .flatMap { NSImage(contentsOf: $0) }
@@ -559,36 +589,36 @@ final class StatusController: NSObject {
         return value > 0 ? "+\(value) W" : "\(value) W"
     }
 
-    private func formatFlowWatts(_ value: Int?) -> String? {
+    private func formatFlowWatts(_ value: Int?, showFlow: Bool) -> String? {
         guard let value else { return nil }
-        return settings.showEnergyFlowArrows ? "\(abs(value)) W" : formatSignedWatts(value)
+        return showFlow ? "\(abs(value)) W" : formatSignedWatts(value)
     }
 
-    private func barText(for metric: BarMetric, snapshot: SolixSnapshot) -> String {
+    private func barText(for metric: BarMetric, snapshot: SolixSnapshot, style: BarDisplayStyle) -> String {
         switch metric {
         case .battery:
-            formatBarMetric(metric, value: snapshot.batteryPercent.map { "\($0)%" } ?? "--%")
+            formatBarMetric(metric, value: snapshot.batteryPercent.map { "\($0)%" } ?? "--%", showLabels: style.showLabels)
         case .solar:
-            formatBarMetric(metric, value: snapshot.solarWatts.map { "\($0)W" } ?? "--W")
+            formatBarMetric(metric, value: snapshot.solarWatts.map { "\($0)W" } ?? "--W", showLabels: style.showLabels)
         case .home:
-            formatBarMetric(metric, value: snapshot.homeWatts.map { "\($0)W" } ?? "--W")
+            formatBarMetric(metric, value: snapshot.homeWatts.map { "\($0)W" } ?? "--W", showLabels: style.showLabels)
         case .grid:
-            formatBarMetric(metric, value: formatFlowWatts(snapshot.gridWatts) ?? "--W")
+            formatBarMetric(metric, value: formatFlowWatts(snapshot.gridWatts, showFlow: style.showFlow) ?? "--W", showLabels: style.showLabels)
         case .batteryFlow:
-            formatBarMetric(metric, value: formatFlowWatts(snapshot.batteryWatts) ?? "--W")
+            formatBarMetric(metric, value: formatFlowWatts(snapshot.batteryWatts, showFlow: style.showFlow) ?? "--W", showLabels: style.showLabels)
         case .flow:
-            settings.showMetricLabels ? "\(metricShortTitle(metric))" : "Flow"
+            style.showLabels ? "\(metricShortTitle(metric))" : "Flow"
         case .today:
-            formatBarMetric(metric, value: snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh")
+            formatBarMetric(metric, value: snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh", showLabels: style.showLabels)
         case .total:
-            formatBarMetric(metric, value: snapshot.totalKWh.map { String(format: "%.1fkWh", $0) } ?? "--kWh")
+            formatBarMetric(metric, value: snapshot.totalKWh.map { String(format: "%.1fkWh", $0) } ?? "--kWh", showLabels: style.showLabels)
         case .status:
-            formatBarMetric(metric, value: snapshot.status ?? "-")
+            formatBarMetric(metric, value: snapshot.status ?? "-", showLabels: style.showLabels)
         }
     }
 
-    private func formatBarMetric(_ metric: BarMetric, value: String) -> String {
-        settings.showMetricLabels ? "\(metricShortTitle(metric)) \(value)" : value
+    private func formatBarMetric(_ metric: BarMetric, value: String, showLabels: Bool) -> String {
+        showLabels ? "\(metricShortTitle(metric)) \(value)" : value
     }
 
     private func metricTitle(_ metric: BarMetric) -> String {
@@ -639,26 +669,26 @@ final class StatusController: NSObject {
         }
     }
 
-    private func barAttributedText(for snapshot: SolixSnapshot, scale: Double) -> NSAttributedString {
+    private func barAttributedText(for snapshot: SolixSnapshot, scale: Double, style: BarDisplayStyle) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let metrics = visibleBarMetrics(for: snapshot)
+        let metrics = visibleBarMetrics(for: snapshot, style: style)
         for (index, metric) in metrics.enumerated() {
             if index > 0 {
                 result.append(textAttachment(separator(scale: scale), scale: scale))
             }
             if metric == .flow {
-                appendFlowField(to: result, snapshot: snapshot, scale: scale)
+                appendFlowField(to: result, snapshot: snapshot, scale: scale, style: style)
                 continue
             }
-            if settings.showEnergyFlowArrows,
+            if style.showFlow,
                let flow = energyFlowText(for: metric, snapshot: snapshot) {
                 result.append(textAttachment(flow.text, color: flow.color, weight: .bold, scale: scale))
                 result.append(textAttachment(" ", scale: scale))
             }
-            if settings.showMenuBarMetricSymbols,
+            if style.showSymbols,
                 let image = coloredSymbol(
                     symbol(for: metric, snapshot: snapshot),
-                    color: (metric == .battery || settings.showEnergyFlowArrows)
+                    color: (metric == .battery || style.showFlow)
                         ? color(for: metric, snapshot: snapshot)
                         : .labelColor,
                     accessibilityDescription: metricTitle(metric)
@@ -666,24 +696,24 @@ final class StatusController: NSObject {
                 result.append(imageAttachment(image, scale: scale))
                 result.append(textAttachment(" ", scale: scale))
             }
-            result.append(textAttachment(barText(for: metric, snapshot: snapshot), color: valueColor(for: metric, snapshot: snapshot), scale: scale))
+            result.append(textAttachment(barText(for: metric, snapshot: snapshot, style: style), color: valueColor(for: metric, snapshot: snapshot, showFlow: style.showFlow), scale: scale))
         }
         return result
     }
 
-    private func visibleBarMetrics(for snapshot: SolixSnapshot) -> [BarMetric] {
-        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
+    private func visibleBarMetrics(for snapshot: SolixSnapshot, style: BarDisplayStyle) -> [BarMetric] {
+        let metrics = style.metrics.isEmpty ? [BarMetric.battery, .solar, .grid] : style.metrics
         return metrics.filter { metric in
             metric != .total || snapshot.totalKWh != nil
         }
     }
 
-    private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot, scale: Double) {
-        if settings.showMetricLabels {
+    private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot, scale: Double, style: BarDisplayStyle) {
+        if style.showLabels {
             result.append(textAttachment("\(metricShortTitle(.flow)) ", color: .secondaryLabelColor, scale: scale))
         }
 
-        guard settings.showEnergyFlowArrows else {
+        guard style.showFlow else {
             result.append(textAttachment("aus", color: .secondaryLabelColor, scale: scale))
             return
         }
@@ -789,11 +819,11 @@ final class StatusController: NSObject {
         )
     }
 
-    private func valueColor(for metric: BarMetric, snapshot: SolixSnapshot) -> NSColor {
+    private func valueColor(for metric: BarMetric, snapshot: SolixSnapshot, showFlow: Bool) -> NSColor {
         if metric == .battery {
             return snapshot.batteryPercent.map(batteryColor) ?? .secondaryLabelColor
         }
-        guard settings.showEnergyFlowArrows else { return .labelColor }
+        guard showFlow else { return .labelColor }
         switch metric {
         case .solar:
             return snapshot.solarWatts == nil ? .secondaryLabelColor : solarFlowColor
@@ -978,6 +1008,9 @@ final class StatusController: NSObject {
                 },
                 onSave: { [weak self] in
                     AppLogger.info("Settings saved.")
+                    if let self {
+                        self.warningMonitor.activateIfNeeded(rules: self.settings.warningRules)
+                    }
                     self?.applyCurrentSettings(refreshNow: true)
                 },
                 onReset: { [weak self] in
@@ -1023,7 +1056,11 @@ final class StatusController: NSObject {
             detachedMenuBarWindow = DetachedMenuBarWindowController(
                 attributedBarProvider: { [weak self] in
                     guard let self, let snapshot = self.currentSnapshot() else { return nil }
-                    return self.barAttributedText(for: snapshot, scale: self.settings.detachedMenuBarScale)
+                    return self.barAttributedText(
+                        for: snapshot,
+                        scale: self.settings.detachedMenuBarScale,
+                        style: self.detachedBarStyle
+                    )
                 },
                 onClose: { [weak self] in
                     self?.isMenuBarDetached = false

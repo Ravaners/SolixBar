@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-07-14
+
+- DE: Menüleiste und abgedockte Leiste besitzen jetzt getrennte Einstellungen für Auswahl und Reihenfolge aller Messwerte. Pfeiltasten verschieben Einträge direkt, und jede Änderung erscheint sofort in einer Live-Vorschau sowie in der aktiven Leiste.
+- EN: The menu bar and detached bar now have separate settings for selecting and ordering every metric. Arrow buttons move items directly, and each change appears immediately in a live preview and the active bar.
+- DE: Ein eigener Reiter bündelt App-Symbol, Bezeichnungen, Symbole, Energiefluss, Skalierung und Fixierung der abgedockten Leiste. Bestehende Einstellungen werden beim ersten Start übernommen.
+- EN: A dedicated tab groups app icon, labels, symbols, energy flow, scale, and locking for the detached bar. Existing settings are inherited on first launch.
+- DE: Der neue Warnungs-Reiter bietet individuell aktivierbare Grenzwerte und Mindestdauern für niedrigen Akkustand, Solar-Einbruch, hohe Hauslast, Netzbezug, Einspeisung sowie Akku-Ladung und -Entladung.
+- EN: The new Warnings tab provides individually enabled thresholds and minimum durations for low battery, solar drop, high home load, grid import, grid export, battery charging, and battery discharging.
+- DE: Solar-Einbrüche werden gegen den höchsten Solarwert der letzten 30 Minuten bewertet; eine Mindestleistung von 100 W verhindert Nachtwarnungen. Jede macOS-Mitteilung wird erst nach Normalisierung erneut ausgelöst.
+- EN: Solar drops are evaluated against the highest solar value from the previous 30 minutes; a 100 W minimum baseline prevents nighttime alerts. Each macOS notification is rearmed only after values return to normal.
+- DE: Die bestehende adaptive Farbgebung, die Semantikfarben, Symbole und der dunkle Glas-Hintergrund der abgedockten Leiste bleiben unverändert.
+- EN: The existing adaptive color scheme, semantic colors, symbols, and dark glass background of the detached bar remain unchanged.
+
 ## 0.4.2 - 2026-07-14
 
 - DE: SOLIX-Mail und Passwort werden ohne Schlüsselbund-Abfrage AES-verschlüsselt im privaten Application-Support-Ordner gespeichert. Nach dem Update müssen die Zugangsdaten einmal neu eingegeben werden.

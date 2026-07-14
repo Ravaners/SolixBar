@@ -18,14 +18,18 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ![SolixBar graph preview](docs/assets/graph-shot.svg)
 
+![SolixBar warning settings](docs/assets/warnings-shot.png)
+
 ## Funktionen / Features
 
 - Native AppKit-Menueleisten-App. / Native AppKit menu bar app.
 - Demo-Modus zum Testen ohne Zugangsdaten. / Demo data mode for testing without credentials.
 - Direkter SOLIX-Login sowie Live-Daten ueber lokalen JSON-Befehl oder JSON-URL. / Direct SOLIX login plus live data via local JSON command or JSON URL.
 - Frei waehlbare Menueleistenwerte, Bezeichnungen, Symbole, App-Symbol und Skalierung. / Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
+- Getrennte Auswahl und Reihenfolge fuer Menueleiste und abgedockte Leiste mit sofortiger Live-Vorschau. / Independent selection and ordering for the menu bar and detached bar with instant live preview.
 - Optionale farbige Energiefluss-Pfeile in der Menueleiste. / Optional colored energy-flow arrows in the menu bar.
 - Abgedockte schmale Leiste mit Andocken-Funktion, Fixieren gegen versehentliches Verschieben und gespeichertem Zustand. / Detachable slim bar with dock action, optional movement lock, and restored state.
+- Individuelle macOS-Warnungen fuer Akku, Solar-Einbruch, Hauslast, Netzbezug, Einspeisung sowie Akku-Ladung und -Entladung. / Individual macOS warnings for battery, solar drop, home load, grid import, grid export, battery charging, and battery discharging.
 - Hell, Dunkel oder automatisch passend zum System. / Light, dark, or automatic system appearance.
 - Deutsche oder englische sichtbare App-Texte. / German or English visible app text.
 - Login-Autostart. / Login autostart support.
@@ -37,7 +41,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.4.2`
+Aktuelle Version / Current version: `0.5.0`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -59,7 +63,7 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
-unzip outputs/SolixBar-0.4.2-macOS-arm64.zip -d outputs
+unzip outputs/SolixBar-0.5.0-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
@@ -93,9 +97,9 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.4.2 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.0 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
 
-English: Anker does not provide a stable public SOLIX API. SolixBar 0.4.2 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.0 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
 
 Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
 Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden ohne

@@ -124,7 +124,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     private func targetSize(for attributedText: NSAttributedString?, screen: NSScreen?) -> NSSize {
         let textWidth = ceil(attributedText?.size().width ?? 152)
         let scale = AppSettings.shared.detachedMenuBarScale
-        let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? round(34 * scale) : 0
+        let iconWidth: CGFloat = AppSettings.shared.showDetachedMenuBarIcon ? round(34 * scale) : 0
         let closeWidth: CGFloat = AppSettings.shared.lockDetachedMenuBar ? 0 : round(44 * scale)
         let horizontalPadding: CGFloat = round(34 * scale)
         let width = textWidth + iconWidth + closeWidth + horizontalPadding
@@ -268,7 +268,7 @@ private final class DetachedMenuBarView: NSView {
         stack.alignment = .centerY
         stack.spacing = round(10 * settings.detachedMenuBarScale)
 
-        if settings.showMenuBarIcon, let image = appIcon() {
+        if settings.showDetachedMenuBarIcon, let image = appIcon() {
             let imageView = NSImageView(image: image)
             let iconSize = round(24 * settings.detachedMenuBarScale)
             imageView.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
@@ -558,7 +558,7 @@ private final class DetachedMenuBarView: NSView {
     }
 
     private var accentColors: [NSColor] {
-        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
+        let metrics = settings.detachedBarMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.detachedBarMetrics
         let colors = metrics.map(accentColor)
         return Array(colors.prefix(5))
     }

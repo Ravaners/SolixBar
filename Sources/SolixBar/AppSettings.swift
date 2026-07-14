@@ -169,6 +169,68 @@ enum GraphMetric: String, CaseIterable {
     }
 }
 
+enum WarningKind: String, CaseIterable, Codable {
+    case batteryLow
+    case solarDrop
+    case homeHigh
+    case gridImportHigh
+    case gridExportHigh
+    case batteryChargeHigh
+    case batteryDischargeHigh
+
+    @MainActor var title: String {
+        switch self {
+        case .batteryLow: LocalizedText.text("Akku niedrig", "Battery low")
+        case .solarDrop: LocalizedText.text("Solar-Einbruch", "Solar drop")
+        case .homeHigh: LocalizedText.text("Hauslast hoch", "Home load high")
+        case .gridImportHigh: LocalizedText.text("Netzbezug hoch", "Grid import high")
+        case .gridExportHigh: LocalizedText.text("Einspeisung hoch", "Grid export high")
+        case .batteryChargeHigh: LocalizedText.text("Akku-Ladung hoch", "Battery charging high")
+        case .batteryDischargeHigh: LocalizedText.text("Akku-Entladung hoch", "Battery discharging high")
+        }
+    }
+
+    var unit: String {
+        switch self {
+        case .batteryLow, .solarDrop: "%"
+        default: "W"
+        }
+    }
+
+    var defaultThreshold: Double {
+        switch self {
+        case .batteryLow: 20
+        case .solarDrop: 60
+        case .homeHigh: 1500
+        case .gridImportHigh: 1000
+        case .gridExportHigh: 1000
+        case .batteryChargeHigh, .batteryDischargeHigh: 1000
+        }
+    }
+
+    var defaultDurationMinutes: Double {
+        switch self {
+        case .batteryLow: 1
+        case .solarDrop: 5
+        default: 2
+        }
+    }
+}
+
+struct WarningRule: Codable, Equatable, Sendable {
+    var isEnabled: Bool
+    var threshold: Double
+    var durationMinutes: Double
+
+    static func defaultRule(for kind: WarningKind) -> WarningRule {
+        WarningRule(
+            isEnabled: false,
+            threshold: kind.defaultThreshold,
+            durationMinutes: kind.defaultDurationMinutes
+        )
+    }
+}
+
 struct AppSettingsSnapshot {
     var dataSourceMode: DataSourceMode
     var command: String
@@ -178,10 +240,15 @@ struct AppSettingsSnapshot {
     var solixTotalBaseKWh: Double?
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
+    var detachedBarMetrics: [BarMetric]
     var showMenuBarIcon: Bool
+    var showDetachedMenuBarIcon: Bool
     var showMetricLabels: Bool
+    var showDetachedMetricLabels: Bool
     var showMenuBarMetricSymbols: Bool
+    var showDetachedMetricSymbols: Bool
     var showEnergyFlowArrows: Bool
+    var showDetachedEnergyFlowArrows: Bool
     var menuBarScale: Double
     var detachedMenuBarScale: Double
     var lockDetachedMenuBar: Bool
@@ -190,6 +257,7 @@ struct AppSettingsSnapshot {
     var historyRange: HistoryRange
     var customHistoryDays: Double
     var graphMetrics: [GraphMetric]
+    var warningRules: [WarningKind: WarningRule]
     var isDetachedMenuBarActive: Bool
     var detachedMenuBarFrame: String
 }
@@ -263,12 +331,37 @@ final class AppSettings {
         }
     }
 
+    var detachedBarMetrics: [BarMetric] {
+        get {
+            guard let values = defaults.array(forKey: "detachedBarMetrics") as? [String] else {
+                return barMetrics
+            }
+            let metrics = values.compactMap(BarMetric.init(rawValue:))
+            return metrics.isEmpty ? defaultBarMetrics : metrics
+        }
+        set {
+            let metrics = newValue.isEmpty ? defaultBarMetrics : newValue
+            defaults.set(metrics.map(\.rawValue), forKey: "detachedBarMetrics")
+        }
+    }
+
     func migrateMenuBarGridMetricIfNeeded() {
         let key = "didMigrateGridMetric033"
         guard defaults.bool(forKey: key) == false else { return }
         if !barMetrics.contains(.grid) {
             barMetrics.append(.grid)
         }
+        defaults.set(true, forKey: key)
+    }
+
+    func migrateDetachedBarSettingsIfNeeded() {
+        let key = "didMigrateDetachedBarSettings050"
+        guard defaults.bool(forKey: key) == false else { return }
+        detachedBarMetrics = barMetrics
+        showDetachedMenuBarIcon = showMenuBarIcon
+        showDetachedMetricLabels = showMetricLabels
+        showDetachedMetricSymbols = showMenuBarMetricSymbols
+        showDetachedEnergyFlowArrows = showEnergyFlowArrows
         defaults.set(true, forKey: key)
     }
 
@@ -280,12 +373,28 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "showMenuBarIcon") }
     }
 
+    var showDetachedMenuBarIcon: Bool {
+        get {
+            guard defaults.object(forKey: "showDetachedMenuBarIcon") != nil else { return showMenuBarIcon }
+            return defaults.bool(forKey: "showDetachedMenuBarIcon")
+        }
+        set { defaults.set(newValue, forKey: "showDetachedMenuBarIcon") }
+    }
+
     var showMetricLabels: Bool {
         get {
             guard defaults.object(forKey: "showMetricLabels") != nil else { return true }
             return defaults.bool(forKey: "showMetricLabels")
         }
         set { defaults.set(newValue, forKey: "showMetricLabels") }
+    }
+
+    var showDetachedMetricLabels: Bool {
+        get {
+            guard defaults.object(forKey: "showDetachedMetricLabels") != nil else { return showMetricLabels }
+            return defaults.bool(forKey: "showDetachedMetricLabels")
+        }
+        set { defaults.set(newValue, forKey: "showDetachedMetricLabels") }
     }
 
     var showMenuBarMetricSymbols: Bool {
@@ -296,12 +405,28 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "showMenuBarMetricSymbols") }
     }
 
+    var showDetachedMetricSymbols: Bool {
+        get {
+            guard defaults.object(forKey: "showDetachedMetricSymbols") != nil else { return showMenuBarMetricSymbols }
+            return defaults.bool(forKey: "showDetachedMetricSymbols")
+        }
+        set { defaults.set(newValue, forKey: "showDetachedMetricSymbols") }
+    }
+
     var showEnergyFlowArrows: Bool {
         get {
             guard defaults.object(forKey: "showEnergyFlowArrows") != nil else { return false }
             return defaults.bool(forKey: "showEnergyFlowArrows")
         }
         set { defaults.set(newValue, forKey: "showEnergyFlowArrows") }
+    }
+
+    var showDetachedEnergyFlowArrows: Bool {
+        get {
+            guard defaults.object(forKey: "showDetachedEnergyFlowArrows") != nil else { return showEnergyFlowArrows }
+            return defaults.bool(forKey: "showDetachedEnergyFlowArrows")
+        }
+        set { defaults.set(newValue, forKey: "showDetachedEnergyFlowArrows") }
     }
 
     var menuBarScale: Double {
@@ -366,6 +491,23 @@ final class AppSettings {
         }
     }
 
+    var warningRules: [WarningKind: WarningRule] {
+        get {
+            guard let data = defaults.data(forKey: "warningRules"),
+                  let stored = try? JSONDecoder().decode([WarningKind: WarningRule].self, from: data) else {
+                return Dictionary(uniqueKeysWithValues: WarningKind.allCases.map { ($0, .defaultRule(for: $0)) })
+            }
+            return Dictionary(uniqueKeysWithValues: WarningKind.allCases.map { kind in
+                (kind, stored[kind] ?? .defaultRule(for: kind))
+            })
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: "warningRules")
+            }
+        }
+    }
+
     var isDetachedMenuBarActive: Bool {
         get { defaults.bool(forKey: "isDetachedMenuBarActive") }
         set { defaults.set(newValue, forKey: "isDetachedMenuBarActive") }
@@ -386,10 +528,15 @@ final class AppSettings {
             solixTotalBaseKWh: solixTotalBaseKWh,
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
+            detachedBarMetrics: detachedBarMetrics,
             showMenuBarIcon: showMenuBarIcon,
+            showDetachedMenuBarIcon: showDetachedMenuBarIcon,
             showMetricLabels: showMetricLabels,
+            showDetachedMetricLabels: showDetachedMetricLabels,
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
+            showDetachedMetricSymbols: showDetachedMetricSymbols,
             showEnergyFlowArrows: showEnergyFlowArrows,
+            showDetachedEnergyFlowArrows: showDetachedEnergyFlowArrows,
             menuBarScale: menuBarScale,
             detachedMenuBarScale: detachedMenuBarScale,
             lockDetachedMenuBar: lockDetachedMenuBar,
@@ -398,6 +545,7 @@ final class AppSettings {
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
             graphMetrics: graphMetrics,
+            warningRules: warningRules,
             isDetachedMenuBarActive: isDetachedMenuBarActive,
             detachedMenuBarFrame: detachedMenuBarFrame
         )
@@ -412,10 +560,15 @@ final class AppSettings {
         solixTotalBaseKWh = snapshot.solixTotalBaseKWh
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
+        detachedBarMetrics = snapshot.detachedBarMetrics
         showMenuBarIcon = snapshot.showMenuBarIcon
+        showDetachedMenuBarIcon = snapshot.showDetachedMenuBarIcon
         showMetricLabels = snapshot.showMetricLabels
+        showDetachedMetricLabels = snapshot.showDetachedMetricLabels
         showMenuBarMetricSymbols = snapshot.showMenuBarMetricSymbols
+        showDetachedMetricSymbols = snapshot.showDetachedMetricSymbols
         showEnergyFlowArrows = snapshot.showEnergyFlowArrows
+        showDetachedEnergyFlowArrows = snapshot.showDetachedEnergyFlowArrows
         menuBarScale = snapshot.menuBarScale
         detachedMenuBarScale = snapshot.detachedMenuBarScale
         lockDetachedMenuBar = snapshot.lockDetachedMenuBar
@@ -424,6 +577,7 @@ final class AppSettings {
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
         graphMetrics = snapshot.graphMetrics
+        warningRules = snapshot.warningRules
         isDetachedMenuBarActive = snapshot.isDetachedMenuBarActive
         detachedMenuBarFrame = snapshot.detachedMenuBarFrame
     }

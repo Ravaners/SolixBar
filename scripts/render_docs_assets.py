@@ -298,28 +298,78 @@ def render_settings():
     base = gradient((1600, 1050), [(251, 252, 249, 255), (241, 247, 243, 255), (235, 243, 255, 255)])
     d = ImageDraw.Draw(base)
     text(d, (90, 76), "Einstellungen", INK, F["h2"])
-    text(d, (92, 148), "Datenquelle, Anzeige, Sprache und abgedockte Leiste klar getrennt.", MUTED, F["body"])
+    text(d, (92, 148), "Menueleiste und abgedockte Leiste unabhaengig und direkt sortierbar.", MUTED, F["body"])
     shadow(base, (360, 230, 1240, 900), radius=34, blur=34)
     rounded(d, (360, 230, 1240, 900), 28, PANEL, (160, 170, 164), 3)
-    text(d, (420, 290), "SolixBar Einstellungen", INK, F["h3"])
+    text(d, (410, 278), "SOLIX Bar 0.5.0", INK, F["h3"])
+    tabs = ["Menueleiste", "Abgedockt", "Warnungen", "Datenquelle", "App", "Start"]
+    xx = 405
+    for index, label in enumerate(tabs):
+        width = 126 if label != "Datenquelle" else 148
+        fill = (225, 242, 232) if index == 0 else (244, 247, 245)
+        rounded(d, (xx, 330, xx + width, 378), 12, fill, (202, 213, 207), 2)
+        text(d, (xx + width / 2, 342), label, GREEN if index == 0 else MUTED, F["tiny"], anchor="ma")
+        xx += width + 6
+    text(d, (420, 408), "Werte und Reihenfolge", INK, F["body_bold"])
     rows = [
-        ("Datenquelle", "SOLIX Login", "Passwort lokal AES-verschluesselt."),
-        ("Menueleiste", "Akku, PV, Netz, Flow", "Werte, Labels, Symbole und Skalierung."),
-        ("Abgedockte Leiste", "Aktiv, skalieren, fixieren", "Separate schmale Anzeige unter der Menueleiste."),
-        ("Darstellung", "System, Hell, Dunkel", "Optik passend zum Mac oder fest gewaehlt."),
-        ("Sprache", "Deutsch / English", "Sichtbare App-Texte umschalten."),
+        (True, "Akku", "78%", GREEN_BRIGHT),
+        (True, "PV", "640W", SOLAR),
+        (True, "Hauslast", "420W", BLUE),
+        (True, "Netzbezug", "80W", BLUE),
+        (False, "Akku-Fluss", "220W", GREEN),
     ]
-    yy = 365
-    for title, value, hint in rows:
-        rounded(d, (420, yy, 1180, yy + 84), 18, (246, 249, 247), (226, 232, 228), 2)
-        text(d, (450, yy + 18), title, INK, F["body_bold"])
-        value_font = font(31, "bold") if len(value) > 18 else F["body_bold"]
-        text(d, (805, yy + 18), value, GREEN if title != "Darstellung" else BLUE, value_font)
-        rounded(d, (1140, yy + 22, 1164, yy + 46), 12, (232, 241, 235), (160, 190, 170), 2)
-        text(d, (1152, yy + 19), "?", GREEN, F["tiny"], anchor="ma")
-        text(d, (450, yy + 53), hint, MUTED, F["tiny"])
-        yy += 98
+    yy = 452
+    for enabled, title, value, color in rows:
+        rounded(d, (420, yy, 1180, yy + 62), 14, (247, 250, 248), (225, 231, 228), 2)
+        d.rectangle((446, yy + 19, 468, yy + 41), outline=GREEN if enabled else (150, 158, 154), width=3)
+        if enabled:
+            d.line((450, yy + 30, 457, yy + 37, 466, yy + 22), fill=GREEN, width=3)
+        text(d, (490, yy + 13), title, INK, F["body_bold"])
+        text(d, (825, yy + 13), value, color, F["body_bold"])
+        rounded(d, (1084, yy + 10, 1122, yy + 50), 9, (237, 242, 239), (198, 207, 202), 2)
+        rounded(d, (1130, yy + 10, 1168, yy + 50), 9, (237, 242, 239), (198, 207, 202), 2)
+        text(d, (1103, yy + 13), "↑", MUTED, F["small"], anchor="ma")
+        text(d, (1149, yy + 13), "↓", MUTED, F["small"], anchor="ma")
+        yy += 68
+    text(d, (420, 810), "Live-Vorschau", INK, F["body_bold"])
+    rounded(d, (420, 848, 1180, 884), 10, (34, 40, 39), (74, 86, 81), 2)
+    text(d, (444, 850), "Akku 78%   PV 640W   Last 420W   Netz 80W", (238, 245, 241), F["small"])
     save(base, "settings-shot.png")
+
+
+def render_warnings():
+    base = gradient((1600, 1050), [(251, 252, 249, 255), (244, 248, 245, 255), (255, 245, 229, 255)])
+    d = ImageDraw.Draw(base)
+    text(d, (90, 76), "Individuelle Warnungen", INK, F["h2"])
+    text(d, (92, 148), "Schwelle und Mindestdauer fuer jeden Energiefluss getrennt festlegen.", MUTED, F["body"])
+    shadow(base, (290, 225, 1310, 920), radius=34, blur=34)
+    rounded(d, (290, 225, 1310, 920), 28, PANEL, (160, 170, 164), 3)
+    text(d, (345, 275), "Warnungen", INK, F["h3"])
+    headers = [("Aktiv", 350), ("Warnung", 455), ("Schwelle", 820), ("Dauer", 1040)]
+    for label, xx in headers:
+        text(d, (xx, 340), label, MUTED, F["small"])
+    rows = [
+        (True, "Akku niedrig", "20 %", "1 Minute"),
+        (True, "Solar-Einbruch", "60 %", "5 Minuten"),
+        (False, "Hauslast hoch", "1500 W", "2 Minuten"),
+        (True, "Netzbezug hoch", "1000 W", "3 Minuten"),
+        (False, "Einspeisung hoch", "1000 W", "2 Minuten"),
+        (False, "Akku-Ladung hoch", "1000 W", "2 Minuten"),
+        (False, "Akku-Entladung hoch", "1000 W", "2 Minuten"),
+    ]
+    yy = 390
+    for enabled, title, threshold, duration in rows:
+        rounded(d, (335, yy, 1265, yy + 58), 13, (247, 250, 248), (226, 232, 228), 2)
+        d.rectangle((357, yy + 18, 379, yy + 40), outline=GREEN if enabled else (150, 158, 154), width=3)
+        if enabled:
+            d.line((361, yy + 29, 368, yy + 36, 377, yy + 21), fill=GREEN, width=3)
+        text(d, (455, yy + 13), title, INK if enabled else MUTED, F["body_bold"])
+        text(d, (820, yy + 13), threshold, GREEN if enabled else MUTED, F["body_bold"])
+        text(d, (1040, yy + 13), duration, INK if enabled else MUTED, F["body"])
+        yy += 64
+    rounded(d, (335, 850, 1265, 892), 12, (237, 245, 240), (211, 224, 216), 2)
+    text(d, (355, 858), "Solar: hoechster Wert der letzten 30 Minuten; unter 100 W keine Nachtwarnung.", MUTED, F["tiny"])
+    save(base, "warnings-shot.png")
 
 
 def render_flow():
@@ -374,6 +424,7 @@ def main():
     render_detached()
     render_graph()
     render_settings()
+    render_warnings()
     render_flow()
 
 
