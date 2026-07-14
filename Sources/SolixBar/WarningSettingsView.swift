@@ -47,7 +47,8 @@ final class WarningSettingsView: NSView, NSTextFieldDelegate {
             header(LocalizedText.text("Aktiv", "On"), width: 58),
             header(LocalizedText.text("Warnung", "Warning"), width: 205),
             header(LocalizedText.text("Schwelle", "Threshold"), width: 120),
-            header(LocalizedText.text("Dauer", "Duration"), width: 150)
+            header(LocalizedText.text("Dauer", "Duration"), width: 150),
+            header(LocalizedText.text("Info", "Info"), width: 30)
         ])
         heading.orientation = .horizontal
         heading.spacing = 8
@@ -126,11 +127,43 @@ final class WarningSettingsView: NSView, NSTextFieldDelegate {
         durationStack.spacing = 5
         durationStack.widthAnchor.constraint(equalToConstant: 150).isActive = true
 
-        let row = NSStackView(views: [enabled, title, thresholdStack, durationStack])
+        let help = helpButton(for: kind)
+        let row = NSStackView(views: [enabled, title, thresholdStack, durationStack, help])
         row.orientation = .horizontal
         row.alignment = .centerY
         row.spacing = 8
         return row
+    }
+
+    private func helpButton(for kind: WarningKind) -> NSButton {
+        let button = NSButton(title: "?", target: nil, action: nil)
+        button.isBordered = false
+        button.font = .systemFont(ofSize: 12, weight: .bold)
+        button.contentTintColor = .secondaryLabelColor
+        button.toolTip = warningTooltip(for: kind)
+        button.setButtonType(.momentaryChange)
+        button.widthAnchor.constraint(equalToConstant: 30).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        return button
+    }
+
+    private func warningTooltip(for kind: WarningKind) -> String {
+        switch kind {
+        case .batteryLow:
+            LocalizedText.text("Warnt, wenn der Akkustand mindestens für die eingestellte Dauer unter der Schwelle liegt.", "Warns when the battery level stays below the threshold for at least the configured duration.")
+        case .solarDrop:
+            LocalizedText.text("Warnt, wenn die Solarleistung gegenüber dem 30-Minuten-Höchstwert um mindestens diesen Prozentsatz einbricht und der Einbruch so lange anhält.", "Warns when solar output drops by at least this percentage from the 30-minute peak and remains low for the configured duration.")
+        case .homeHigh:
+            LocalizedText.text("Warnt, wenn die Hauslast mindestens für die eingestellte Dauer über der Watt-Schwelle liegt.", "Warns when home load stays above the watt threshold for the configured duration.")
+        case .gridImportHigh:
+            LocalizedText.text("Warnt bei anhaltend hohem Strombezug aus dem Netz.", "Warns when grid import remains above the configured threshold.")
+        case .gridExportHigh:
+            LocalizedText.text("Warnt bei anhaltend hoher Einspeisung in das Netz.", "Warns when grid export remains above the configured threshold.")
+        case .batteryChargeHigh:
+            LocalizedText.text("Warnt bei anhaltend hoher Ladeleistung des Akkus.", "Warns when battery charging power remains above the configured threshold.")
+        case .batteryDischargeHigh:
+            LocalizedText.text("Warnt bei anhaltend hoher Entladeleistung des Akkus.", "Warns when battery discharging power remains above the configured threshold.")
+        }
     }
 
     private func header(_ text: String, width: CGFloat) -> NSTextField {

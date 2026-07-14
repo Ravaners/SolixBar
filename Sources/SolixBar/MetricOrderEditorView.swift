@@ -110,7 +110,10 @@ final class MetricOrderEditorView: NSView {
             up.isEnabled = index > 0
             down.isEnabled = index < orderedMetrics.count - 1
 
-            let row = NSStackView(views: [checkbox, up, down])
+            checkbox.toolTip = metricTooltip(metric)
+            let help = helpButton(tooltip: metricTooltip(metric))
+
+            let row = NSStackView(views: [checkbox, up, down, help])
             row.orientation = .horizontal
             row.spacing = 8
             row.alignment = .centerY
@@ -125,6 +128,18 @@ final class MetricOrderEditorView: NSView {
         button.toolTip = tooltip
         button.bezelStyle = .rounded
         button.widthAnchor.constraint(equalToConstant: 34).isActive = true
+        return button
+    }
+
+    private func helpButton(tooltip: String) -> NSButton {
+        let button = NSButton(title: "?", target: nil, action: nil)
+        button.isBordered = false
+        button.font = .systemFont(ofSize: 12, weight: .bold)
+        button.contentTintColor = .secondaryLabelColor
+        button.toolTip = tooltip
+        button.setButtonType(.momentaryChange)
+        button.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 22).isActive = true
         return button
     }
 
@@ -172,6 +187,29 @@ final class MetricOrderEditorView: NSView {
         case .today: "Today's Yield"
         case .total: "Total Yield"
         case .status: "Status"
+        }
+    }
+
+    private func metricTooltip(_ metric: BarMetric) -> String {
+        switch metric {
+        case .battery:
+            LocalizedText.text("Zeigt den aktuellen Akkustand in Prozent.", "Shows the current battery level as a percentage.")
+        case .solar:
+            LocalizedText.text("Zeigt die aktuelle Solarleistung in Watt.", "Shows the current solar output in watts.")
+        case .home:
+            LocalizedText.text("Zeigt die aktuelle echte Hauslast in Watt.", "Shows the current real home load in watts.")
+        case .grid:
+            LocalizedText.text("Zeigt Netzbezug oder Einspeisung in Watt.", "Shows grid import or export in watts.")
+        case .batteryFlow:
+            LocalizedText.text("Zeigt, ob der Akku lädt oder entlädt.", "Shows whether the battery is charging or discharging.")
+        case .flow:
+            LocalizedText.text("Zeigt Richtung und Art des aktuellen Energieflusses.", "Shows the direction and type of the current energy flow.")
+        case .today:
+            LocalizedText.text("Zeigt den heutigen Solarertrag in kWh.", "Shows today's solar yield in kWh.")
+        case .total:
+            LocalizedText.text("Zeigt den kumulierten Gesamtertrag in kWh.", "Shows the cumulative total yield in kWh.")
+        case .status:
+            LocalizedText.text("Zeigt den aktuellen Status der Datenquelle.", "Shows the current data-source status.")
         }
     }
 
