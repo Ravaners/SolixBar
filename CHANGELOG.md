@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.4.2 - 2026-07-14
+
+- DE: SOLIX-Mail und Passwort werden ohne Schlüsselbund-Abfrage AES-verschlüsselt im privaten Application-Support-Ordner gespeichert. Nach dem Update müssen die Zugangsdaten einmal neu eingegeben werden.
+- EN: SOLIX email and password are stored AES-encrypted in the private Application Support folder without a Keychain prompt. Credentials must be entered once again after updating.
+
 ## 0.4.1 - 2026-07-13
 
 - DE: Nach dem Aufwachen des Macs wartet SolixBar kurz auf die Netzwerkverbindung und wiederholt einen fehlgeschlagenen Abruf automatisch nach 8 und 20 Sekunden.

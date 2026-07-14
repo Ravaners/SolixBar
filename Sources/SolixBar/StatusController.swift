@@ -1139,7 +1139,7 @@ final class StatusController: NSObject {
     private var isCurrentDataSourceConfigured: Bool {
         switch settings.dataSourceMode {
         case .solix:
-            KeychainCredentialStore.load().isComplete
+            EncryptedCredentialStore.load().isComplete
         case .demo:
             true
         case .command:

@@ -303,7 +303,7 @@ def render_settings():
     rounded(d, (360, 230, 1240, 900), 28, PANEL, (160, 170, 164), 3)
     text(d, (420, 290), "SolixBar Einstellungen", INK, F["h3"])
     rows = [
-        ("Datenquelle", "SOLIX Login", "Passwort sicher in der macOS-Keychain."),
+        ("Datenquelle", "SOLIX Login", "Passwort lokal AES-verschluesselt."),
         ("Menueleiste", "Akku, PV, Netz, Flow", "Werte, Labels, Symbole und Skalierung."),
         ("Abgedockte Leiste", "Aktiv, skalieren, fixieren", "Separate schmale Anzeige unter der Menueleiste."),
         ("Darstellung", "System, Hell, Dunkel", "Optik passend zum Mac oder fest gewaehlt."),

@@ -43,7 +43,7 @@ final class BundledSolixDataProvider: SolixDataProvider {
     }
 
     func fetchSnapshot() async throws -> SolixSnapshot {
-        let credentials = KeychainCredentialStore.load()
+        let credentials = EncryptedCredentialStore.load()
         guard credentials.isComplete else { throw SolixProviderError.missingCredentials }
         guard let runtime = Self.runtimeConfiguration() else {
             throw SolixProviderError.missingBundledHelper

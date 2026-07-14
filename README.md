@@ -37,7 +37,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.4.1`
+Aktuelle Version / Current version: `0.4.2`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -59,7 +59,7 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
-unzip outputs/SolixBar-0.4.1-macOS-arm64.zip -d outputs
+unzip outputs/SolixBar-0.4.2-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
@@ -69,7 +69,7 @@ Das Paket-Skript erwartet die lokale, nicht eingecheckte Python-Laufzeit unter `
 
 SolixBar unterstuetzt vier Modi. / SolixBar supports four modes:
 
-- `SOLIX Login`: direkter Abruf mit in der macOS-Keychain gespeicherten Zugangsdaten. / Direct fetch with credentials stored in the macOS Keychain.
+- `SOLIX Login`: direkter Abruf mit AES-verschlüsselt lokal gespeicherten Zugangsdaten. / Direct fetch with locally stored AES-encrypted credentials.
 - `Demo`: erzeugte Beispieldaten zum Testen der Oberflaeche. / Generated sample data for testing the UI.
 - `Lokaler JSON-Befehl`: fuehrt einen lokalen Befehl aus und liest JSON aus stdout. / Runs a local command and reads JSON from stdout.
 - `JSON-URL`: laedt JSON von einer lokalen oder entfernten HTTP-Adresse. / Fetches JSON from a local or remote HTTP endpoint.
@@ -93,19 +93,19 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.4.1 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.4.2 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich.
 
-English: Anker does not provide a stable public SOLIX API. SolixBar 0.4.1 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.4.2 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths.
 
 Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
-Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden in der
-macOS-Keychain gespeichert. Verlauf, API-Cache und lokale Ertragswerte liegen
-im Application-Support-Ordner der App.
+Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden ohne
+Schluesselbund-Abfrage AES-verschluesselt im privaten Application-Support-Ordner
+der App gespeichert. Dort liegen auch Verlauf, API-Cache und lokale Ertragswerte.
 
 English: Open `Settings` -> `Data Source`, choose `SOLIX Login`, enter email,
-password, and country, then press `Save`. Email and password are stored in the
-macOS Keychain. History, API cache, and local yield state live in the app's
-Application Support folder.
+password, and country, then press `Save`. Email and password are stored
+AES-encrypted in the app's private Application Support folder without a Keychain
+prompt. History, API cache, and local yield state are stored there as well.
 
 Du kannst jederzeit zu `Demo` oder `JSON-URL` wechseln; SolixBar zeigt nur die
 Felder an, die fuer den gewaehlten Modus notwendig sind.

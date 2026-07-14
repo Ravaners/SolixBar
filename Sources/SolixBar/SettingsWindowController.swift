@@ -20,8 +20,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let urlRow = NSStackView()
     private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
     private let solixHint = NSTextField(wrappingLabelWithString: LocalizedText.text(
-        "Direkter SOLIX-Zugriff. Das Passwort bleibt ausschließlich in der macOS-Keychain.",
-        "Direct SOLIX access. The password remains exclusively in the macOS Keychain."
+        "Direkter SOLIX-Zugriff. Das Passwort wird verschlüsselt lokal gespeichert.",
+        "Direct SOLIX access. The password is stored locally in encrypted form."
     ))
     private let solixEmailRow = NSStackView()
     private let solixPasswordRow = NSStackView()
@@ -101,8 +101,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixEmailField.toolTip = "E-Mail-Adresse deines Anker/SOLIX-Kontos."
         solixPasswordField.placeholderString = "Passwort"
         solixPasswordField.toolTip = LocalizedText.text(
-            "Passwort deines Anker/SOLIX-Kontos. Es wird ausschließlich in der macOS-Keychain gespeichert.",
-            "Your Anker/SOLIX password. It is stored exclusively in the macOS Keychain."
+            "Passwort deines Anker/SOLIX-Kontos. Es wird verschlüsselt lokal gespeichert.",
+            "Your Anker/SOLIX password. It is stored locally in encrypted form."
         )
         solixCountryField.placeholderString = "DE"
         solixCountryField.toolTip = "Land deines Anker-Kontos, normalerweise DE."
@@ -720,7 +720,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         applyControlsToSettings()
         if settings.dataSourceMode == .solix {
             do {
-                try KeychainCredentialStore.save(
+                try EncryptedCredentialStore.save(
                     SolixCredentials(
                         email: solixEmailField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
                         password: solixPasswordField.stringValue
@@ -746,7 +746,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private func loadSolixCredentials() {
-        let credentials = KeychainCredentialStore.load()
+        let credentials = EncryptedCredentialStore.load()
         solixEmailField.stringValue = credentials.email
         solixPasswordField.stringValue = credentials.password
         solixCountryField.stringValue = settings.solixCountry
