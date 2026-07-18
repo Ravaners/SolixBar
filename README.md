@@ -41,7 +41,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.5.2`
+Aktuelle Version / Current version: `0.5.3`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -63,7 +63,7 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
-unzip outputs/SolixBar-0.5.2-macOS-arm64.zip -d outputs
+unzip outputs/SolixBar-0.5.3-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
@@ -97,9 +97,9 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.2 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich. Tagesertrag und PV-Gesamtertrag werden ueber die passenden SOLIX-Energieendpunkte gelesen; falls kein Gesamtwert verfuegbar ist, wird die reale Messung lokal und datenquellenuebergreifend fortgefuehrt.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.3 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich. Tagesertrag und PV-Gesamtertrag werden ueber die passenden SOLIX-Energieendpunkte gelesen; bei mehreren Wechselrichtern werden deren PV-Gesamtwerte addiert. Falls kein Gesamtwert verfuegbar ist, wird die reale Messung lokal und datenquellenuebergreifend fortgefuehrt.
 
-English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.2 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths. Daily yield and PV lifetime total use the matching SOLIX energy endpoints; if no lifetime total is available, the real measurement continues locally across live data sources.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.3 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths. Daily yield and PV lifetime total use the matching SOLIX energy endpoints; PV lifetime totals from multiple inverters are added together. If no lifetime total is available, the real measurement continues locally across live data sources.
 
 Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
 Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden ohne

@@ -20,14 +20,15 @@ assert helper._first_positive_number(None, -1, "") is None
 assert helper._site_today_energy({"energy_details": {"today": {"solar_production": "4.2"}}}) == {
     "solar_production": "4.2"
 }
-assert helper._first_inverter_serial(
-    {"solar_list": [{"device_sn": "PV-1"}]},
-    [{"type": "inverter", "device_sn": "PV-2"}],
-) == "PV-1"
-assert helper._first_inverter_serial(
+assert helper._first_text(None, "", 7) == "7"
+assert helper._inverter_serials(
+    {"solar_list": [{"device_sn": "PV-1"}, {"device_sn": "PV-2"}]},
+    [{"type": "inverter", "device_sn": "PV-2"}, {"type": "inverter", "device_sn": "PV-3"}],
+) == ["PV-1", "PV-2", "PV-3"]
+assert helper._inverter_serials(
     {},
     [{"type": "inverter", "device_sn": "PV-2"}],
-) == "PV-2"
+) == ["PV-2"]
 
 with tempfile.TemporaryDirectory() as temporary:
     state_path = Path(temporary) / "energy.json"
@@ -70,6 +71,10 @@ with tempfile.TemporaryDirectory() as temporary:
     today, _, has_manual_today, _ = helper._local_energy_totals(500, start + timedelta(hours=2, minutes=2))
     assert today == 0.5
     assert has_manual_today is True
+
+    today, _, has_manual_today, _ = helper._local_energy_totals(500, start + timedelta(days=1))
+    assert today == 0
+    assert has_manual_today is False
 
     os.environ.pop("SOLIXBAR_STATE_PATH")
     os.environ.pop("SOLIXBAR_TODAY_KWH_BASE")

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.5.3 - 2026-07-18
+
+- DE: Voruebergehende Abruffehler behalten die letzten gueltigen Messwerte bis zu zwei automatische Versuche lang sichtbar. Erst bei anhaltenden Fehlern wechselt die App in den echten Offline-Zustand; der Fehler bleibt im Menue nachvollziehbar.
+- EN: Temporary fetch failures keep the latest valid readings visible for up to two automatic attempts. The app only switches to a genuine offline state when failures persist, while the error remains visible in the menu.
+- DE: Direkter SOLIX-Abruf und lokale JSON-Befehle schreiben ihre Ausgabe jetzt in private temporaere Dateien. Dadurch koennen grosse Ausgaben den Prozess nicht mehr durch einen vollen Pipe-Puffer blockieren; Timeouts beenden festhaengende Prozesse verlaesslich und unterscheiden SOLIX-Abruf und JSON-Befehl korrekt.
+- EN: Direct SOLIX refreshes and local JSON commands now write output to private temporary files. Large output can no longer block the process through a full pipe buffer; timeouts reliably stop stuck processes and correctly distinguish SOLIX refreshes from JSON commands.
+- DE: Bei Anlagen mit mehreren PV-Wechselrichtern werden die einzelnen echten PV-Gesamtwerte nun eindeutig gesammelt und addiert. Numerische API-Statuswerte koennen die gesamte Aktualisierung nicht mehr durch einen JSON-Typfehler abbrechen.
+- EN: For systems with multiple PV inverters, the individual real PV lifetime totals are now collected uniquely and added together. Numeric API status values can no longer abort an entire refresh with a JSON type mismatch.
+- DE: Die Verlaufshistorie behaelt den letzten Tag in voller Aufloesung und verdichtet aeltere Werte auf Fuenf-Minuten-Punkte. Damit stehen die angebotenen 7- und 30-Tage-Bereiche auch bei kurzen Aktualisierungsintervallen zur Verfuegung, statt nach 2.000 Punkten vorzeitig abzubrechen.
+- EN: History keeps the latest day at full resolution and compacts older readings into five-minute samples. This preserves the offered 7- and 30-day ranges even with short refresh intervals instead of cutting them off after 2,000 points.
+- DE: Ein manueller Korrekturwert fuer „Heute“ gilt nur noch fuer den Kalendertag seiner Eingabe und wird danach automatisch entfernt. Negative oder ungueltige Tages- und Gesamtstartwerte werden nicht mehr uebernommen.
+- EN: A manual “Today” correction now applies only to the calendar day on which it was entered and is then removed automatically. Negative or invalid daily and total starting values are no longer accepted.
+- DE: Log-, Verlauf-, Cache- und Ertragsdateien erhalten konsequent private Dateirechte. Die Release-Pruefung schliesst Zugangsdaten, Schluessel, Logs und lokale Laufzeitdaten ausdruecklich aus; JSON-URLs akzeptieren nur HTTP(S) und melden fehlerhafte HTTP-Antworten klar.
+- EN: Log, history, cache, and yield files now consistently use private permissions. Release verification explicitly excludes credentials, keys, logs, and local runtime data; JSON URLs accept HTTP(S) only and clearly report failed HTTP responses.
+- DE: Layout, Farben, Symbole und bestehende Screenshots bleiben unveraendert, da 0.5.3 ausschliesslich Logik, Zuverlaessigkeit und Datenschutz korrigiert.
+- EN: Layout, colors, symbols, and existing screenshots remain unchanged because 0.5.3 only corrects logic, reliability, and privacy.
+
 ## 0.5.2 - 2026-07-14
 
 - DE: „Heute“ verwendet jetzt vorrangig den echten Tagesertrag aus der SOLIX-Energieanalyse. API-Nullwerte werden nicht mehr zwischengespeichert und verdecken keine späteren gültigen Werte mehr.

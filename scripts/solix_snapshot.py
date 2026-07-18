@@ -46,6 +46,13 @@ def _first_positive_number(*values):
     return None
 
 
+def _first_text(*values):
+    for value in values:
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return None
+
+
 def _as_int(*values):
     number = _first_number(*values)
     return None if number is None else int(round(number))
@@ -136,6 +143,7 @@ def _load_cache():
 
 def _write_private_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.chmod(0o700)
     temporary = path.with_name(f".{path.name}.tmp")
     temporary.write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")
     temporary.chmod(0o600)
@@ -248,16 +256,16 @@ def _site_today_energy(site):
     return _first_dict(energy_details.get("today"))
 
 
-def _first_inverter_serial(site, devices):
+def _inverter_serials(site, devices):
+    serials = []
     solar_list = site.get("solar_list") or []
-    if solar_list and isinstance(solar_list[0], dict):
-        serial = solar_list[0].get("device_sn")
-        if serial:
-            return str(serial)
+    for item in solar_list:
+        if isinstance(item, dict) and item.get("device_sn"):
+            serials.append(str(item["device_sn"]))
     for device in devices:
         if str(device.get("type") or "").lower() == "inverter" and device.get("device_sn"):
-            return str(device["device_sn"])
-    return ""
+            serials.append(str(device["device_sn"]))
+    return list(dict.fromkeys(serials))
 
 
 def _load_stdin_configuration():
@@ -297,7 +305,7 @@ async def main():
         cache_namespace = site_id or "default-site"
         today_key = datetime.now().astimezone().date().isoformat()
         today_cache_key = f"{cache_namespace}:todayKWh:{today_key}"
-        total_cache_key = f"{cache_namespace}:pvLifetimeTotalKWh"
+        total_cache_key = f"{cache_namespace}:pvLifetimeTotalKWh:v2"
         today_kwh = _fresh_cached_positive_value(cache, today_cache_key, 10 * 60)
         devices = list(client.devices.values())
         solarbank = _first_solarbank(devices)
@@ -333,16 +341,24 @@ async def main():
 
         api_total_kwh = _fresh_cached_positive_value(cache, total_cache_key, 15 * 60)
         if api_total_kwh is None:
-            try:
-                inverter_serial = _first_inverter_serial(site, devices)
-                if inverter_serial:
+            inverter_serials = _inverter_serials(site, devices)
+            inverter_totals = []
+            for inverter_serial in inverter_serials:
+                try:
                     total_statistics = await client.get_device_pv_total_statistics(
                         deviceSn=inverter_serial
                     )
-                    api_total_kwh = _first_positive_number(total_statistics.get("energy"))
-                    _store_cached_value(cache, total_cache_key, api_total_kwh)
-            except Exception:
-                api_total_kwh = None
+                    value = _first_number(total_statistics.get("energy"))
+                    if value is not None and value >= 0:
+                        inverter_totals.append(value)
+                except Exception:
+                    continue
+            api_total_kwh = (
+                sum(inverter_totals)
+                if inverter_serials and len(inverter_totals) == len(inverter_serials)
+                else None
+            )
+            _store_cached_value(cache, total_cache_key, api_total_kwh)
         _save_cache(cache)
 
         battery_watts = _signed_battery_watts(solarbank_info, solarbank, first_solarbank)
@@ -372,10 +388,11 @@ async def main():
         manual_total_kwh = _first_number(os.environ.get("SOLIXBAR_TOTAL_KWH_BASE"))
 
         snapshot = {
-            "siteName": site_info.get("site_name")
-            or site.get("site_name")
-            or site.get("siteName")
-            or "Anker SOLIX",
+            "siteName": _first_text(
+                site_info.get("site_name"),
+                site.get("site_name"),
+                site.get("siteName"),
+            ) or "Anker SOLIX",
             "batteryPercent": _as_int(
                 solarbank.get("battery_soc"),
                 first_solarbank.get("battery_power"),
@@ -403,7 +420,12 @@ async def main():
             "todayKWhIsAuthoritative": has_manual_today or api_today_kwh is not None,
             "totalKWh": manual_total_kwh if has_manual_total else api_total_kwh,
             "totalKWhIsAuthoritative": not has_manual_total and api_total_kwh is not None,
-            "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",
+            "status": _first_text(
+                site.get("status_desc"),
+                solarbank.get("status_desc"),
+                site.get("status"),
+                solarbank.get("status"),
+            ) or "Online",
             "updatedAt": now.isoformat(),
         }
 

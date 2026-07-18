@@ -300,13 +300,45 @@ final class AppSettings {
     }
 
     var solixTodayBaseKWh: Double? {
-        get { optionalDouble(forKey: "solixTodayBaseKWh") }
-        set { setOptionalDouble(newValue, forKey: "solixTodayBaseKWh") }
+        get {
+            guard let value = validNonnegativeDouble(forKey: "solixTodayBaseKWh") else {
+                defaults.removeObject(forKey: "solixTodayBaseDate")
+                return nil
+            }
+
+            let today = Self.localDayKey()
+            if let savedDay = defaults.string(forKey: "solixTodayBaseDate") {
+                guard savedDay == today else {
+                    defaults.removeObject(forKey: "solixTodayBaseKWh")
+                    defaults.removeObject(forKey: "solixTodayBaseDate")
+                    return nil
+                }
+            } else {
+                // Existing installations did not store the day alongside the correction.
+                defaults.set(today, forKey: "solixTodayBaseDate")
+            }
+            return value
+        }
+        set {
+            let previousValue = optionalDouble(forKey: "solixTodayBaseKWh")
+            let value = newValue.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+            setOptionalDouble(value, forKey: "solixTodayBaseKWh")
+            if let value {
+                if previousValue != value || defaults.string(forKey: "solixTodayBaseDate") == nil {
+                    defaults.set(Self.localDayKey(), forKey: "solixTodayBaseDate")
+                }
+            } else {
+                defaults.removeObject(forKey: "solixTodayBaseDate")
+            }
+        }
     }
 
     var solixTotalBaseKWh: Double? {
-        get { optionalDouble(forKey: "solixTotalBaseKWh") }
-        set { setOptionalDouble(newValue, forKey: "solixTotalBaseKWh") }
+        get { validNonnegativeDouble(forKey: "solixTotalBaseKWh") }
+        set {
+            let value = newValue.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+            setOptionalDouble(value, forKey: "solixTotalBaseKWh")
+        }
     }
 
     var refreshInterval: TimeInterval {
@@ -587,11 +619,29 @@ final class AppSettings {
         return defaults.double(forKey: key)
     }
 
+    private func validNonnegativeDouble(forKey key: String) -> Double? {
+        guard let value = optionalDouble(forKey: key), value.isFinite, value >= 0 else {
+            defaults.removeObject(forKey: key)
+            return nil
+        }
+        return value
+    }
+
     private func setOptionalDouble(_ value: Double?, forKey key: String) {
         if let value {
             defaults.set(value, forKey: key)
         } else {
             defaults.removeObject(forKey: key)
         }
+    }
+
+    private static func localDayKey(_ date: Date = Date()) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
     }
 }
