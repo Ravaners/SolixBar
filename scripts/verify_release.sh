@@ -16,7 +16,14 @@ test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
 test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")" -ge 1
 codesign --verify --deep --strict --verbose=2 "$APP"
 
-if find "$APP" -type f \( -name '*.env' -o -name 'solixbar-energy.json' -o -name 'solixbar-api-cache.json' \) | grep -q .; then
+if find "$APP" -type f \( \
+  -name '*.env' -o -name '.env*' \
+  -o -name 'credentials.enc' -o -name 'credentials.key' \
+  -o -name 'energy.json' -o -name 'api-cache.json' \
+  -o -name 'history.json' -o -name 'energy-accumulators.json' \
+  -o -name 'SolixBar.log' -o -name 'SolixBar.old.log' \
+  -o -name 'solixbar-energy.json' -o -name 'solixbar-api-cache.json' \
+\) | grep -q .; then
   echo "Private runtime data found in app bundle." >&2
   exit 1
 fi

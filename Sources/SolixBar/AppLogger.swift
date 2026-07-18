@@ -29,7 +29,12 @@ enum AppLogger {
 
         do {
             let directory = logURL.deletingLastPathComponent()
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
             rotateIfNeeded()
 
             let line = "\(timestamp()) [\(level)] \(message)\n"
@@ -42,6 +47,7 @@ enum AppLogger {
             } else {
                 try data.write(to: logURL, options: .atomic)
             }
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: logURL.path)
         } catch {
             NSLog("SolixBar logging failed: \(error.localizedDescription)")
         }

@@ -18,6 +18,9 @@ final class SolixHistoryStore {
     private let legacyHistoryKey = "solixHistorySamples"
     private let legacyAccumulatorKey = "solixEnergyAccumulators"
     private let maxAge: TimeInterval = 31 * 24 * 60 * 60
+    private let fullResolutionAge: TimeInterval = 24 * 60 * 60
+    private let olderSampleInterval: TimeInterval = 5 * 60
+    private let maximumSamples = 12_000
     private let directoryURL: URL
     private let historyURL: URL
     private let accumulatorsURL: URL
@@ -178,7 +181,12 @@ final class SolixHistoryStore {
 
     private func save<T: Encodable>(_ value: T, to url: URL) {
         do {
-            try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(
+                at: directoryURL,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directoryURL.path)
             let data = try JSONEncoder().encode(value)
             try data.write(to: url, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
@@ -194,7 +202,25 @@ final class SolixHistoryStore {
 
     private func pruned(_ samples: [SolixHistorySample], from date: Date) -> [SolixHistorySample] {
         let cutoff = date.addingTimeInterval(-maxAge)
-        let filtered = samples.filter { $0.date >= cutoff }
-        return filtered.count > 2000 ? Array(filtered.suffix(2000)) : filtered
+        let fullResolutionCutoff = date.addingTimeInterval(-fullResolutionAge)
+        let filtered = samples.filter { $0.date >= cutoff }.sorted { $0.date < $1.date }
+        var compacted: [SolixHistorySample] = []
+        compacted.reserveCapacity(min(maximumSamples, filtered.count))
+        var lastOlderBucket: Int?
+
+        for sample in filtered {
+            guard sample.date < fullResolutionCutoff else {
+                compacted.append(sample)
+                continue
+            }
+            let bucket = Int(sample.date.timeIntervalSince1970 / olderSampleInterval)
+            if bucket == lastOlderBucket, !compacted.isEmpty {
+                compacted[compacted.count - 1] = sample
+            } else {
+                compacted.append(sample)
+                lastOlderBucket = bucket
+            }
+        }
+        return compacted.count > maximumSamples ? Array(compacted.suffix(maximumSamples)) : compacted
     }
 }

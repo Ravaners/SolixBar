@@ -84,6 +84,7 @@ final class StatusController: NSObject {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         timer?.invalidate()
         wakeRefreshTimer?.invalidate()
+        refreshAnimationTimer?.invalidate()
         settings.isDetachedMenuBarActive = isMenuBarDetached
         AppLogger.info("Persisted detached slim bar state: \(isMenuBarDetached ? "active" : "inactive").")
     }
@@ -106,6 +107,7 @@ final class StatusController: NSObject {
     }
 
     private func refresh() {
+        guard !isTerminating else { return }
         guard !isRefreshing else {
             refreshRequestedWhileBusy = true
             AppLogger.info("Refresh skipped because a previous refresh is still running.")
@@ -160,8 +162,9 @@ final class StatusController: NSObject {
                         + "total=\(snapshot.totalKWh.map { String(format: "%.3f", $0) } ?? "-")kWh."
                 )
             } catch {
-                let keepsLastWakeSnapshot = wakeRefreshAttemptsRemaining > 0 && currentSnapshot() != nil
-                if !keepsLastWakeSnapshot {
+                let keepsLastSnapshot = currentSnapshot() != nil
+                    && (wakeRefreshAttemptsRemaining > 0 || consecutiveRefreshFailures < 2)
+                if !keepsLastSnapshot {
                     lastSnapshot = nil
                     lastSnapshotMode = nil
                 }
@@ -231,6 +234,7 @@ final class StatusController: NSObject {
     }
 
     private func scheduleRefreshTimer() {
+        guard !isTerminating else { return }
         timer?.invalidate()
         let baseInterval = max(60, settings.refreshInterval)
         let multiplier = pow(2.0, Double(min(4, consecutiveRefreshFailures)))

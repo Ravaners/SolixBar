@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 protocol SolixDataProvider: Sendable {
@@ -11,6 +12,8 @@ enum SolixProviderError: LocalizedError, Sendable {
     case missingURL
     case commandFailed(String)
     case commandTimedOut(TimeInterval)
+    case helperTimedOut(TimeInterval)
+    case invalidHTTPStatus(Int)
 
     var errorDescription: String? {
         switch self {
@@ -19,13 +22,17 @@ enum SolixProviderError: LocalizedError, Sendable {
         case .missingBundledHelper:
             "Der gebündelte SOLIX-Helper fehlt. / The bundled SOLIX helper is missing."
         case .missingCommand:
-            "Kein JSON-Befehl konfiguriert."
+            "Kein JSON-Befehl konfiguriert. / No JSON command is configured."
         case .missingURL:
-            "Keine JSON-URL konfiguriert."
+            "Keine gültige HTTP(S)-JSON-URL konfiguriert. / No valid HTTP(S) JSON URL is configured."
         case .commandFailed(let message):
             message
         case .commandTimedOut(let seconds):
-            "JSON-Befehl nach \(Int(seconds)) Sekunden abgebrochen."
+            "JSON-Befehl nach \(Int(seconds)) Sekunden abgebrochen. / JSON command stopped after \(Int(seconds)) seconds."
+        case .helperTimedOut(let seconds):
+            "SOLIX-Aktualisierung nach \(Int(seconds)) Sekunden abgebrochen. / SOLIX refresh stopped after \(Int(seconds)) seconds."
+        case .invalidHTTPStatus(let status):
+            "JSON-URL antwortete mit HTTP \(status). / JSON URL returned HTTP \(status)."
         }
     }
 }
@@ -71,32 +78,30 @@ final class BundledSolixDataProvider: SolixDataProvider {
             process.environment = environment
 
             let input = Pipe()
-            let output = Pipe()
-            let error = Pipe()
+            let capture = try ProcessOutputCapture.create()
+            defer { capture.remove() }
             process.standardInput = input
-            process.standardOutput = output
-            process.standardError = error
+            process.standardOutput = capture.standardOutput
+            process.standardError = capture.standardError
 
             try FileManager.default.createDirectory(
                 at: runtime.applicationSupport,
-                withIntermediateDirectories: true
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o700],
+                ofItemAtPath: runtime.applicationSupport.path
             )
             try process.run()
             try input.fileHandleForWriting.write(contentsOf: inputData)
             try input.fileHandleForWriting.close()
 
-            let deadline = Date().addingTimeInterval(timeout)
-            while process.isRunning && Date() < deadline {
-                try await Task.sleep(nanoseconds: 100_000_000)
-            }
-            if process.isRunning {
-                process.terminate()
-                process.waitUntilExit()
-                throw SolixProviderError.commandTimedOut(timeout)
+            guard try await waitForExit(process, timeout: timeout) else {
+                throw SolixProviderError.helperTimedOut(timeout)
             }
 
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            let errorData = error.fileHandleForReading.readDataToEndOfFile()
+            let (data, errorData) = try capture.read()
             guard process.terminationStatus == 0 else {
                 let message = String(data: errorData, encoding: .utf8) ?? "SOLIX helper failed."
                 throw SolixProviderError.commandFailed(message.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -189,25 +194,17 @@ final class CommandSolixDataProvider: SolixDataProvider {
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
             process.arguments = ["-lc", command]
 
-            let output = Pipe()
-            let error = Pipe()
-            process.standardOutput = output
-            process.standardError = error
+            let capture = try ProcessOutputCapture.create()
+            defer { capture.remove() }
+            process.standardOutput = capture.standardOutput
+            process.standardError = capture.standardError
 
             try process.run()
-            let deadline = Date().addingTimeInterval(timeout)
-            while process.isRunning && Date() < deadline {
-                try await Task.sleep(nanoseconds: 100_000_000)
-            }
-
-            if process.isRunning {
-                process.terminate()
-                process.waitUntilExit()
+            guard try await waitForExit(process, timeout: timeout) else {
                 throw SolixProviderError.commandTimedOut(timeout)
             }
 
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            let errorData = error.fileHandleForReading.readDataToEndOfFile()
+            let (data, errorData) = try capture.read()
 
             guard process.terminationStatus == 0 else {
                 let message = String(data: errorData, encoding: .utf8) ?? "Befehl fehlgeschlagen."
@@ -228,15 +225,94 @@ final class URLSolixDataProvider: SolixDataProvider {
     }
 
     func fetchSnapshot() async throws -> SolixSnapshot {
-        guard let url = URL(string: urlString), !urlString.isEmpty else {
+        guard let url = URL(string: urlString),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              !urlString.isEmpty else {
             throw SolixProviderError.missingURL
         }
 
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw SolixProviderError.invalidHTTPStatus((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
         return try SnapshotDecoder.decode(data)
     }
+}
+
+private struct ProcessOutputCapture {
+    let directory: URL
+    let outputURL: URL
+    let errorURL: URL
+    let standardOutput: FileHandle
+    let standardError: FileHandle
+
+    static func create() throws -> ProcessOutputCapture {
+        let fileManager = FileManager.default
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("SolixBar-process-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700]
+        )
+        let outputURL = directory.appendingPathComponent("stdout")
+        let errorURL = directory.appendingPathComponent("stderr")
+        try Data().write(to: outputURL, options: .atomic)
+        try Data().write(to: errorURL, options: .atomic)
+        try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: outputURL.path)
+        try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: errorURL.path)
+        return ProcessOutputCapture(
+            directory: directory,
+            outputURL: outputURL,
+            errorURL: errorURL,
+            standardOutput: try FileHandle(forWritingTo: outputURL),
+            standardError: try FileHandle(forWritingTo: errorURL)
+        )
+    }
+
+    func read() throws -> (Data, Data) {
+        try standardOutput.close()
+        try standardError.close()
+        return (try Data(contentsOf: outputURL), try Data(contentsOf: errorURL))
+    }
+
+    func remove() {
+        try? standardOutput.close()
+        try? standardError.close()
+        try? FileManager.default.removeItem(at: directory)
+    }
+}
+
+private func waitForExit(_ process: Process, timeout: TimeInterval) async throws -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    do {
+        while process.isRunning && Date() < deadline {
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+    } catch {
+        await terminate(process)
+        throw error
+    }
+    guard process.isRunning else { return true }
+    await terminate(process)
+    return false
+}
+
+private func terminate(_ process: Process) async {
+    guard process.isRunning else { return }
+    process.terminate()
+    let deadline = Date().addingTimeInterval(2)
+    while process.isRunning && Date() < deadline {
+        try? await Task.sleep(nanoseconds: 50_000_000)
+    }
+    if process.isRunning {
+        Darwin.kill(process.processIdentifier, SIGKILL)
+    }
+    process.waitUntilExit()
 }
 
 enum SnapshotDecoder {
