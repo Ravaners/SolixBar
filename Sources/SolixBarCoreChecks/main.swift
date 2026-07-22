@@ -70,4 +70,8 @@ require(WarningConditionEvaluator.isLow(nil, threshold: 20) == nil, "missing bat
 require(WarningConditionEvaluator.isHigh(1_200, threshold: 1_000) == true, "high input warning")
 require(WarningConditionEvaluator.solarDrop(currentWatts: 350, baselineWatts: 1_000, thresholdPercent: 60)?.isTriggered == true, "solar drop warning")
 require(WarningConditionEvaluator.solarDrop(currentWatts: 0, baselineWatts: 99, thresholdPercent: 60) == nil, "nighttime solar suppression")
+require(MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: true, detachedBarIsOpen: false), "enabled menu bar icon")
+require(MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: true, detachedBarIsOpen: true), "enabled menu bar icon while detached")
+require(!MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: false, detachedBarIsOpen: false), "disabled menu bar icon")
+require(!MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: false, detachedBarIsOpen: true), "detached bar must not force menu bar icon")
 print("SolixBar core checks passed.")

@@ -1,4 +1,5 @@
 import AppKit
+import SolixBarCore
 
 private enum WakeRefreshError: LocalizedError {
     case deviceStillOffline
@@ -440,7 +441,10 @@ final class StatusController: NSObject {
     }
 
     private var shouldShowMenuBarIcon: Bool {
-        settings.showMenuBarIcon || isMenuBarDetached
+        MenuBarIconPolicy.shouldShowAppIcon(
+            settingIsEnabled: settings.showMenuBarIcon,
+            detachedBarIsOpen: isMenuBarDetached
+        )
     }
 
     private var menuBarStyle: BarDisplayStyle {

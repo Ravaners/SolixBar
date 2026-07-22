@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.5.4 - 2026-07-22
+
+- DE: Das App-Symbol der normalen macOS-Menueleiste laesst sich jetzt zuverlaessig ausblenden, auch wenn die abgedockte Leiste geoeffnet ist. Die abgedockte Leiste behaelt weiterhin ihre eigene, unabhaengige Symbol-Einstellung.
+- EN: The regular macOS menu bar app icon can now be hidden reliably even while the detached bar is open. The detached bar continues to use its own independent icon setting.
+- DE: Eine neue Logikpruefung deckt alle Kombinationen aus sichtbarem oder ausgeblendetem Menueleisten-Symbol und geoeffneter oder geschlossener abgedockter Leiste ab, damit die beiden Einstellungen nicht erneut gekoppelt werden.
+- EN: A new logic check covers every combination of a shown or hidden menu bar icon and an open or closed detached bar so the two settings cannot become coupled again.
+- DE: Layout, Farben, Symbole, Reihenfolge und bestehende Screenshots bleiben unveraendert; korrigiert wurde ausschliesslich die bereits vorhandene Sichtbarkeitseinstellung.
+- EN: Layout, colors, symbols, ordering, and existing screenshots remain unchanged; only the existing visibility setting was corrected.
+
 ## 0.5.3 - 2026-07-18
 
 - DE: Voruebergehende Abruffehler behalten die letzten gueltigen Messwerte bis zu zwei automatische Versuche lang sichtbar. Erst bei anhaltenden Fehlern wechselt die App in den echten Offline-Zustand; der Fehler bleibt im Menue nachvollziehbar.
