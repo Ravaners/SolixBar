@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.5.5 - 2026-07-30
+
+- DE: Der direkte SOLIX-Abruf fordert jetzt fuer alle unterstuetzten Geraete der Anlage Echtzeitdaten an und liest anschliessend die gemeinsame Anlagenansicht erneut. Dadurch werden Akku, PV, Hauslast, Netz und Akku-Fluss zusammen aktualisiert, auch wenn die normale Anker-Cloud-Uebersicht zuvor alte Werte geliefert hat.
+- EN: Direct SOLIX refreshes now request real-time data from every supported system device and then reload the combined system view. Battery, solar, home load, grid, and battery flow therefore update together even when the regular Anker cloud overview previously returned stale values.
+- DE: Der direkt empfangene Echtzeit-Akkustand hat Vorrang vor einem aelteren Cloudwert; bei Geraeten oder Konten ohne Echtzeitunterstuetzung bleibt der bisherige Cloud-Abruf als Rueckfall erhalten.
+- EN: A directly received real-time battery level takes precedence over an older cloud value; the existing cloud retrieval remains available as a fallback for devices or accounts without real-time support.
+- DE: Eine unabhaengige Aktualisierungsueberwachung erkennt ausgebliebene Zeitgeber und Abrufe, die laenger als 60 Sekunden festhaengen. Manuelles Aktualisieren bricht einen solchen Abruf jetzt wirklich ab und startet mit einer frischen Verbindung neu.
+- EN: An independent refresh watchdog detects missed timers and fetches stuck for more than 60 seconds. Manual refresh now actually cancels such a fetch and restarts it with a fresh connection.
+- DE: Neben dem vollstaendigen Aufwachen werden auch Bildschirm-Aufwachen und eine wieder aktive macOS-Sitzung erkannt, damit nach Ruhephasen sofort wieder aktuelle Daten abgerufen werden.
+- EN: In addition to a full system wake, screen wake and a reactivated macOS session are detected so current data is fetched immediately after idle periods.
+- DE: Layout, Farben, Symbole, Reihenfolge und bestehende Screenshots bleiben unveraendert; 0.5.5 korrigiert ausschliesslich die Zuverlaessigkeit und Aktualitaet aller Messwerte.
+- EN: Layout, colors, symbols, ordering, and existing screenshots remain unchanged; 0.5.5 only corrects the reliability and freshness of all readings.
+
 ## 0.5.4 - 2026-07-22
 
 - DE: Das App-Symbol der normalen macOS-Menueleiste laesst sich jetzt zuverlaessig ausblenden, auch wenn die abgedockte Leiste geoeffnet ist. Die abgedockte Leiste behaelt weiterhin ihre eigene, unabhaengige Symbol-Einstellung.

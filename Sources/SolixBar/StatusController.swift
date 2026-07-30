@@ -50,6 +50,10 @@ final class StatusController: NSObject {
     private var isTerminating = false
     private var isRefreshing = false
     private var refreshRequestedWhileBusy = false
+    private var refreshTask: Task<Void, Never>?
+    private var refreshStartedAt: Date?
+    private var nextRefreshDueAt: Date?
+    private var refreshWatchdog: DispatchSourceTimer?
     private var refreshAnimationTimer: Timer?
     private var wakeRefreshTimer: Timer?
     private var wakeRefreshAttemptsRemaining = 0
@@ -60,10 +64,23 @@ final class StatusController: NSObject {
     func start() {
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
-            selector: #selector(workspaceDidWake(_:)),
+            selector: #selector(workspaceBecameUsable(_:)),
             name: NSWorkspace.didWakeNotification,
             object: nil
         )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(workspaceBecameUsable(_:)),
+            name: NSWorkspace.screensDidWakeNotification,
+            object: nil
+        )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(workspaceBecameUsable(_:)),
+            name: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil
+        )
+        startRefreshWatchdog()
         settings.migrateMenuBarGridMetricIfNeeded()
         settings.migrateDetachedBarSettingsIfNeeded()
         applyAppearance()
@@ -86,6 +103,9 @@ final class StatusController: NSObject {
         timer?.invalidate()
         wakeRefreshTimer?.invalidate()
         refreshAnimationTimer?.invalidate()
+        refreshTask?.cancel()
+        refreshWatchdog?.cancel()
+        refreshWatchdog = nil
         settings.isDetachedMenuBarActive = isMenuBarDetached
         AppLogger.info("Persisted detached slim bar state: \(isMenuBarDetached ? "active" : "inactive").")
     }
@@ -107,20 +127,31 @@ final class StatusController: NSObject {
         }
     }
 
-    private func refresh() {
+    private func refresh(force: Bool = false) {
         guard !isTerminating else { return }
         guard !isRefreshing else {
             refreshRequestedWhileBusy = true
-            AppLogger.info("Refresh skipped because a previous refresh is still running.")
+            if force {
+                AppLogger.info("Active refresh cancelled so the requested refresh can start with a fresh connection.")
+                refreshTask?.cancel()
+            } else {
+                AppLogger.info("Refresh queued because a previous refresh is still running.")
+            }
             return
         }
+        timer?.invalidate()
+        timer = nil
+        nextRefreshDueAt = nil
         isRefreshing = true
+        refreshStartedAt = Date()
         startRefreshAnimation()
         AppLogger.info("Refreshing data source: \(settings.dataSourceMode.rawValue).")
         updateTitle()
-        Task {
+        refreshTask = Task {
             defer {
                 isRefreshing = false
+                refreshStartedAt = nil
+                refreshTask = nil
                 stopRefreshAnimation()
                 if refreshRequestedWhileBusy {
                     refreshRequestedWhileBusy = false
@@ -162,6 +193,8 @@ final class StatusController: NSObject {
                         + "today=\(snapshot.todayKWh.map { String(format: "%.3f", $0) } ?? "-")kWh, "
                         + "total=\(snapshot.totalKWh.map { String(format: "%.3f", $0) } ?? "-")kWh."
                 )
+            } catch is CancellationError {
+                AppLogger.info("Refresh cancelled; a fresh retrieval is already scheduled.")
             } catch {
                 let keepsLastSnapshot = currentSnapshot() != nil
                     && (wakeRefreshAttemptsRemaining > 0 || consecutiveRefreshFailures < 2)
@@ -190,16 +223,21 @@ final class StatusController: NSObject {
         }
     }
 
-    @objc private func workspaceDidWake(_ notification: Notification) {
-        AppLogger.info("Mac woke from sleep; scheduling network-aware refresh retries.")
+    @objc private func workspaceBecameUsable(_ notification: Notification) {
+        AppLogger.info("Mac or screen became active; scheduling a fresh network-aware refresh.")
         consecutiveRefreshFailures = 0
         wakeRefreshAttemptsRemaining = 2
+        if isRefreshing {
+            refreshRequestedWhileBusy = false
+            refreshTask?.cancel()
+        }
         scheduleWakeRefresh(after: 3, reason: "macOS wake notification")
     }
 
     private func scheduleWakeRefresh(after delay: TimeInterval, reason: String) {
         timer?.invalidate()
         timer = nil
+        nextRefreshDueAt = nil
         wakeRefreshTimer?.invalidate()
         let wakeTimer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
             Task { @MainActor in
@@ -211,6 +249,40 @@ final class StatusController: NSObject {
         RunLoop.main.add(wakeTimer, forMode: .common)
         wakeRefreshTimer = wakeTimer
         AppLogger.info("Wake refresh scheduled in \(Int(delay)) seconds (\(reason)).")
+    }
+
+    private func startRefreshWatchdog() {
+        refreshWatchdog?.cancel()
+        let watchdog = DispatchSource.makeTimerSource(queue: .main)
+        watchdog.schedule(deadline: .now() + 15, repeating: 15, leeway: .seconds(2))
+        watchdog.setEventHandler { [weak self] in
+            Task { @MainActor in
+                self?.recoverOverdueRefreshIfNeeded()
+            }
+        }
+        refreshWatchdog = watchdog
+        watchdog.resume()
+    }
+
+    private func recoverOverdueRefreshIfNeeded() {
+        guard !isTerminating else { return }
+        let now = Date()
+        if isRefreshing,
+           RefreshReliabilityPolicy.refreshIsStuck(now: now, startedAt: refreshStartedAt) {
+            AppLogger.error("Refresh watchdog found a fetch running for more than 60 seconds; restarting it.")
+            refresh(force: true)
+            return
+        }
+        guard !isRefreshing,
+              wakeRefreshTimer == nil,
+              RefreshReliabilityPolicy.timerIsOverdue(now: now, scheduledFor: nextRefreshDueAt) else {
+            return
+        }
+        AppLogger.info("Refresh watchdog recovered an overdue automatic refresh.")
+        timer?.invalidate()
+        timer = nil
+        nextRefreshDueAt = nil
+        refresh()
     }
 
     private func startRefreshAnimation() {
@@ -249,6 +321,7 @@ final class StatusController: NSObject {
         newTimer.tolerance = min(5, interval * 0.1)
         RunLoop.main.add(newTimer, forMode: .common)
         timer = newTimer
+        nextRefreshDueAt = Date().addingTimeInterval(interval)
         AppLogger.info("Next refresh scheduled in \(Int(interval)) seconds (failures=\(consecutiveRefreshFailures)).")
     }
 
@@ -1003,7 +1076,7 @@ final class StatusController: NSObject {
 
     @objc private func refreshMenuAction() {
         AppLogger.info("Manual refresh requested from menu.")
-        refresh()
+        refresh(force: true)
     }
 
     @objc private func toggleDetachedMenuBar() {

@@ -66,7 +66,7 @@ final class BundledSolixDataProvider: SolixDataProvider {
         let inputData = try JSONEncoder().encode(request) + Data([0x0A])
         let timeout = timeout
 
-        return try await Task.detached(priority: .utility) {
+        let worker = Task.detached(priority: .utility) {
             let process = Process()
             process.executableURL = runtime.python
             process.arguments = [runtime.script.path, "--stdin-config"]
@@ -107,7 +107,12 @@ final class BundledSolixDataProvider: SolixDataProvider {
                 throw SolixProviderError.commandFailed(message.trimmingCharacters(in: .whitespacesAndNewlines))
             }
             return try SnapshotDecoder.decode(data)
-        }.value
+        }
+        return try await withTaskCancellationHandler {
+            try await worker.value
+        } onCancel: {
+            worker.cancel()
+        }
     }
 
     private static func runtimeConfiguration() -> HelperRuntime? {
@@ -189,7 +194,7 @@ final class CommandSolixDataProvider: SolixDataProvider {
 
         let command = command
         let timeout = timeout
-        return try await Task.detached(priority: .utility) {
+        let worker = Task.detached(priority: .utility) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
             process.arguments = ["-lc", command]
@@ -212,7 +217,12 @@ final class CommandSolixDataProvider: SolixDataProvider {
             }
 
             return try SnapshotDecoder.decode(data)
-        }.value
+        }
+        return try await withTaskCancellationHandler {
+            try await worker.value
+        } onCancel: {
+            worker.cancel()
+        }
     }
 }
 

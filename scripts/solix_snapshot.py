@@ -115,6 +115,89 @@ def _first_solarbank(devices):
     )
 
 
+def _mqtt_snapshot(device):
+    mqtt_data = device.get("mqtt_data")
+    return dict(mqtt_data) if isinstance(mqtt_data, dict) else {}
+
+
+def _battery_percent(mqtt_solarbank, solarbank, first_solarbank, site):
+    return _as_int(
+        mqtt_solarbank.get("battery_soc"),
+        first_solarbank.get("battery_power"),
+        solarbank.get("battery_soc"),
+        solarbank.get("battery_percentage"),
+        site.get("battery_soc"),
+        site.get("soc"),
+    )
+
+
+async def _trigger_realtime_devices(client):
+    """Ask every supported site device for fresh telemetry."""
+    devices = [
+        device
+        for device in client.devices.values()
+        if device.get("mqtt_supported")
+        and not device.get("is_passive")
+    ]
+    if not devices:
+        return {}
+
+    mqtt_session = None
+    try:
+        mqtt_session = await asyncio.wait_for(client.startMqttSession(), timeout=6)
+        if not mqtt_session or not mqtt_session.is_connected():
+            return {}
+
+        subscribed = []
+        for device in devices:
+            topic_prefix = mqtt_session.get_topic_prefix(deviceDict=device)
+            if not topic_prefix:
+                continue
+            response = mqtt_session.subscribe(f"{topic_prefix}#")
+            if response is None or not response.is_failure:
+                subscribed.append(device)
+        if not subscribed:
+            return {}
+
+        await asyncio.sleep(0.25)
+        for device in subscribed:
+            mqtt_session.realtime_trigger(
+                deviceDict=device,
+                timeout=300,
+                wait_for_publish=2,
+            )
+            if device.get("mqtt_status_request"):
+                mqtt_session.status_request(
+                    deviceDict=device,
+                    wait_for_publish=2,
+                )
+
+        earliest_cloud_refresh = time.monotonic() + 3
+        deadline = time.monotonic() + 5
+        freshest_solarbank = {}
+        while time.monotonic() < deadline:
+            await asyncio.sleep(0.25)
+            for device in subscribed:
+                candidate = _mqtt_snapshot(device)
+                device_type = str(device.get("type", "")).lower()
+                is_solarbank = "solarbank" in device_type or "battery" in device_type
+                if is_solarbank and candidate.get("last_update"):
+                    freshest_solarbank = candidate
+                    if (
+                        candidate.get("battery_soc") is not None
+                        and time.monotonic() >= earliest_cloud_refresh
+                    ):
+                        return candidate
+        return freshest_solarbank
+    except Exception:
+        # MQTT is an optional freshness path. The regular cloud response remains
+        # available when a device, account, or network does not support it.
+        return {}
+    finally:
+        if mqtt_session is not None:
+            client.stopMqttSession()
+
+
 def _energy_total(statistics, stat_type="1"):
     if not isinstance(statistics, list):
         return None
@@ -298,6 +381,12 @@ async def main():
         client = api.AnkerSolixApi(user, password, country, session)
         await client.update_sites()
         await client.update_device_details()
+        mqtt_solarbank = await _trigger_realtime_devices(client)
+        # Real-time triggers refresh the cloud scene used by the app. Query it
+        # once more so battery, solar, load, grid, and flow all come from the
+        # same current system measurement. This also works when direct MQTT
+        # values are not available for a particular device model.
+        await client.update_sites()
 
         cache = _load_cache()
         site = next(iter(client.sites.values()), {})
@@ -393,12 +482,11 @@ async def main():
                 site.get("site_name"),
                 site.get("siteName"),
             ) or "Anker SOLIX",
-            "batteryPercent": _as_int(
-                solarbank.get("battery_soc"),
-                first_solarbank.get("battery_power"),
-                solarbank.get("battery_percentage"),
-                site.get("battery_soc"),
-                site.get("soc"),
+            "batteryPercent": _battery_percent(
+                mqtt_solarbank,
+                solarbank,
+                first_solarbank,
+                site,
             ),
             "solarWatts": solar_watts,
             "homeWatts": _as_int(
