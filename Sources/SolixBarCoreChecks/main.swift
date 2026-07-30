@@ -74,4 +74,26 @@ require(MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: true, detachedBarI
 require(MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: true, detachedBarIsOpen: true), "enabled menu bar icon while detached")
 require(!MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: false, detachedBarIsOpen: false), "disabled menu bar icon")
 require(!MenuBarIconPolicy.shouldShowAppIcon(settingIsEnabled: false, detachedBarIsOpen: true), "detached bar must not force menu bar icon")
+let refreshDue = start.addingTimeInterval(120)
+require(
+    !RefreshReliabilityPolicy.timerIsOverdue(
+        now: refreshDue.addingTimeInterval(14),
+        scheduledFor: refreshDue
+    ),
+    "refresh watchdog observes grace period"
+)
+require(
+    RefreshReliabilityPolicy.timerIsOverdue(
+        now: refreshDue.addingTimeInterval(15),
+        scheduledFor: refreshDue
+    ),
+    "refresh watchdog detects overdue timer"
+)
+require(
+    RefreshReliabilityPolicy.refreshIsStuck(
+        now: start.addingTimeInterval(60),
+        startedAt: start
+    ),
+    "refresh watchdog detects stuck fetch"
+)
 print("SolixBar core checks passed.")

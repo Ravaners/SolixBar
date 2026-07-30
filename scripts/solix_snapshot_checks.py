@@ -21,6 +21,22 @@ assert helper._site_today_energy({"energy_details": {"today": {"solar_production
     "solar_production": "4.2"
 }
 assert helper._first_text(None, "", 7) == "7"
+assert helper._mqtt_snapshot({"mqtt_data": {"battery_soc": "62"}}) == {
+    "battery_soc": "62"
+}
+assert helper._mqtt_snapshot({"mqtt_data": "invalid"}) == {}
+assert helper._battery_percent(
+    {"battery_soc": "62"},
+    {"battery_soc": "70"},
+    {"battery_power": "69"},
+    {},
+) == 62
+assert helper._battery_percent(
+    {},
+    {"battery_soc": "70"},
+    {"battery_power": "69"},
+    {},
+) == 69
 assert helper._inverter_serials(
     {"solar_list": [{"device_sn": "PV-1"}, {"device_sn": "PV-2"}]},
     [{"type": "inverter", "device_sn": "PV-2"}, {"type": "inverter", "device_sn": "PV-3"}],
