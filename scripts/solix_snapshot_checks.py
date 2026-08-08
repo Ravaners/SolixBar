@@ -37,6 +37,17 @@ assert helper._battery_percent(
     {"battery_power": "69"},
     {},
 ) == 69
+assert helper._realtime_refresh_needed({}, "lease", now=1_000) is True
+assert helper._realtime_refresh_needed(
+    {"lease": {"timestamp": 800, "value": 1}},
+    "lease",
+    now=1_000,
+) is False
+assert helper._realtime_refresh_needed(
+    {"lease": {"timestamp": 760, "value": 1}},
+    "lease",
+    now=1_000,
+) is True
 assert helper._inverter_serials(
     {"solar_list": [{"device_sn": "PV-1"}, {"device_sn": "PV-2"}]},
     [{"type": "inverter", "device_sn": "PV-2"}, {"type": "inverter", "device_sn": "PV-3"}],
@@ -45,6 +56,33 @@ assert helper._inverter_serials(
     {},
     [{"type": "inverter", "device_sn": "PV-2"}],
 ) == ["PV-2"]
+assert helper._period_solar_total(
+    {"statistics": [{"type": "1", "total": "312.45", "unit": "kwh"}]}
+) == 312.45
+assert helper._period_solar_total(
+    {"power": [{"value": "100.5"}, {"value": "211.95"}]}
+) == 312.45
+assert helper._period_solar_total({"power": []}) is None
+assert helper._device_pv_period_total({"solarGeneraion": 312.45}) == 312.45
+assert helper._device_pv_period_total(
+    {"energy": [{"energy": 100.5}, {"energy": 211.95}]}
+) == 312.45
+assert helper._device_pv_period_total({"energy": []}) is None
+assert helper._daily_history_solar_total(
+    {
+        "2026-07-01": {"solar_production": "100.50"},
+        "2026-07-02": {"solar_production": "211.95"},
+    }
+) == 312.45
+assert helper._daily_history_solar_total({}) is None
+assert helper._installation_start_year(
+    [{"create_time": datetime(2024, 6, 1, tzinfo=timezone.utc).timestamp()}],
+    2026,
+) == 2024
+assert helper._installation_start_date(
+    [{"create_time": datetime(2024, 6, 1, 12, tzinfo=timezone.utc).timestamp()}],
+    datetime(2026, 8, 8, tzinfo=timezone.utc),
+).date().isoformat() == "2024-06-01"
 
 with tempfile.TemporaryDirectory() as temporary:
     state_path = Path(temporary) / "energy.json"

@@ -13,7 +13,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -140,13 +140,13 @@ async def _trigger_realtime_devices(client):
         and not device.get("is_passive")
     ]
     if not devices:
-        return {}
+        return {}, False
 
     mqtt_session = None
     try:
         mqtt_session = await asyncio.wait_for(client.startMqttSession(), timeout=6)
         if not mqtt_session or not mqtt_session.is_connected():
-            return {}
+            return {}, False
 
         subscribed = []
         for device in devices:
@@ -157,20 +157,27 @@ async def _trigger_realtime_devices(client):
             if response is None or not response.is_failure:
                 subscribed.append(device)
         if not subscribed:
-            return {}
+            return {}, False
 
         await asyncio.sleep(0.25)
+        realtime_requested = False
         for device in subscribed:
-            mqtt_session.realtime_trigger(
-                deviceDict=device,
-                timeout=300,
-                wait_for_publish=2,
-            )
-            if device.get("mqtt_status_request"):
-                mqtt_session.status_request(
+            try:
+                mqtt_session.realtime_trigger(
                     deviceDict=device,
+                    timeout=300,
                     wait_for_publish=2,
                 )
+                realtime_requested = True
+                if device.get("mqtt_status_request"):
+                    mqtt_session.status_request(
+                        deviceDict=device,
+                        wait_for_publish=2,
+                    )
+            except Exception:
+                continue
+        if not realtime_requested:
+            return {}, False
 
         earliest_cloud_refresh = time.monotonic() + 3
         deadline = time.monotonic() + 5
@@ -187,12 +194,12 @@ async def _trigger_realtime_devices(client):
                         candidate.get("battery_soc") is not None
                         and time.monotonic() >= earliest_cloud_refresh
                     ):
-                        return candidate
-        return freshest_solarbank
+                        return candidate, True
+        return freshest_solarbank, True
     except Exception:
         # MQTT is an optional freshness path. The regular cloud response remains
         # available when a device, account, or network does not support it.
-        return {}
+        return {}, False
     finally:
         if mqtt_session is not None:
             client.stopMqttSession()
@@ -205,6 +212,161 @@ def _energy_total(statistics, stat_type="1"):
         if str(item.get("type")) == stat_type:
             return _first_positive_number(item.get("total"))
     return None
+
+
+def _period_solar_total(analysis):
+    total = _energy_total(analysis.get("statistics"))
+    if total is not None:
+        return total
+    power = analysis.get("power")
+    if not isinstance(power, list) or not power:
+        return None
+    values = [_first_number(item.get("value")) for item in power if isinstance(item, dict)]
+    return sum(value for value in values if value is not None) if any(value is not None for value in values) else None
+
+
+def _installation_start_year(devices, current_year):
+    years = []
+    for device in devices:
+        timestamp = _first_number(device.get("create_time"))
+        if timestamp is None or timestamp <= 0:
+            continue
+        try:
+            year = datetime.fromtimestamp(timestamp, timezone.utc).year
+        except (OverflowError, OSError, ValueError):
+            continue
+        if 2020 <= year <= current_year:
+            years.append(year)
+    return min(years, default=current_year)
+
+
+def _installation_start_date(devices, now):
+    dates = []
+    for device in devices:
+        timestamp = _first_number(device.get("create_time"))
+        if timestamp is None or timestamp <= 0:
+            continue
+        try:
+            date = datetime.fromtimestamp(timestamp, timezone.utc).astimezone()
+        except (OverflowError, OSError, ValueError):
+            continue
+        if 2020 <= date.year <= now.astimezone().year:
+            dates.append(date.replace(hour=0, minute=0, second=0, microsecond=0))
+    return min(dates, default=now.astimezone().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0))
+
+
+def _device_pv_period_total(statistics):
+    total = _first_number(
+        statistics.get("solarGeneraion"),
+        statistics.get("solarGeneration"),
+    )
+    if total is not None:
+        return total
+    energy = statistics.get("energy")
+    if not isinstance(energy, list) or not energy:
+        return None
+    values = [_first_number(item.get("energy")) for item in energy if isinstance(item, dict)]
+    return sum(value for value in values if value is not None) if any(value is not None for value in values) else None
+
+
+def _daily_history_solar_total(history):
+    if not isinstance(history, dict) or not history:
+        return None
+    values = [
+        _first_number(item.get("solar_production"))
+        for item in history.values()
+        if isinstance(item, dict)
+    ]
+    return sum(value for value in values if value is not None) if any(value is not None for value in values) else None
+
+
+async def _historical_daily_solar_total(client, site_id, devices, now):
+    start = _installation_start_date(devices, now)
+    end = now.astimezone()
+    total = 0.0
+    found_value = False
+    while start.date() <= end.date():
+        days = min(366, (end.date() - start.date()).days + 1)
+        history = await client.energy_daily(
+            siteId=site_id,
+            deviceSn="",
+            startDay=start,
+            numDays=days,
+            dayTotals=False,
+        )
+        period_total = _daily_history_solar_total(history)
+        if period_total is not None:
+            total += max(0, period_total)
+            found_value = True
+        start += timedelta(days=days)
+    return total if found_value else None
+
+
+async def _lifetime_solar_total(client, site_id, devices, now):
+    """Sum authoritative Anker solar totals for every installation year."""
+    current_year = now.astimezone().year
+    inverter_serials = _inverter_serials(next(iter(client.sites.values()), {}), devices)
+    if inverter_serials:
+        devices_by_serial = {
+            str(device.get("device_sn")): device
+            for device in devices
+            if device.get("device_sn")
+        }
+        device_total = 0.0
+        device_totals_complete = True
+        try:
+            for inverter_serial in inverter_serials:
+                start_year = _installation_start_year(
+                    [devices_by_serial.get(inverter_serial, {})],
+                    current_year,
+                )
+                for year in range(start_year, current_year + 1):
+                    statistics = await client.get_device_pv_statistics(
+                        deviceSn=inverter_serial,
+                        rangeType="year",
+                        startDay=datetime(year, 1, 1),
+                        endDay=datetime(year, 12, 31),
+                    )
+                    year_total = _device_pv_period_total(statistics)
+                    if year_total is None:
+                        device_totals_complete = False
+                        break
+                    device_total += max(0, year_total)
+                if not device_totals_complete:
+                    break
+        except Exception:
+            device_totals_complete = False
+        if device_totals_complete and device_total > 0:
+            return device_total
+
+    # Some systems expose no PV-device statistics. Use the site-wide annual
+    # analysis only when the device-specific endpoint is unavailable.
+    try:
+        start_year = _installation_start_year(devices, current_year)
+        site_total = 0.0
+        for year in range(start_year, current_year + 1):
+            analysis = await client.energy_analysis(
+                siteId=site_id,
+                deviceSn="",
+                rangeType="year",
+                startDay=datetime(year, 1, 1),
+                endDay=datetime(year, 12, 31),
+                devType="solar_production",
+            )
+            year_total = _period_solar_total(analysis)
+            if year_total is None:
+                site_total = 0
+                break
+            site_total += max(0, year_total)
+        if site_total > 0:
+            return site_total
+    except Exception:
+        pass
+
+    try:
+        return await _historical_daily_solar_total(client, site_id, devices, now)
+    except Exception:
+        return None
 
 
 def _state_path():
@@ -250,6 +412,15 @@ def _fresh_cached_value(cache, key, max_age_seconds):
 def _fresh_cached_positive_value(cache, key, max_age_seconds):
     value = _fresh_cached_value(cache, key, max_age_seconds)
     return value if value is not None and value > 0 else None
+
+
+def _realtime_refresh_needed(cache, key, now=None, max_age_seconds=240):
+    item = cache.get(key)
+    if not isinstance(item, dict):
+        return True
+    timestamp = _first_number(item.get("timestamp"))
+    current_time = time.time() if now is None else now
+    return timestamp is None or current_time - timestamp >= max_age_seconds
 
 
 def _store_cached_value(cache, key, value):
@@ -381,20 +552,26 @@ async def main():
         client = api.AnkerSolixApi(user, password, country, session)
         await client.update_sites()
         await client.update_device_details()
-        mqtt_solarbank = await _trigger_realtime_devices(client)
-        # Real-time triggers refresh the cloud scene used by the app. Query it
-        # once more so battery, solar, load, grid, and flow all come from the
-        # same current system measurement. This also works when direct MQTT
-        # values are not available for a particular device model.
-        await client.update_sites()
-
         cache = _load_cache()
-        site = next(iter(client.sites.values()), {})
         site_id = next(iter(client.sites.keys()), "")
         cache_namespace = site_id or "default-site"
+        realtime_cache_key = f"{cache_namespace}:mqttRealtimeLease:v1"
+        mqtt_solarbank = {}
+        if _realtime_refresh_needed(cache, realtime_cache_key):
+            mqtt_solarbank, realtime_requested = await _trigger_realtime_devices(client)
+            if realtime_requested:
+                # A real-time request keeps telemetry flowing for five minutes.
+                # Refresh the cloud scene once after requesting it; subsequent
+                # helper runs can use the already active stream without paying
+                # for another MQTT setup and duplicate cloud request.
+                await client.update_sites()
+                _store_cached_value(cache, realtime_cache_key, 1)
+                _save_cache(cache)
+
+        site = next(iter(client.sites.values()), {})
         today_key = datetime.now().astimezone().date().isoformat()
         today_cache_key = f"{cache_namespace}:todayKWh:{today_key}"
-        total_cache_key = f"{cache_namespace}:pvLifetimeTotalKWh:v2"
+        total_cache_key = f"{cache_namespace}:pvLifetimeTotalKWh:v6"
         today_kwh = _fresh_cached_positive_value(cache, today_cache_key, 10 * 60)
         devices = list(client.devices.values())
         solarbank = _first_solarbank(devices)
@@ -428,26 +605,19 @@ async def main():
             except Exception:
                 today_kwh = None
 
-        api_total_kwh = _fresh_cached_positive_value(cache, total_cache_key, 15 * 60)
-        if api_total_kwh is None:
-            inverter_serials = _inverter_serials(site, devices)
-            inverter_totals = []
-            for inverter_serial in inverter_serials:
-                try:
-                    total_statistics = await client.get_device_pv_total_statistics(
-                        deviceSn=inverter_serial
-                    )
-                    value = _first_number(total_statistics.get("energy"))
-                    if value is not None and value >= 0:
-                        inverter_totals.append(value)
-                except Exception:
-                    continue
-            api_total_kwh = (
-                sum(inverter_totals)
-                if inverter_serials and len(inverter_totals) == len(inverter_serials)
-                else None
+        cached_api_total = _fresh_cached_value(cache, total_cache_key, 6 * 60 * 60)
+        if cached_api_total is None:
+            api_total_kwh = await _lifetime_solar_total(
+                client,
+                site_id,
+                devices,
+                datetime.now(timezone.utc),
             )
-            _store_cached_value(cache, total_cache_key, api_total_kwh)
+            # Cache a negative sentinel as well. Accounts without a supported
+            # total must not repeat all expensive fallback queries every cycle.
+            _store_cached_value(cache, total_cache_key, api_total_kwh if api_total_kwh is not None else -1)
+        else:
+            api_total_kwh = cached_api_total if cached_api_total >= 0 else None
         _save_cache(cache)
 
         battery_watts = _signed_battery_watts(solarbank_info, solarbank, first_solarbank)
