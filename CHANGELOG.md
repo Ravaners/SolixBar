@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.5.6 - 2026-08-08
+
+- DE: Der fehlerhafte PV-Gesamtaufruf wurde korrigiert. SolixBar prueft nacheinander PV-Geraetejahre, Anlagenjahre und historische Tagesertraege; der bisherige ungueltige Bibliotheksaufruf konnte keinen Gesamtwert liefern und liess die App unbemerkt beim lokalen Messwert bleiben.
+- EN: The faulty PV-total request has been corrected. SolixBar now checks PV-device years, site years, and historical daily yields in sequence; the previous invalid library call could not return a total and silently left the app on its local measurement.
+- DE: Verfuegbare Gesamtwerte sowie ein von Anker bestaetigtes Nichtverfuegbar werden sechs Stunden privat zwischengespeichert. Ohne API-Gesamtwert zaehlt SolixBar weiterhin fortlaufende Messungen; fuer zuvor fehlende Zeitraeume bleibt der manuelle Gesamtstartwert erforderlich. Das Log kennzeichnet die verwendete Quelle.
+- EN: Available totals and a confirmed unavailable result from Anker are cached privately for six hours. Without an API total, SolixBar continues ongoing measurements; a manual total starting value remains necessary for previously missing periods. The log identifies the source used.
+- DE: Laufende Echtzeit-Telemetrie wird innerhalb ihres Fuenf-Minuten-Fensters wiederverwendet. Dadurch entfallen unnoetige MQTT-Verbindungen und doppelte Anlagenabrufe, ohne Akku, PV, Hauslast, Netz oder Fluss getrennt zu aktualisieren.
+- EN: Active real-time telemetry is reused within its five-minute window. This avoids unnecessary MQTT connections and duplicate site requests without refreshing battery, solar, home load, grid, or flow separately.
+- DE: Ein aktivierter, aber veralteter Autostart-Eintrag wird automatisch auf die tatsaechlich laufende App korrigiert. Gleichzeitige macOS-Aufwachsignale werden zusammengefasst, damit nur eine Wiederherstellung startet.
+- EN: An enabled but outdated autostart entry is automatically corrected to the app that is actually running. Simultaneous macOS wake signals are coalesced so only one recovery starts.
+- DE: Layout, Farben, Symbole, Einstellungen und Bedienablauf bleiben unveraendert; vorhandene Screenshots gelten weiterhin.
+- EN: Layout, colors, symbols, settings, and interaction flow remain unchanged; existing screenshots remain current.
+
 ## 0.5.5 - 2026-07-30
 
 - DE: Der direkte SOLIX-Abruf fordert jetzt fuer alle unterstuetzten Geraete der Anlage Echtzeitdaten an und liest anschliessend die gemeinsame Anlagenansicht erneut. Dadurch werden Akku, PV, Hauslast, Netz und Akku-Fluss zusammen aktualisiert, auch wenn die normale Anker-Cloud-Uebersicht zuvor alte Werte geliefert hat.

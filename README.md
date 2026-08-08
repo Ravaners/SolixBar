@@ -41,7 +41,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.5.5`
+Aktuelle Version / Current version: `0.5.6`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -63,7 +63,7 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
-unzip outputs/SolixBar-0.5.5-macOS-arm64.zip -d outputs
+unzip outputs/SolixBar-0.5.6-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
@@ -97,9 +97,9 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.5 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich. Der direkte Abruf fordert Echtzeitdaten fuer alle unterstuetzten Anlagengeraete an und liest danach Akku, PV, Hauslast, Netz und Akku-Fluss gemeinsam neu. Eine unabhaengige Ueberwachung stellt ausgebliebene oder festhaengende Aktualisierungen wieder her. Tagesertrag und PV-Gesamtertrag werden ueber die passenden SOLIX-Energieendpunkte gelesen; bei mehreren Wechselrichtern werden deren PV-Gesamtwerte addiert. Falls kein Gesamtwert verfuegbar ist, wird die reale Messung lokal und datenquellenuebergreifend fortgefuehrt.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.6 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich. Der direkte Abruf haelt Echtzeitdaten fuer alle unterstuetzten Anlagengeraete gemeinsam aktuell und verwendet eine bereits aktive Fuenf-Minuten-Anforderung weiter. Eine unabhaengige Ueberwachung stellt ausgebliebene oder festhaengende Aktualisierungen wieder her. Fuer den PV-Gesamtertrag prueft SolixBar PV-Geraetejahre, Anlagenjahre und historische Tagesertraege. Falls Anker keinen Gesamtwert bereitstellt, wird die reale Messung lokal und datenquellenuebergreifend fortgefuehrt; fuer frueher fehlende Zeitraeume kann ein manueller Gesamtstartwert gesetzt werden.
 
-English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.5 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths. Direct refreshes request real-time data from every supported system device and then reload battery, solar, home load, grid, and battery flow together. An independent watchdog recovers missed or stuck refreshes. Daily yield and PV lifetime total use the matching SOLIX energy endpoints; PV lifetime totals from multiple inverters are added together. If no lifetime total is available, the real measurement continues locally across live data sources.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.6 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths. Direct refreshes keep real-time data current for every supported system device together and reuse an active five-minute request. An independent watchdog recovers missed or stuck refreshes. For PV lifetime yield, SolixBar checks PV-device years, site years, and historical daily yields. If Anker provides no total, the real measurement continues locally across live data sources; a manual total starting value can account for earlier missing periods.
 
 Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
 Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden ohne
