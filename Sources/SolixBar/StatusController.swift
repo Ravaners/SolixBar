@@ -56,6 +56,7 @@ final class StatusController: NSObject {
     private var refreshWatchdog: DispatchSourceTimer?
     private var refreshAnimationTimer: Timer?
     private var wakeRefreshTimer: Timer?
+    private var lastWakeSignalAt: Date?
     private var wakeRefreshAttemptsRemaining = 0
     private var refreshAnimationFrame = 0
     private var consecutiveRefreshFailures = 0
@@ -81,6 +82,7 @@ final class StatusController: NSObject {
             object: nil
         )
         startRefreshWatchdog()
+        AutostartManager.repairIfNeeded()
         settings.migrateMenuBarGridMetricIfNeeded()
         settings.migrateDetachedBarSettingsIfNeeded()
         applyAppearance()
@@ -172,6 +174,7 @@ final class StatusController: NSObject {
                     let measuredToday = historyStore.estimatedSolarKWh(since: startOfDay)
                     snapshot.todayKWh = max(snapshot.todayKWh ?? 0, measuredToday)
                 }
+                let totalSource = snapshot.totalKWhIsAuthoritative == true ? "provider" : "local"
                 snapshot.totalKWh = historyStore.cumulativeSolarKWh(
                     recording: snapshot,
                     sourceKey: settings.dataSourceMode.rawValue,
@@ -191,7 +194,8 @@ final class StatusController: NSObject {
                         + "solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, "
                         + "grid=\(snapshot.gridWatts.map(String.init) ?? "-")W, "
                         + "today=\(snapshot.todayKWh.map { String(format: "%.3f", $0) } ?? "-")kWh, "
-                        + "total=\(snapshot.totalKWh.map { String(format: "%.3f", $0) } ?? "-")kWh."
+                        + "total=\(snapshot.totalKWh.map { String(format: "%.3f", $0) } ?? "-")kWh "
+                        + "(source=\(totalSource))."
                 )
             } catch is CancellationError {
                 AppLogger.info("Refresh cancelled; a fresh retrieval is already scheduled.")
@@ -224,6 +228,11 @@ final class StatusController: NSObject {
     }
 
     @objc private func workspaceBecameUsable(_ notification: Notification) {
+        let now = Date()
+        if let lastWakeSignalAt, now.timeIntervalSince(lastWakeSignalAt) < 1 {
+            return
+        }
+        lastWakeSignalAt = now
         AppLogger.info("Mac or screen became active; scheduling a fresh network-aware refresh.")
         consecutiveRefreshFailures = 0
         wakeRefreshAttemptsRemaining = 2

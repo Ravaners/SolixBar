@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 enum AutostartManager {
     private static let label = "local.codex.SolixBar"
 
@@ -12,6 +13,16 @@ enum AutostartManager {
         FileManager.default.fileExists(atPath: launchAgentURL.path)
     }
 
+    static func repairIfNeeded() {
+        guard isEnabled, !isConfiguredForCurrentApp else { return }
+        do {
+            try install()
+            AppLogger.info("Repaired the enabled autostart entry for the currently running app.")
+        } catch {
+            AppLogger.error("Could not repair the autostart entry: \(error.localizedDescription)")
+        }
+    }
+
     static func setEnabled(_ enabled: Bool) throws {
         if enabled {
             try install()
@@ -21,14 +32,9 @@ enum AutostartManager {
     }
 
     private static func install() throws {
-        let executableURL = Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])
-        let appURL = appBundleURL(from: executableURL)
-        let launchPath = appURL?.path ?? executableURL.path
-        let programArguments = appURL == nil ? [launchPath] : ["/usr/bin/open", "-a", launchPath]
-
         let plist: [String: Any] = [
             "Label": label,
-            "ProgramArguments": programArguments,
+            "ProgramArguments": currentProgramArguments,
             "RunAtLoad": true,
             "KeepAlive": false
         ]
@@ -42,6 +48,24 @@ enum AutostartManager {
     private static func remove() throws {
         guard isEnabled else { return }
         try FileManager.default.removeItem(at: launchAgentURL)
+    }
+
+    private static var isConfiguredForCurrentApp: Bool {
+        guard let data = try? Data(contentsOf: launchAgentURL),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+              let dictionary = plist as? [String: Any],
+              let arguments = dictionary["ProgramArguments"] as? [String] else {
+            return false
+        }
+        return arguments == currentProgramArguments
+    }
+
+    private static var currentProgramArguments: [String] {
+        let executableURL = Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])
+        guard let appURL = appBundleURL(from: executableURL) else {
+            return [executableURL.standardizedFileURL.path]
+        }
+        return ["/usr/bin/open", "-a", appURL.standardizedFileURL.path]
     }
 
     private static func appBundleURL(from executableURL: URL) -> URL? {
