@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.6.1 - 2026-08-10
+
+- DE: Die Homepage erklaert jetzt direkt bei der Sprachauswahl, dass Arabisch wegen der dafuer notwendigen und noch nicht geprueften Rechts-nach-links-Darstellung derzeit nicht enthalten ist.
+- EN: The homepage now explains directly beside the language selection that Arabic is not currently included because its required right-to-left layout has not yet been fully verified.
+- DE: App-Funktionen, Messwerte, Aktualisierung, Layout und die vorhandenen 20 Uebersetzungen bleiben unveraendert.
+- EN: App features, readings, refresh behavior, layout, and the existing 20 translations remain unchanged.
+
 ## 0.6.0 - 2026-08-10
 
 - DE: SolixBar ist jetzt vollstaendig in 20 Sprachen bedienbar: Deutsch, Englisch, Franzoesisch, Spanisch, Italienisch, Niederlaendisch, Polnisch, Portugiesisch, Tschechisch, Daenisch, Schwedisch, Norwegisch, Finnisch, Russisch, vereinfachtes und traditionelles Chinesisch, Japanisch, Koreanisch, Tuerkisch und Rumaenisch.

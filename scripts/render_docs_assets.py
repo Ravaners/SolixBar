@@ -302,7 +302,7 @@ def render_settings():
     text(d, (92, 148), "Menueleiste und abgedockte Leiste unabhaengig und direkt sortierbar.", MUTED, F["body"])
     shadow(base, (360, 230, 1240, 900), radius=34, blur=34)
     rounded(d, (360, 230, 1240, 900), 28, PANEL, (160, 170, 164), 3)
-    text(d, (410, 278), "SOLIX Bar 0.6.0", INK, F["h3"])
+    text(d, (410, 278), "SOLIX Bar 0.6.1", INK, F["h3"])
     tabs = ["Menueleiste", "Abgedockt", "Warnungen", "Datenquelle", "App", "Start"]
     xx = 405
     for index, label in enumerate(tabs):
@@ -346,7 +346,7 @@ def render_languages():
     text(d, (92, 142), "Alle Menues, Warnungen, Hilfen, Diagramme und Zeitangaben uebersetzt.", MUTED, F["body"])
     shadow(base, (300, 215, 1300, 1020), radius=34, blur=34)
     rounded(d, (300, 215, 1300, 1020), 28, PANEL, (160, 170, 164), 3)
-    text(d, (355, 260), "SOLIX Bar 0.6.0", INK, F["h3"])
+    text(d, (355, 260), "SOLIX Bar 0.6.1", INK, F["h3"])
     tabs = ["Menueleiste", "Abgedockt", "Warnungen", "Datenquelle", "App", "Start"]
     xx = 345
     for label in tabs:
