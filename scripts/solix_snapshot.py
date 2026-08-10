@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -548,8 +549,18 @@ async def main():
     password = os.environ["ANKER_SOLIX_PASSWORD"]
     country = os.environ.get("ANKER_SOLIX_COUNTRY", "DE")
 
+    # The upstream client otherwise writes authentication and MQTT caches next
+    # to its installed Python module. Keep every runtime artifact in the app's
+    # private Application Support directory so the signed bundle stays sealed.
+    private_runtime_dir = _cache_path().parent / "runtime"
+    private_runtime_dir.mkdir(parents=True, exist_ok=True)
+    private_runtime_dir.chmod(0o700)
+    tempfile.tempdir = str(private_runtime_dir)
+    os.umask(0o077)
+
     async with ClientSession() as session:
         client = api.AnkerSolixApi(user, password, country, session)
+        client.apisession._authFile = str(private_runtime_dir / "auth-session.json")
         await client.update_sites()
         await client.update_device_details()
         cache = _load_cache()

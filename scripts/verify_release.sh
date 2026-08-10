@@ -5,7 +5,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 ARCHIVE="$ROOT/outputs/SolixBar-$VERSION-macOS-arm64.zip"
 STAGING="$(mktemp -d "${TMPDIR:-/private/tmp}/solixbar-verify.XXXXXX")"
-trap 'rm -rf "$STAGING"' EXIT INT TERM
+cleanup() {
+  chmod -R u+w "$STAGING" 2>/dev/null || true
+  rm -rf "$STAGING"
+}
+trap cleanup EXIT INT TERM
 ditto -x -k "$ARCHIVE" "$STAGING"
 APP="$STAGING/SolixBar.app"
 PLIST="$APP/Contents/Info.plist"
@@ -27,8 +31,16 @@ if find "$APP" -type f \( \
   echo "Private runtime data found in app bundle." >&2
   exit 1
 fi
-if rg -a -l '/Users/holger|Documents/Codex/2026-07-06' "$APP" >/dev/null; then
+if find "$APP" \( -type d -name authcache -o -type d -name __pycache__ -o -type f -name '*.pyc' \) | grep -q .; then
+  echo "Authentication or Python cache found in app bundle." >&2
+  exit 1
+fi
+if rg -a -l '/Users/[^/]+/(Desktop|Documents|Downloads)/|Documents/Codex/' "$APP" >/dev/null; then
   echo "Personal development path found in app bundle." >&2
+  exit 1
+fi
+if unzip -Z1 "$ARCHIVE" | grep -Eqi '(^|/)(authcache|__pycache__)(/|$)|\.pyc$'; then
+  echo "Authentication or Python cache found in release archive." >&2
   exit 1
 fi
 unzip -t "$ARCHIVE" >/dev/null
@@ -38,4 +50,5 @@ if unzip -Z1 "$ARCHIVE" | grep -Eq '(^|/)(__MACOSX|\.DS_Store)(/|$)'; then
 fi
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$APP/Contents/Resources/site-packages" \
   "$APP/Contents/Resources/python/bin/python3.12" -c 'import aiohttp, anker_solix_api'
+python3 "$ROOT/scripts/localization_checks.py"
 echo "Verified SolixBar $VERSION release bundle."

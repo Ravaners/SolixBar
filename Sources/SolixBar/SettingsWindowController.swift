@@ -18,7 +18,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let solixTotalBaseField = NSTextField()
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
-    private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
+    private let solixTitle = NSTextField(labelWithString: LocalizedText.text("SOLIX Login", "SOLIX Login"))
     private let solixHint = NSTextField(wrappingLabelWithString: LocalizedText.text(
         "Direkter SOLIX-Zugriff. Das Passwort wird verschlüsselt lokal gespeichert.",
         "Direct SOLIX access. The password is stored locally in encrypted form."
@@ -28,17 +28,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let solixCountryRow = NSStackView()
     private let solixTodayBaseRow = NSStackView()
     private let solixTotalBaseRow = NSStackView()
-    private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
+    private let autostartButton = NSButton(checkboxWithTitle: LocalizedText.text("Beim Login automatisch starten", "Start automatically at login"), target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
-    private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
-    private let showLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
-    private let showMetricSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
-    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Pfeile beim Energiefluss anzeigen", target: nil, action: nil)
-    private let showDetachedIconButton = NSButton(checkboxWithTitle: "App-Symbol anzeigen", target: nil, action: nil)
-    private let showDetachedLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
-    private let showDetachedSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
-    private let showDetachedFlowButton = NSButton(checkboxWithTitle: "Farben und Flussrichtung anzeigen", target: nil, action: nil)
-    private let lockDetachedMenuBarButton = NSButton(checkboxWithTitle: "Abgedockte Leiste fixieren", target: nil, action: nil)
+    private let showIconButton = NSButton(checkboxWithTitle: LocalizedText.text("App-Symbol in der Menüleiste anzeigen", "Show app icon in the menu bar"), target: nil, action: nil)
+    private let showLabelsButton = NSButton(checkboxWithTitle: LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values"), target: nil, action: nil)
+    private let showMetricSymbolsButton = NSButton(checkboxWithTitle: LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values"), target: nil, action: nil)
+    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction"), target: nil, action: nil)
+    private let showDetachedIconButton = NSButton(checkboxWithTitle: LocalizedText.text("App-Symbol anzeigen", "Show app icon"), target: nil, action: nil)
+    private let showDetachedLabelsButton = NSButton(checkboxWithTitle: LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values"), target: nil, action: nil)
+    private let showDetachedSymbolsButton = NSButton(checkboxWithTitle: LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values"), target: nil, action: nil)
+    private let showDetachedFlowButton = NSButton(checkboxWithTitle: LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction"), target: nil, action: nil)
+    private let lockDetachedMenuBarButton = NSButton(checkboxWithTitle: LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar"), target: nil, action: nil)
     private let scaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.6, target: nil, action: nil)
     private let scaleValue = NSTextField(labelWithString: "100 %")
     private let detachedScaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.9, target: nil, action: nil)
@@ -97,30 +97,37 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             LocalizedText.text("Lokaler JSON-Befehl", "Local JSON Command"),
             "JSON-URL"
         ])
-        appearancePopup.addItems(withTitles: ["Automatisch", "Hell", "Dunkel"])
-        languagePopup.addItems(withTitles: ["Deutsch", "English"])
+        appearancePopup.addItems(withTitles: [
+            LocalizedText.text("Automatisch", "Automatic"),
+            LocalizedText.text("Hell", "Light"),
+            LocalizedText.text("Dunkel", "Dark")
+        ])
+        languagePopup.addItems(withTitles: AppLanguage.allCases.map(\.displayName))
         applyLocalizedControlTitles()
-        modePopup.toolTip = "Legt fest, woher SolixBar die Werte lädt."
-        appearancePopup.toolTip = "Waehlt helle Darstellung, dunkle Darstellung oder automatisch passend zum macOS-System."
-        languagePopup.toolTip = "Waehlt die Sprache fuer sichtbare App-Texte."
+        modePopup.toolTip = LocalizedText.text("Legt fest, woher SolixBar die Werte lädt.", "Selects where SolixBar loads its values from.")
+        appearancePopup.toolTip = LocalizedText.text("Wählt helle Darstellung, dunkle Darstellung oder automatisch passend zum macOS-System.", "Selects light, dark, or automatic appearance to match macOS.")
+        languagePopup.toolTip = LocalizedText.text("Wählt die Sprache für alle sichtbaren App-Texte.", "Selects the language for all visible app text.")
         commandField.placeholderString = "/path/to/command-that-prints-json"
-        commandField.toolTip = "Führt einen lokalen Befehl aus und liest dessen JSON-Ausgabe."
+        commandField.toolTip = LocalizedText.text("Führt einen lokalen Befehl aus und liest dessen JSON-Ausgabe.", "Runs a local command and reads its JSON output.")
         urlField.placeholderString = "http://127.0.0.1:8787/solix.json"
-        urlField.toolTip = "Lädt die Werte von einer JSON-Adresse."
+        urlField.toolTip = LocalizedText.text("Lädt die Werte von einer JSON-Adresse.", "Loads values from a JSON address.")
         intervalField.placeholderString = "300"
-        intervalField.toolTip = "Zeit zwischen zwei Aktualisierungen in Sekunden."
+        intervalField.toolTip = LocalizedText.text("Zeit zwischen zwei Aktualisierungen in Sekunden.", "Time between refreshes in seconds.")
         solixEmailField.placeholderString = "mail@example.com"
-        solixEmailField.toolTip = "E-Mail-Adresse deines Anker/SOLIX-Kontos."
-        solixPasswordField.placeholderString = "Passwort"
+        solixEmailField.toolTip = LocalizedText.text("E-Mail-Adresse deines Anker/SOLIX-Kontos.", "Email address of your Anker/SOLIX account.")
+        solixPasswordField.placeholderString = LocalizedText.text("Passwort", "Password")
         solixPasswordField.toolTip = LocalizedText.text(
             "Passwort deines Anker/SOLIX-Kontos. Es wird verschlüsselt lokal gespeichert.",
             "Your Anker/SOLIX password. It is stored locally in encrypted form."
         )
         solixCountryField.placeholderString = "DE"
-        solixCountryField.toolTip = "Land deines Anker-Kontos, normalerweise DE."
-        solixTodayBaseField.placeholderString = "z.B. 7.2"
-        solixTodayBaseField.toolTip = "Optionaler Korrekturwert fuer den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zaehlt ab diesem Wert weiter."
-        solixTotalBaseField.placeholderString = "z.B. 427.8"
+        solixCountryField.toolTip = LocalizedText.text("Land deines Anker-Kontos, normalerweise DE.", "Country of your Anker account, usually DE.")
+        solixTodayBaseField.placeholderString = LocalizedText.text("z. B. 7,2", "e.g. 7.2")
+        solixTodayBaseField.toolTip = LocalizedText.text(
+            "Optionaler Korrekturwert für den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zählt ab diesem Wert weiter.",
+            "Optional correction value for today's yield in kWh if Anker reports 0 kWh. SolixBar continues counting from this value."
+        )
+        solixTotalBaseField.placeholderString = LocalizedText.text("z. B. 427,8", "e.g. 427.8")
         solixTotalBaseField.toolTip = LocalizedText.text(
             "Optionaler Startwert fuer den Gesamtertrag. Ohne API-Gesamtwert kumuliert SolixBar alle fortlaufenden Solarmessungen lokal.",
             "Optional starting value for total yield. Without an API total, SolixBar locally accumulates all continuous solar measurements."
@@ -136,22 +143,22 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
         autostartButton.target = self
         autostartButton.action = #selector(toggleAutostart)
-        autostartButton.toolTip = "Startet SolixBar automatisch nach dem Anmelden."
+        autostartButton.toolTip = LocalizedText.text("Startet SolixBar automatisch nach dem Anmelden.", "Starts SolixBar automatically after login.")
         autostartStatus.textColor = .secondaryLabelColor
         autostartStatus.lineBreakMode = .byTruncatingMiddle
-        showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
-        showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
-        showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
-        showEnergyFlowArrowsButton.toolTip = "Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus."
-        showDetachedIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol nur in der abgedockten Leiste."
-        showDetachedLabelsButton.toolTip = "Zeigt Bezeichnungen nur in der abgedockten Leiste."
-        showDetachedSymbolsButton.toolTip = "Zeigt die bestehenden farbigen Symbole nur in der abgedockten Leiste."
-        showDetachedFlowButton.toolTip = "Verwendet die bestehenden Flussfarben und Richtungspfeile in der abgedockten Leiste."
-        lockDetachedMenuBarButton.toolTip = "Fixiert die abgedockte Leiste, damit sie nicht versehentlich verschoben wird."
-        scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
-        scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
-        detachedScaleSlider.toolTip = "Vergrößert oder verkleinert nur die abgedockte Menüleistenanzeige."
-        detachedScaleValue.toolTip = "Aktuell eingestellte Größe der abgedockten Leiste."
+        showIconButton.toolTip = LocalizedText.text("Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste.", "Shows or hides the SolixBar icon in the menu bar.")
+        showLabelsButton.toolTip = LocalizedText.text("Zeigt kurze Namen wie Akku oder Solar vor den Zahlen.", "Shows short labels such as Battery or Solar before the values.")
+        showMetricSymbolsButton.toolTip = LocalizedText.text("Zeigt farbige Symbole direkt vor den Menüleistenwerten.", "Shows colored symbols directly before menu-bar values.")
+        showEnergyFlowArrowsButton.toolTip = LocalizedText.text("Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus.", "Turns high-contrast flow colors, direction arrows, and labels such as Charging, Discharging, Import, and Export on or off together.")
+        showDetachedIconButton.toolTip = LocalizedText.text("Zeigt oder versteckt das SolixBar-Symbol nur in der abgedockten Leiste.", "Shows or hides the SolixBar icon only in the detached bar.")
+        showDetachedLabelsButton.toolTip = LocalizedText.text("Zeigt Bezeichnungen nur in der abgedockten Leiste.", "Shows labels only in the detached bar.")
+        showDetachedSymbolsButton.toolTip = LocalizedText.text("Zeigt die bestehenden farbigen Symbole nur in der abgedockten Leiste.", "Shows the existing colored symbols only in the detached bar.")
+        showDetachedFlowButton.toolTip = LocalizedText.text("Verwendet die bestehenden Flussfarben und Richtungspfeile in der abgedockten Leiste.", "Uses the existing flow colors and direction arrows in the detached bar.")
+        lockDetachedMenuBarButton.toolTip = LocalizedText.text("Fixiert die abgedockte Leiste, damit sie nicht versehentlich verschoben wird.", "Locks the detached bar so it cannot be moved accidentally.")
+        scaleSlider.toolTip = LocalizedText.text("Vergrößert oder verkleinert Text und Symbole in der Menüleiste.", "Enlarges or reduces text and symbols in the menu bar.")
+        scaleValue.toolTip = LocalizedText.text("Aktuell eingestellte Größe der Menüleistenanzeige.", "Currently selected menu-bar display size.")
+        detachedScaleSlider.toolTip = LocalizedText.text("Vergrößert oder verkleinert nur die abgedockte Menüleistenanzeige.", "Enlarges or reduces only the detached menu-bar display.")
+        detachedScaleValue.toolTip = LocalizedText.text("Aktuell eingestellte Größe der abgedockten Leiste.", "Currently selected detached-bar size.")
 
         let title = NSTextField(labelWithString: "SOLIX Bar \(AppVersion.short)")
         title.font = .boldSystemFont(ofSize: 20)
@@ -167,12 +174,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
         let cancel = NSButton(title: LocalizedText.text("Abbrechen", "Cancel"), target: self, action: #selector(cancelSettings))
         cancel.bezelStyle = .rounded
-        cancel.toolTip = "Verwirft die Vorschau und stellt die alten Einstellungen wieder her."
+        cancel.toolTip = LocalizedText.text("Verwirft die Vorschau und stellt die alten Einstellungen wieder her.", "Discards the preview and restores the previous settings.")
 
         let save = NSButton(title: LocalizedText.text("Speichern", "Save"), target: self, action: #selector(saveSettings))
         save.bezelStyle = .rounded
         save.keyEquivalent = "\r"
-        save.toolTip = "Speichert die aktuellen Einstellungen dauerhaft."
+        save.toolTip = LocalizedText.text("Speichert die aktuellen Einstellungen dauerhaft.", "Saves the current settings permanently.")
 
         for view in [title, tabs, cancel, save] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -513,108 +520,76 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private func metricTooltip(_ metric: BarMetric) -> String {
-        if settings.appLanguage == .english {
-            switch metric {
-            case .battery:
-                return "Shows the current battery level in percent in the menu bar."
-            case .solar:
-                return "Shows the current solar output in watts in the menu bar."
-            case .home:
-                return "Shows the current real home load in watts in the menu bar."
-            case .grid:
-                return "Shows current grid import or export in watts."
-            case .batteryFlow:
-                return "Shows whether the battery is charging or discharging."
-            case .flow:
-                return "Shows the energy-flow field in the menu bar. Arrows appear when the arrow option is enabled."
-            case .today:
-                return "Shows today's solar yield in kWh."
-            case .total:
-                return "Shows the total measured solar yield in kWh."
-            case .status:
-                return "Shows the current data-source status."
-            }
-        }
         switch metric {
         case .battery:
-            return "Zeigt den aktuellen Akkustand in Prozent in der Menüleiste."
+            return LocalizedText.text("Zeigt den aktuellen Akkustand in Prozent in der Menüleiste.", "Shows the current battery level in percent in the menu bar.")
         case .solar:
-            return "Zeigt die aktuelle Solarleistung in Watt in der Menüleiste."
+            return LocalizedText.text("Zeigt die aktuelle Solarleistung in Watt in der Menüleiste.", "Shows the current solar output in watts in the menu bar.")
         case .home:
-            return "Zeigt die aktuelle echte Hauslast in Watt in der Menüleiste."
+            return LocalizedText.text("Zeigt die aktuelle echte Hauslast in Watt in der Menüleiste.", "Shows the current real home load in watts in the menu bar.")
         case .grid:
-            return "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt."
+            return LocalizedText.text("Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt.", "Shows current grid import or export in watts.")
         case .batteryFlow:
-            return "Zeigt, ob der Akku gerade lädt oder entlädt."
+            return LocalizedText.text("Zeigt, ob der Akku gerade lädt oder entlädt.", "Shows whether the battery is charging or discharging.")
         case .flow:
-            return "Zeigt das Energiefluss-Feld in der Menüleiste. Die Pfeile erscheinen, wenn die Pfeil-Option aktiviert ist."
+            return LocalizedText.text("Zeigt das Energiefluss-Feld in der Menüleiste. Die Pfeile erscheinen, wenn die Pfeil-Option aktiviert ist.", "Shows the energy-flow field in the menu bar. Arrows appear when the arrow option is enabled.")
         case .today:
-            return "Zeigt den heutigen Solarertrag in kWh."
+            return LocalizedText.text("Zeigt den heutigen Solarertrag in kWh.", "Shows today's solar yield in kWh.")
         case .total:
-            return "Zeigt den gesamten bisher gemessenen Solarertrag in kWh."
+            return LocalizedText.text("Zeigt den gesamten bisher gemessenen Solarertrag in kWh.", "Shows the total measured solar yield in kWh.")
         case .status:
-            return "Zeigt den aktuellen Status der Datenquelle."
+            return LocalizedText.text("Zeigt den aktuellen Status der Datenquelle.", "Shows the current data-source status.")
         }
     }
 
     private func localizedMetricTitle(_ metric: BarMetric) -> String {
-        guard settings.appLanguage == .english else { return metric.title }
-        switch metric {
-        case .battery:
-            return "Battery"
-        case .solar:
-            return "PV"
-        case .home:
-            return "Home"
-        case .grid:
-            return "Grid Import"
-        case .batteryFlow:
-            return "Battery Flow"
-        case .flow:
-            return "Energy Flow"
-        case .today:
-            return "Today's Yield"
-        case .total:
-            return "Total Yield"
-        case .status:
-            return "Status"
-        }
+        LocalizedText.metricTitle(metric)
     }
 
     private func labelTooltip(_ text: String) -> String {
-        switch text {
-        case "Skalierung", "Scale":
-            return "Passt die Größe der Menüleistenanzeige an."
-        case "Abgedockt", "Detached":
-            return "Passt nur die Größe der abgedockten Menüleistenleiste an."
-        case "Modus", "Mode":
-            return "Wählt Demo, lokalen JSON-Befehl oder JSON-URL."
-        case "Mail", "Email":
-            return "E-Mail-Adresse deines Anker/SOLIX-Kontos."
-        case "Passwort", "Password":
-            return "Passwort deines Anker/SOLIX-Kontos."
-        case "Land", "Country":
-            return "Land des Anker-Kontos, meistens DE."
-        case "Ertrag heute", "Yield today":
-            return "Korrigiert den heutigen Ertrag in kWh, wenn Anker fuer heute 0 kWh liefert."
-        case "Gesamtertrag", "Total yield":
+        if LocalizedText.matches(text, german: "Skalierung", english: "Scale") {
+            return LocalizedText.text("Passt die Größe der Menüleistenanzeige an.", "Adjusts the size of the menu-bar display.")
+        }
+        if LocalizedText.matches(text, german: "Abgedockt", english: "Detached") {
+            return LocalizedText.text("Passt nur die Größe der abgedockten Menüleistenleiste an.", "Adjusts only the size of the detached menu bar.")
+        }
+        if LocalizedText.matches(text, german: "Modus", english: "Mode") {
+            return LocalizedText.text("Wählt Demo, lokalen JSON-Befehl oder JSON-URL.", "Selects Demo, Local JSON Command, or JSON URL.")
+        }
+        if LocalizedText.matches(text, german: "Mail", english: "Email") {
+            return LocalizedText.text("E-Mail-Adresse deines Anker/SOLIX-Kontos.", "Email address of your Anker/SOLIX account.")
+        }
+        if LocalizedText.matches(text, german: "Passwort", english: "Password") {
+            return LocalizedText.text("Passwort deines Anker/SOLIX-Kontos.", "Password of your Anker/SOLIX account.")
+        }
+        if LocalizedText.matches(text, german: "Land", english: "Country") {
+            return LocalizedText.text("Land des Anker-Kontos, meistens DE.", "Country of the Anker account, usually DE.")
+        }
+        if LocalizedText.matches(text, german: "Ertrag heute", english: "Yield today") {
+            return LocalizedText.text("Korrigiert den heutigen Ertrag in kWh, wenn Anker für heute 0 kWh liefert.", "Corrects today's yield in kWh when Anker reports 0 kWh for today.")
+        }
+        if LocalizedText.matches(text, german: "Gesamtertrag", english: "Total yield") {
             return LocalizedText.text(
                 "Setzt optional den Gesamtertrag aus der Anker-App als Startwert. Ohne API-Gesamtwert zaehlt SolixBar alle fortlaufenden Messungen zusammen.",
                 "Optionally sets the Anker app total as a starting value. Without an API total, SolixBar adds up all continuous measurements."
             )
-        case "Befehl", "Command":
-            return "Der lokale Befehl muss ein JSON-Objekt ausgeben."
-        case "URL":
-            return "Die Adresse muss ein JSON-Objekt liefern."
-        case "Intervall", "Interval":
-            return "Legt fest, wie oft neue Daten geholt werden."
-        case "Design", "Theme":
-            return "Waehlt Hell, Dunkel oder Automatisch passend zum System."
-        case "Sprache", "Language":
-            return "Waehlt Deutsch oder Englisch fuer sichtbare App-Texte."
-        default:
-            return text
         }
+        if LocalizedText.matches(text, german: "Befehl", english: "Command") {
+            return LocalizedText.text("Der lokale Befehl muss ein JSON-Objekt ausgeben.", "The local command must output a JSON object.")
+        }
+        if text == "URL" {
+            return LocalizedText.text("Die Adresse muss ein JSON-Objekt liefern.", "The address must return a JSON object.")
+        }
+        if LocalizedText.matches(text, german: "Intervall", english: "Interval") {
+            return LocalizedText.text("Legt fest, wie oft neue Daten geholt werden.", "Sets how often new data is fetched.")
+        }
+        if LocalizedText.matches(text, german: "Design", english: "Theme") {
+            return LocalizedText.text("Wählt Hell, Dunkel oder Automatisch passend zum System.", "Selects Light, Dark, or Automatic to match the system.")
+        }
+        if LocalizedText.matches(text, german: "Sprache", english: "Language") {
+            return LocalizedText.text("Wählt die Sprache für alle sichtbaren App-Texte.", "Selects the language for all visible app text.")
+        }
+        return text
     }
 
     private func loadSettings() {
@@ -637,7 +612,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case .dark:
             appearancePopup.selectItem(at: 2)
         }
-        languagePopup.selectItem(at: settings.appLanguage == .english ? 1 : 0)
+        languagePopup.selectItem(at: AppLanguage.allCases.firstIndex(of: settings.appLanguage) ?? 0)
         commandField.stringValue = settings.command
         urlField.stringValue = settings.urlString
         intervalField.stringValue = String(Int(settings.refreshInterval))
@@ -670,8 +645,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             autostartStatus.stringValue = message
         } else {
             autostartStatus.stringValue = AutostartManager.isEnabled
-                ? "Autostart ist aktiv."
-                : "Autostart ist deaktiviert."
+                ? LocalizedText.text("Autostart ist aktiv.", "Automatic startup is enabled.")
+                : LocalizedText.text("Autostart ist deaktiviert.", "Automatic startup is disabled.")
         }
     }
 
@@ -694,7 +669,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         default:
             settings.appearanceMode = .system
         }
-        settings.appLanguage = languagePopup.indexOfSelectedItem == 1 ? .english : .german
+        settings.appLanguage = AppLanguage.allCases.indices.contains(languagePopup.indexOfSelectedItem)
+            ? AppLanguage.allCases[languagePopup.indexOfSelectedItem]
+            : .german
         settings.command = commandField.stringValue
         settings.urlString = urlField.stringValue
         settings.refreshInterval = TimeInterval(max(60, intervalField.integerValue))
@@ -765,7 +742,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             try AutostartManager.setEnabled(autostartButton.state == .on)
             refreshAutostartState()
         } catch {
-            refreshAutostartState(message: "Autostart konnte nicht geändert werden: \(error.localizedDescription)")
+            refreshAutostartState(message: LocalizedText.format(
+                "Autostart konnte nicht geändert werden: {error}",
+                "Automatic startup could not be changed: {error}",
+                replacements: ["error": error.localizedDescription]
+            ))
         }
     }
 

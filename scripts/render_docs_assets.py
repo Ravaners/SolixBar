@@ -53,6 +53,7 @@ F = {
     "hero": font(92, "bold"),
     "metric": font(66, "bold"),
     "menu": font(38, "bold"),
+    "unicode_small": ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Unicode.ttf", size=24),
 }
 
 
@@ -301,7 +302,7 @@ def render_settings():
     text(d, (92, 148), "Menueleiste und abgedockte Leiste unabhaengig und direkt sortierbar.", MUTED, F["body"])
     shadow(base, (360, 230, 1240, 900), radius=34, blur=34)
     rounded(d, (360, 230, 1240, 900), 28, PANEL, (160, 170, 164), 3)
-    text(d, (410, 278), "SOLIX Bar 0.5.5", INK, F["h3"])
+    text(d, (410, 278), "SOLIX Bar 0.6.0", INK, F["h3"])
     tabs = ["Menueleiste", "Abgedockt", "Warnungen", "Datenquelle", "App", "Start"]
     xx = 405
     for index, label in enumerate(tabs):
@@ -336,6 +337,50 @@ def render_settings():
     rounded(d, (420, 848, 1180, 884), 10, (34, 40, 39), (74, 86, 81), 2)
     text(d, (444, 850), "Akku 78%   PV 640W   Last 420W   Netz 80W", (238, 245, 241), F["small"])
     save(base, "settings-shot.png")
+
+
+def render_languages():
+    base = gradient((1600, 1120), [(251, 252, 249, 255), (241, 247, 243, 255), (235, 243, 255, 255)])
+    d = ImageDraw.Draw(base)
+    text(d, (90, 70), "20 Sprachen", INK, F["h2"])
+    text(d, (92, 142), "Alle Menues, Warnungen, Hilfen, Diagramme und Zeitangaben uebersetzt.", MUTED, F["body"])
+    shadow(base, (300, 215, 1300, 1020), radius=34, blur=34)
+    rounded(d, (300, 215, 1300, 1020), 28, PANEL, (160, 170, 164), 3)
+    text(d, (355, 260), "SOLIX Bar 0.6.0", INK, F["h3"])
+    tabs = ["Menueleiste", "Abgedockt", "Warnungen", "Datenquelle", "App", "Start"]
+    xx = 345
+    for label in tabs:
+        width = 126 if label != "Datenquelle" else 148
+        selected = label == "App"
+        rounded(d, (xx, 315, xx + width, 363), 12, (225, 242, 232) if selected else (244, 247, 245), (202, 213, 207), 2)
+        text(d, (xx + width / 2, 327), label, GREEN if selected else MUTED, F["tiny"], anchor="ma")
+        xx += width + 6
+
+    text(d, (370, 410), "App-Darstellung", INK, F["body_bold"])
+    text(d, (370, 474), "Design", MUTED, F["small"])
+    rounded(d, (555, 458, 1140, 510), 12, (247, 250, 248), (202, 213, 207), 2)
+    text(d, (580, 470), "Automatisch", INK, F["small"])
+    text(d, (1105, 470), "⌄", MUTED, F["small"], anchor="ma")
+    text(d, (370, 548), "Sprache", MUTED, F["small"])
+    rounded(d, (555, 532, 1140, 584), 12, (247, 250, 248), (99, 168, 126), 3)
+    text(d, (580, 544), "Deutsch", INK, F["small"])
+    text(d, (1105, 544), "⌃", MUTED, F["small"], anchor="ma")
+
+    languages = [
+        "Deutsch", "English", "Français", "Español", "Italiano", "Nederlands", "Polski", "Português", "Čeština", "Dansk",
+        "Svenska", "Norsk", "Suomi", "Русский", "简体中文", "繁體中文", "日本語", "한국어", "Türkçe", "Română",
+    ]
+    rounded(d, (540, 598, 1160, 944), 16, (252, 253, 252), (160, 177, 168), 3)
+    for index, language in enumerate(languages):
+        column = index // 10
+        row = index % 10
+        lx = 575 + column * 300
+        ly = 617 + row * 31
+        if index == 0:
+            rounded(d, (560, ly - 3, 840, ly + 29), 8, (225, 242, 232))
+        text(d, (lx, ly), language, GREEN if index == 0 else INK, F["unicode_small"])
+    text(d, (370, 970), "Aenderungen wirken sofort als Vorschau.", MUTED, F["small"])
+    save(base, "languages-shot.png")
 
 
 def render_warnings():
@@ -426,6 +471,7 @@ def main():
     render_detached()
     render_graph()
     render_settings()
+    render_languages()
     render_warnings()
     render_flow()
 

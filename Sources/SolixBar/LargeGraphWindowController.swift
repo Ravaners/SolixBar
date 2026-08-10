@@ -17,7 +17,7 @@ final class LargeGraphWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "SOLIX Verlauf"
+        window.title = LocalizedText.text("SOLIX Verlauf", "SOLIX History")
         window.minSize = NSSize(width: 620, height: 400)
         window.center()
         super.init(window: window)
@@ -62,7 +62,7 @@ final class LargeGraphWindowController: NSWindowController {
     private func buildView() -> NSView {
         let container = NSView()
 
-        let title = NSTextField(labelWithString: "Verlauf")
+        let title = NSTextField(labelWithString: LocalizedText.text("Verlauf", "History"))
         title.font = .boldSystemFont(ofSize: 16)
         title.textColor = .labelColor
 
@@ -70,15 +70,15 @@ final class LargeGraphWindowController: NSWindowController {
         segmented.action = #selector(changeRange)
         segmented.segmentStyle = .rounded
         segmented.controlSize = .regular
-        segmented.toolTip = "Wählt den Zeitraum für den Graphen."
+        segmented.toolTip = LocalizedText.text("Wählt den Zeitraum für den Graphen.", "Selects the time range for the graph.")
 
-        customDaysField.placeholderString = "Tage"
+        customDaysField.placeholderString = LocalizedText.text("Tage", "Days")
         customDaysField.target = self
         customDaysField.action = #selector(changeCustomDays)
         customDaysField.cell = CenteredTextFieldCell(textCell: "")
         customDaysField.alignment = .center
         customDaysField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
-        customDaysField.toolTip = "Anzahl der Tage für den individuellen Zeitraum."
+        customDaysField.toolTip = LocalizedText.text("Anzahl der Tage für den individuellen Zeitraum.", "Number of days for the custom range.")
 
         let metricControls = graphMetricControls()
 
@@ -123,7 +123,11 @@ final class LargeGraphWindowController: NSWindowController {
         for metric in GraphMetric.allCases {
             let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(changeGraphMetrics))
             button.font = .systemFont(ofSize: 12, weight: .semibold)
-            button.toolTip = "Blendet \(metric.title) im Graphen ein oder aus."
+            button.toolTip = LocalizedText.format(
+                "Blendet {metric} im Graphen ein oder aus.",
+                "Shows or hides {metric} in the graph.",
+                replacements: ["metric": metric.title]
+            )
             graphMetricButtons[metric] = button
             stack.addArrangedSubview(button)
         }

@@ -30,19 +30,22 @@ final class HistoryGraphMenuView: NSView {
     }
 
     private func buildView() {
-        let title = NSTextField(labelWithString: "Verlauf")
+        let title = NSTextField(labelWithString: LocalizedText.text("Verlauf", "History"))
         title.font = .boldSystemFont(ofSize: 13)
         title.textColor = .labelColor
-        title.toolTip = "Zeigt den zeitlichen Verlauf von Akku, Solar und Netzbezug."
+        title.toolTip = LocalizedText.text(
+            "Zeigt den zeitlichen Verlauf von Akku, Solar und Netzbezug.",
+            "Shows battery, solar, and grid import over time."
+        )
 
         segmented.target = self
         segmented.action = #selector(changeRange)
         segmented.segmentStyle = .rounded
         segmented.controlSize = .small
         segmented.font = .systemFont(ofSize: 11, weight: .semibold)
-        segmented.toolTip = "Wählt den Zeitraum für den Graphen."
+        segmented.toolTip = LocalizedText.text("Wählt den Zeitraum für den Graphen.", "Selects the time range for the graph.")
 
-        customDaysField.placeholderString = "Tage"
+        customDaysField.placeholderString = LocalizedText.text("Tage", "Days")
         customDaysField.target = self
         customDaysField.action = #selector(changeCustomDays)
         customDaysField.cell = CenteredTextFieldCell(textCell: "")
@@ -50,7 +53,7 @@ final class HistoryGraphMenuView: NSView {
         customDaysField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
         customDaysField.backgroundColor = fieldBackground
         customDaysField.textColor = .labelColor
-        customDaysField.toolTip = "Anzahl der Tage für den individuellen Zeitraum."
+        customDaysField.toolTip = LocalizedText.text("Anzahl der Tage für den individuellen Zeitraum.", "Number of days for the custom range.")
 
         let metricControls = graphMetricControls()
 
@@ -95,7 +98,11 @@ final class HistoryGraphMenuView: NSView {
             let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(changeGraphMetrics))
             button.font = .systemFont(ofSize: 11, weight: .semibold)
             button.controlSize = .small
-            button.toolTip = "Blendet \(metric.title) im Graphen ein oder aus."
+            button.toolTip = LocalizedText.format(
+                "Blendet {metric} im Graphen ein oder aus.",
+                "Shows or hides {metric} in the graph.",
+                replacements: ["metric": metric.title]
+            )
             graphMetricButtons[metric] = button
             stack.addArrangedSubview(button)
         }

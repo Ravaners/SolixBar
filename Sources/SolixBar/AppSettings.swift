@@ -13,9 +13,77 @@ enum AppAppearanceMode: String {
     case dark
 }
 
-enum AppLanguage: String {
+enum AppLanguage: String, CaseIterable {
     case german
     case english
+    case french
+    case spanish
+    case italian
+    case dutch
+    case polish
+    case portuguese
+    case czech
+    case danish
+    case swedish
+    case norwegian
+    case finnish
+    case russian
+    case simplifiedChinese
+    case traditionalChinese
+    case japanese
+    case korean
+    case turkish
+    case romanian
+
+    var displayName: String {
+        switch self {
+        case .german: "Deutsch"
+        case .english: "English"
+        case .french: "Français"
+        case .spanish: "Español"
+        case .italian: "Italiano"
+        case .dutch: "Nederlands"
+        case .polish: "Polski"
+        case .portuguese: "Português"
+        case .czech: "Čeština"
+        case .danish: "Dansk"
+        case .swedish: "Svenska"
+        case .norwegian: "Norsk"
+        case .finnish: "Suomi"
+        case .russian: "Русский"
+        case .simplifiedChinese: "简体中文"
+        case .traditionalChinese: "繁體中文"
+        case .japanese: "日本語"
+        case .korean: "한국어"
+        case .turkish: "Türkçe"
+        case .romanian: "Română"
+        }
+    }
+
+    var localeIdentifier: String {
+        switch self {
+        case .german: "de_DE"
+        case .english: "en_US"
+        case .french: "fr_FR"
+        case .spanish: "es_ES"
+        case .italian: "it_IT"
+        case .dutch: "nl_NL"
+        case .polish: "pl_PL"
+        case .portuguese: "pt_PT"
+        case .czech: "cs_CZ"
+        case .danish: "da_DK"
+        case .swedish: "sv_SE"
+        case .norwegian: "nb_NO"
+        case .finnish: "fi_FI"
+        case .russian: "ru_RU"
+        case .simplifiedChinese: "zh_Hans"
+        case .traditionalChinese: "zh_Hant"
+        case .japanese: "ja_JP"
+        case .korean: "ko_KR"
+        case .turkish: "tr_TR"
+        case .romanian: "ro_RO"
+        }
+    }
 }
 
 enum BarMetric: String, CaseIterable {
@@ -29,50 +97,12 @@ enum BarMetric: String, CaseIterable {
     case total
     case status
 
-    var title: String {
-        switch self {
-        case .battery:
-            "Batterie"
-        case .solar:
-            "PV"
-        case .home:
-            "Hauslast"
-        case .grid:
-            "Netzbezug"
-        case .batteryFlow:
-            "Akku-Fluss"
-        case .flow:
-            "Energiefluss"
-        case .today:
-            "Heutiger Ertrag"
-        case .total:
-            "Gesamtertrag"
-        case .status:
-            "Status"
-        }
+    @MainActor var title: String {
+        LocalizedText.metricTitle(self)
     }
 
-    var shortTitle: String {
-        switch self {
-        case .battery:
-            "Akku"
-        case .solar:
-            "PV"
-        case .home:
-            "Last"
-        case .grid:
-            "Netz"
-        case .batteryFlow:
-            "Fluss"
-        case .flow:
-            "Flow"
-        case .today:
-            "Ertrag"
-        case .total:
-            "Gesamt"
-        case .status:
-            "Status"
-        }
+    @MainActor var shortTitle: String {
+        LocalizedText.metricTitle(self, short: true)
     }
 
     var symbolName: String {
@@ -106,34 +136,12 @@ enum HistoryRange: String, CaseIterable {
     case month
     case custom
 
-    var title: String {
-        switch self {
-        case .current:
-            "Aktuell"
-        case .day:
-            "24 Stunden"
-        case .week:
-            "7 Tage"
-        case .month:
-            "30 Tage"
-        case .custom:
-            "Individuell"
-        }
+    @MainActor var title: String {
+        LocalizedText.historyRangeTitle(self)
     }
 
-    var shortTitle: String {
-        switch self {
-        case .current:
-            "Akt."
-        case .day:
-            "24h"
-        case .week:
-            "7T"
-        case .month:
-            "30T"
-        case .custom:
-            "Eig."
-        }
+    @MainActor var shortTitle: String {
+        LocalizedText.historyRangeTitle(self, short: true)
     }
 
     func duration(customDays: Double) -> TimeInterval {
@@ -157,14 +165,14 @@ enum GraphMetric: String, CaseIterable {
     case solar
     case grid
 
-    var title: String {
+    @MainActor var title: String {
         switch self {
         case .battery:
-            "Akku"
+            LocalizedText.text("Akku", "Battery")
         case .solar:
             "Solar"
         case .grid:
-            "Netzbezug"
+            LocalizedText.text("Netzbezug", "Grid Import")
         }
     }
 }

@@ -21,7 +21,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
             backing: .buffered,
             defer: false
         )
-        window.title = "SOLIX Leiste"
+        window.title = LocalizedText.text("SOLIX Leiste", "SOLIX Bar")
         window.level = Self.desktopAccessoryLevel
         window.isMovableByWindowBackground = !settings.lockDetachedMenuBar
         window.collectionBehavior = [.canJoinAllSpaces]
@@ -284,7 +284,7 @@ private final class DetachedMenuBarView: NSView {
             label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             stack.addArrangedSubview(label)
         } else {
-            let label = NSTextField(labelWithString: "SOLIX wartet auf Daten")
+            let label = NSTextField(labelWithString: LocalizedText.text("SOLIX wartet auf Daten", "SOLIX is waiting for data"))
             label.font = .systemFont(ofSize: 13, weight: .semibold)
             label.textColor = .white
             stack.addArrangedSubview(label)

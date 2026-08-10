@@ -150,21 +150,7 @@ final class HistoryGraphView: NSView {
     }
 
     private func localizedRangeTitle(_ title: String) -> String {
-        guard AppSettings.shared.appLanguage == .english else { return title }
-        switch title {
-        case "Aktuell":
-            return "Current"
-        case "24 Stunden":
-            return "24 Hours"
-        case "7 Tage":
-            return "7 Days"
-        case "30 Tage":
-            return "30 Days"
-        case "Individuell":
-            return "Custom"
-        default:
-            return title
-        }
+        title
     }
 
     private func drawGrid(in rect: NSRect, maxPower: Int) {
@@ -293,14 +279,14 @@ final class HistoryGraphView: NSView {
         return (0..<count).map { index in
             let progress = count == 1 ? 0 : Double(index) / Double(count - 1)
             let date = domain.start.addingTimeInterval(domain.end.timeIntervalSince(domain.start) * progress)
-            return (date: date, label: index == count - 1 ? "Jetzt" : nil, isLast: index == count - 1)
+            return (date: date, label: index == count - 1 ? LocalizedText.text("Jetzt", "Now") : nil, isLast: index == count - 1)
         }
     }
 
     private func timeLabel(for date: Date, isLast: Bool) -> String {
-        if isLast { return "Jetzt" }
+        if isLast { return LocalizedText.text("Jetzt", "Now") }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale(identifier: AppSettings.shared.appLanguage.localeIdentifier)
         switch range {
         case .current, .day:
             formatter.dateFormat = "HH:mm"
@@ -377,7 +363,7 @@ final class HistoryGraphView: NSView {
         let maxWidth = bounds.width - 36
         let compact = maxWidth < 310
         if visibleMetrics.contains(.battery) {
-            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y, width: compact ? 50 : 58)
+            drawLegendItem(title: LocalizedText.metricTitle(.battery, short: true), color: batteryColor, x: x, y: y, width: compact ? 50 : 58)
             x += compact ? 56 : 66
         }
         if visibleMetrics.contains(.solar) {
@@ -385,7 +371,7 @@ final class HistoryGraphView: NSView {
             x += compact ? 60 : 72
         }
         if visibleMetrics.contains(.grid) {
-            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y, width: compact ? 50 : 58)
+            drawLegendItem(title: LocalizedText.metricTitle(.grid, short: true), color: gridColor, x: x, y: y, width: compact ? 50 : 58)
         }
     }
 

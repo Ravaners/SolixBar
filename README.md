@@ -20,6 +20,8 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ![SolixBar warning settings](docs/assets/warnings-shot.png)
 
+![SolixBar language selection](docs/assets/languages-shot.png)
+
 ## Funktionen / Features
 
 - Native AppKit-Menueleisten-App. / Native AppKit menu bar app.
@@ -31,7 +33,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 - Abgedockte schmale Leiste mit Andocken-Funktion, Fixieren gegen versehentliches Verschieben und gespeichertem Zustand. / Detachable slim bar with dock action, optional movement lock, and restored state.
 - Individuelle macOS-Warnungen fuer Akku, Solar-Einbruch, Hauslast, Netzbezug, Einspeisung sowie Akku-Ladung und -Entladung. / Individual macOS warnings for battery, solar drop, home load, grid import, grid export, battery charging, and battery discharging.
 - Hell, Dunkel oder automatisch passend zum System. / Light, dark, or automatic system appearance.
-- Deutsche oder englische sichtbare App-Texte. / German or English visible app text.
+- Vollstaendig lokalisierte App-Texte in 20 Sprachen: Deutsch, Englisch, Franzoesisch, Spanisch, Italienisch, Niederlaendisch, Polnisch, Portugiesisch, Tschechisch, Daenisch, Schwedisch, Norwegisch, Finnisch, Russisch, vereinfachtes und traditionelles Chinesisch, Japanisch, Koreanisch, Tuerkisch und Rumaenisch. / Fully localized UI text in 20 languages: German, English, French, Spanish, Italian, Dutch, Polish, Portuguese, Czech, Danish, Swedish, Norwegian, Finnish, Russian, Simplified and Traditional Chinese, Japanese, Korean, Turkish, and Romanian.
 - Login-Autostart. / Login autostart support.
 - Aufklapp-Dashboard mit Akku, PV, Hauslast, Netzbezug, Akku-Fluss, Tagesertrag, Gesamtertrag und Status. / Dropdown dashboard with battery, solar, home load, grid import, battery flow, daily yield, total yield, and status.
 - Animierter Verlaufsgraf fuer Akku, Solar und Netzbezug. / Animated history graph for battery, solar, and grid import.
@@ -41,7 +43,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.5.6`
+Aktuelle Version / Current version: `0.6.0`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -63,7 +65,7 @@ App-Bundle zum Doppelklicken erstellen. / Create a double-clickable app bundle:
 
 ```bash
 sh scripts/package_app.sh
-unzip outputs/SolixBar-0.5.6-macOS-arm64.zip -d outputs
+unzip outputs/SolixBar-0.6.0-macOS-arm64.zip -d outputs
 open outputs/SolixBar.app
 ```
 
@@ -97,9 +99,9 @@ Das JSON sollte so aussehen. / The JSON should look like this:
 
 ## Live SOLIX Daten / Live SOLIX Data
 
-Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.5.6 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich. Der direkte Abruf haelt Echtzeitdaten fuer alle unterstuetzten Anlagengeraete gemeinsam aktuell und verwendet eine bereits aktive Fuenf-Minuten-Anforderung weiter. Eine unabhaengige Ueberwachung stellt ausgebliebene oder festhaengende Aktualisierungen wieder her. Fuer den PV-Gesamtertrag prueft SolixBar PV-Geraetejahre, Anlagenjahre und historische Tagesertraege. Falls Anker keinen Gesamtwert bereitstellt, wird die reale Messung lokal und datenquellenuebergreifend fortgefuehrt; fuer frueher fehlende Zeitraeume kann ein manueller Gesamtstartwert gesetzt werden.
+Anker stellt keine stabile oeffentliche SOLIX API bereit. SolixBar 0.6.0 liefert den benoetigten Python-Helper und seine Laufzeit im App-Bundle mit. Fuer den normalen SOLIX-Login sind keine Projektordner, Terminalbefehle oder persoenlichen Dateipfade mehr erforderlich. Der direkte Abruf haelt Echtzeitdaten fuer alle unterstuetzten Anlagengeraete gemeinsam aktuell und verwendet eine bereits aktive Fuenf-Minuten-Anforderung weiter. Eine unabhaengige Ueberwachung stellt ausgebliebene oder festhaengende Aktualisierungen wieder her. Fuer den PV-Gesamtertrag prueft SolixBar PV-Geraetejahre, Anlagenjahre und historische Tagesertraege. Falls Anker keinen Gesamtwert bereitstellt, wird die reale Messung lokal und datenquellenuebergreifend fortgefuehrt; fuer frueher fehlende Zeitraeume kann ein manueller Gesamtstartwert gesetzt werden.
 
-English: Anker does not provide a stable public SOLIX API. SolixBar 0.5.6 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths. Direct refreshes keep real-time data current for every supported system device together and reuse an active five-minute request. An independent watchdog recovers missed or stuck refreshes. For PV lifetime yield, SolixBar checks PV-device years, site years, and historical daily yields. If Anker provides no total, the real measurement continues locally across live data sources; a manual total starting value can account for earlier missing periods.
+English: Anker does not provide a stable public SOLIX API. SolixBar 0.6.0 bundles the required Python helper and runtime inside the app. Normal SOLIX login no longer requires a project checkout, Terminal commands, or personal file paths. Direct refreshes keep real-time data current for every supported system device together and reuse an active five-minute request. An independent watchdog recovers missed or stuck refreshes. For PV lifetime yield, SolixBar checks PV-device years, site years, and historical daily yields. If Anker provides no total, the real measurement continues locally across live data sources; a manual total starting value can account for earlier missing periods.
 
 Oeffne `Einstellungen` -> `Datenquelle`, waehle `SOLIX Login`, trage Mail,
 Passwort und Land ein und druecke `Speichern`. Mail und Passwort werden ohne

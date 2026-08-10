@@ -102,9 +102,10 @@ final class WarningMonitor {
         let duration = durationMinutes.rounded() == durationMinutes
             ? String(Int(durationMinutes))
             : String(format: "%.1f", durationMinutes)
-        content.body = LocalizedText.text(
-            "Grenzwert seit mindestens \(duration) Minuten erreicht: \(detail)",
-            "Threshold reached for at least \(duration) minutes: \(detail)"
+        content.body = LocalizedText.format(
+            "Grenzwert seit mindestens {duration} Minuten erreicht: {detail}",
+            "Threshold reached for at least {duration} minutes: {detail}",
+            replacements: ["duration": duration, "detail": detail]
         )
         content.sound = .default
         let request = UNNotificationRequest(

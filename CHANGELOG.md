@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.6.0 - 2026-08-10
+
+- DE: SolixBar ist jetzt vollstaendig in 20 Sprachen bedienbar: Deutsch, Englisch, Franzoesisch, Spanisch, Italienisch, Niederlaendisch, Polnisch, Portugiesisch, Tschechisch, Daenisch, Schwedisch, Norwegisch, Finnisch, Russisch, vereinfachtes und traditionelles Chinesisch, Japanisch, Koreanisch, Tuerkisch und Rumaenisch.
+- EN: SolixBar is now fully usable in 20 languages: German, English, French, Spanish, Italian, Dutch, Polish, Portuguese, Czech, Danish, Swedish, Norwegian, Finnish, Russian, Simplified and Traditional Chinese, Japanese, Korean, Turkish, and Romanian.
+- DE: Menues, Einstellungen, Warnungen, Hilfetexte, Vorschauen, Diagramme, Statusangaben, Benachrichtigungen sowie relative und formatierte Zeitangaben verwenden gemeinsam den zentralen Sprachkatalog.
+- EN: Menus, settings, warnings, help text, previews, graphs, status values, notifications, and relative or formatted time labels now share the central language catalog.
+- DE: Eine automatische Vollstaendigkeitspruefung kontrolliert 213 Textschluessel, alle direkten Sprachspalten und dynamische Platzhalter. Fehlende oder leere Uebersetzungen stoppen die Pruefung.
+- EN: An automated completeness check validates 213 text keys, every direct language column, and dynamic placeholders. Missing or empty translations fail the check.
+- DE: Die gebuendelte Python-Laufzeit schreibt beim Abruf keine Cache-Dateien mehr in das signierte App-Bundle; die Signatur bleibt deshalb auch nach echten SOLIX-Aktualisierungen gueltig.
+- EN: The bundled Python runtime no longer writes cache files into the signed app bundle during refreshes, so the signature remains valid after real SOLIX updates.
+- DE: Authentifizierungs- und MQTT-Laufzeitdaten werden ausschliesslich im privaten Application-Support-Ordner gespeichert. Die Paketpruefung blockiert Authentifizierungs-, Python-Cache- und persoenliche Laufzeitdateien im App-Bundle und Release-ZIP.
+- EN: Authentication and MQTT runtime data are stored exclusively in the private Application Support folder. Packaging checks block authentication, Python-cache, and personal runtime files from the app bundle and release ZIP.
+- DE: Messwerte, Aktualisierungslogik, Farben, Symbole, Anordnung und Bedienablauf bleiben unveraendert.
+- EN: Readings, refresh logic, colors, symbols, layout, and interaction flow remain unchanged.
+
 ## 0.5.6 - 2026-08-08
 
 - DE: Der fehlerhafte PV-Gesamtaufruf wurde korrigiert. SolixBar prueft nacheinander PV-Geraetejahre, Anlagenjahre und historische Tagesertraege; der bisherige ungueltige Bibliotheksaufruf konnte keinen Gesamtwert liefern und liess die App unbemerkt beim lokalen Messwert bleiben.

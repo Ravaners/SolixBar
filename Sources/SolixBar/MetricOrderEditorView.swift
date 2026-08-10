@@ -176,18 +176,7 @@ final class MetricOrderEditorView: NSView {
     }
 
     private func localizedTitle(_ metric: BarMetric) -> String {
-        guard AppSettings.shared.appLanguage == .english else { return metric.title }
-        return switch metric {
-        case .battery: "Battery"
-        case .solar: "PV"
-        case .home: "Home Load"
-        case .grid: "Grid"
-        case .batteryFlow: "Battery Flow"
-        case .flow: "Energy Flow"
-        case .today: "Today's Yield"
-        case .total: "Total Yield"
-        case .status: "Status"
-        }
+        LocalizedText.metricTitle(metric)
     }
 
     private func metricTooltip(_ metric: BarMetric) -> String {
@@ -223,7 +212,7 @@ final class MetricOrderEditorView: NSView {
         case .flow: LocalizedText.text("↓ Erzeugt  ↑ Laden", "↓ Producing  ↑ Charging")
         case .today: LocalizedText.text("Ertrag 4.28kWh", "Yield 4.28kWh")
         case .total: LocalizedText.text("Gesamt 438.6kWh", "Total 438.6kWh")
-        case .status: "Online"
+        case .status: LocalizedText.status("Online")
         }
     }
 

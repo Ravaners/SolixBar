@@ -50,7 +50,7 @@ final class SolixMenuDashboardView: NSView {
         updated.toolTip = LocalizedText.text("Wann die Werte zuletzt aktualisiert wurden.", "When the values were last updated.")
         updatedLabel = updated
 
-        let status = badge(snapshot.status ?? "Online", color: statusColor)
+        let status = badge(LocalizedText.status(snapshot.status ?? "Online"), color: statusColor)
 
         let battery = primaryMetricPanel(LocalizedText.text("Akku", "Battery"), snapshot.batteryPercent.map { "\($0) %" }, "battery.100percent", batteryColor)
         let solar = primaryMetricPanel("Solar", snapshot.solarWatts.map { "\($0) W" }, "sun.max.fill", solarColor)
@@ -144,18 +144,18 @@ final class SolixMenuDashboardView: NSView {
     private func relativeUpdatedText() -> String {
         let seconds = max(0, Int(Date().timeIntervalSince(snapshot.updatedAt)))
         if seconds < 60 {
-            return LocalizedText.text("vor \(seconds) Sekunden", "\(seconds) seconds ago")
+            return LocalizedText.relativeTime(seconds, unit: .seconds)
         }
         let minutes = seconds / 60
         if minutes < 60 {
-            return LocalizedText.text("vor \(minutes) Minuten", "\(minutes) minutes ago")
+            return LocalizedText.relativeTime(minutes, unit: .minutes)
         }
         let hours = minutes / 60
         if hours < 24 {
-            return LocalizedText.text("vor \(hours) Stunden", "\(hours) hours ago")
+            return LocalizedText.relativeTime(hours, unit: .hours)
         }
         let days = hours / 24
-        return LocalizedText.text("vor \(days) Tagen", "\(days) days ago")
+        return LocalizedText.relativeTime(days, unit: .days)
     }
 
     private func primaryMetricPanel(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor) -> NSView {
@@ -316,44 +316,29 @@ final class SolixMenuDashboardView: NSView {
 
     private func tooltip(for title: String, value: String?) -> String {
         let current = value ?? "-"
-        if AppSettings.shared.appLanguage == .english {
-            switch title {
-            case "Battery":
-                return "Shows the current battery charge level: \(current)."
-            case "Solar":
-                return "Shows how much power the solar panels are producing right now: \(current)."
-            case "Home Load":
-                return "Shows how much power your home is currently using: \(current)."
-            case "Grid Import":
-                return "Shows how much power is imported from the grid. Negative values mean export: \(current)."
-            case "Battery Flow":
-                return "Shows whether and how strongly the battery is charging or discharging: \(current)."
-            case "Today's Yield":
-                return "Shows how much solar energy was generated today: \(current)."
-            case "Total Yield":
-                return "Shows the total solar energy recorded so far: \(current)."
-            default:
-                return "\(title): \(current)."
-            }
+        let replacements = ["value": current]
+        if LocalizedText.matches(title, german: "Akku", english: "Battery") {
+            return LocalizedText.format("Aktueller Ladestand des Speichers: {value}.", "Current battery charge level: {value}.", replacements: replacements)
         }
-        switch title {
-        case "Akku":
-            return "Hier wird angezeigt, wie voll der Speicher aktuell geladen ist: \(current)."
-        case "Solar":
-            return "Hier wird angezeigt, wie viel Leistung die Solarmodule gerade erzeugen: \(current)."
-        case "Hauslast":
-            return "Hier wird angezeigt, welche Leistung dein Haus gerade wirklich nutzt: \(current)."
-        case "Netzbezug":
-            return "Hier wird angezeigt, wie viel Leistung aus dem Netz bezogen wird. Negative Werte bedeuten Einspeisung: \(current)."
-        case "Akku-Fluss":
-            return "Hier wird angezeigt, ob und mit welcher Leistung der Akku lädt oder entlädt: \(current)."
-        case "Heutiger Ertrag":
-            return "Hier wird angezeigt, wie viel Solarenergie heute bereits erzeugt wurde: \(current)."
-        case "Gesamtertrag":
-            return "Hier wird angezeigt, wie viel Solarenergie insgesamt bisher erfasst wurde: \(current)."
-        default:
-            return "\(title): \(current)."
+        if title == "Solar" {
+            return LocalizedText.format("Aktuell von den Solarmodulen erzeugte Leistung: {value}.", "Current power produced by the solar panels: {value}.", replacements: replacements)
         }
+        if LocalizedText.matches(title, german: "Hauslast", english: "Home Load") {
+            return LocalizedText.format("Aktuell vom Haus genutzte Leistung: {value}.", "Current power used by the home: {value}.", replacements: replacements)
+        }
+        if LocalizedText.matches(title, german: "Netzbezug", english: "Grid Import") {
+            return LocalizedText.format("Aktueller Netzbezug; negative Werte bedeuten Einspeisung: {value}.", "Current grid import; negative values mean export: {value}.", replacements: replacements)
+        }
+        if LocalizedText.matches(title, german: "Akku-Fluss", english: "Battery Flow") {
+            return LocalizedText.format("Aktuelle Lade- oder Entladeleistung des Akkus: {value}.", "Current battery charging or discharging power: {value}.", replacements: replacements)
+        }
+        if LocalizedText.matches(title, german: "Heutiger Ertrag", english: "Today's Yield") {
+            return LocalizedText.format("Heute erzeugte Solarenergie: {value}.", "Solar energy generated today: {value}.", replacements: replacements)
+        }
+        if LocalizedText.matches(title, german: "Gesamtertrag", english: "Total Yield") {
+            return LocalizedText.format("Bisher insgesamt erfasste Solarenergie: {value}.", "Total solar energy recorded so far: {value}.", replacements: replacements)
+        }
+        return "\(title): \(current)."
     }
 
     private var backgroundColor: NSColor {

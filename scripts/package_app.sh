@@ -4,7 +4,11 @@ set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 STAGING="$(mktemp -d "${TMPDIR:-/private/tmp}/solixbar-package.XXXXXX")"
-trap 'rm -rf "$STAGING"' EXIT INT TERM
+cleanup() {
+  chmod -R u+w "$STAGING" 2>/dev/null || true
+  rm -rf "$STAGING"
+}
+trap cleanup EXIT INT TERM
 APP="$STAGING/SolixBar.app"
 ARCHIVE="$ROOT/outputs/SolixBar-$VERSION-macOS-arm64.zip"
 CONTENTS="$APP/Contents"
@@ -24,6 +28,7 @@ if [ ! -x "$PYTHON_ROOT/bin/python3.12" ] || [ ! -d "$SITE_PACKAGES/anker_solix_
   exit 1
 fi
 
+python3 "$ROOT/scripts/localization_checks.py"
 swift run -c release --disable-sandbox SolixBarCoreChecks
 swift build -c release --disable-sandbox --product SolixBar
 
@@ -47,6 +52,7 @@ rm -rf "$RESOURCES/python/lib/tcl9" "$RESOURCES/python/lib/tcl9.0" \
   "$RESOURCES/python/lib/itcl4.3.5"
 find "$RESOURCES/python/bin" -mindepth 1 ! -name python3.12 -delete
 rm -rf "$RESOURCES/site-packages/pip" "$RESOURCES/site-packages/pip-"*.dist-info
+rm -rf "$RESOURCES/site-packages/anker_solix_api/authcache"
 find "$RESOURCES/python" "$RESOURCES/site-packages" -type d -name __pycache__ -prune -exec rm -rf {} +
 find "$RESOURCES/python" "$RESOURCES/site-packages" -type f -name '*.pyc' -delete
 find "$RESOURCES" -type f -name .DS_Store -delete
@@ -62,6 +68,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$RESOURCES/site-packages" \
 find "$RESOURCES/python" "$RESOURCES/site-packages" -type d -name __pycache__ -prune -exec rm -rf {} +
 find "$RESOURCES/python" "$RESOURCES/site-packages" -type f -name '*.pyc' -delete
 xattr -cr "$APP"
+chmod -R a-w "$RESOURCES"
 codesign --force --deep --sign - "$APP"
 
 PLIST_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$CONTENTS/Info.plist")"

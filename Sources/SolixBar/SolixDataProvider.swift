@@ -35,6 +35,39 @@ enum SolixProviderError: LocalizedError, Sendable {
             "JSON-URL antwortete mit HTTP \(status). / JSON URL returned HTTP \(status)."
         }
     }
+
+    @MainActor var localizedDisplayDescription: String {
+        switch self {
+        case .missingCredentials:
+            return LocalizedText.text("SOLIX-Mail und Passwort fehlen.", "SOLIX email and password are missing.")
+        case .missingBundledHelper:
+            return LocalizedText.text("Der gebündelte SOLIX-Helper fehlt.", "The bundled SOLIX helper is missing.")
+        case .missingCommand:
+            return LocalizedText.text("Kein JSON-Befehl konfiguriert.", "No JSON command is configured.")
+        case .missingURL:
+            return LocalizedText.text("Keine gültige HTTP(S)-JSON-URL konfiguriert.", "No valid HTTP(S) JSON URL is configured.")
+        case .commandFailed(let message):
+            return message
+        case .commandTimedOut(let seconds):
+            return LocalizedText.format(
+                "JSON-Befehl nach {seconds} Sekunden abgebrochen.",
+                "JSON command stopped after {seconds} seconds.",
+                replacements: ["seconds": String(Int(seconds))]
+            )
+        case .helperTimedOut(let seconds):
+            return LocalizedText.format(
+                "SOLIX-Aktualisierung nach {seconds} Sekunden abgebrochen.",
+                "SOLIX refresh stopped after {seconds} seconds.",
+                replacements: ["seconds": String(Int(seconds))]
+            )
+        case .invalidHTTPStatus(let status):
+            return LocalizedText.format(
+                "JSON-URL antwortete mit HTTP {status}.",
+                "JSON URL returned HTTP {status}.",
+                replacements: ["status": String(status)]
+            )
+        }
+    }
 }
 
 final class BundledSolixDataProvider: SolixDataProvider {
@@ -72,6 +105,7 @@ final class BundledSolixDataProvider: SolixDataProvider {
             process.arguments = [runtime.script.path, "--stdin-config"]
 
             var environment = ProcessInfo.processInfo.environment
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
             environment["PYTHONPATH"] = runtime.sitePackages.path
             environment["SOLIXBAR_STATE_PATH"] = runtime.applicationSupport.appendingPathComponent("energy.json").path
             environment["SOLIXBAR_CACHE_PATH"] = runtime.applicationSupport.appendingPathComponent("api-cache.json").path

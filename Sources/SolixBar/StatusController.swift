@@ -206,7 +206,7 @@ final class StatusController: NSObject {
                     lastSnapshot = nil
                     lastSnapshotMode = nil
                 }
-                lastError = error.localizedDescription
+                lastError = (error as? SolixProviderError)?.localizedDisplayDescription ?? error.localizedDescription
                 consecutiveRefreshFailures += 1
                 AppLogger.error("Refresh failed: \(error.localizedDescription)")
                 if wakeRefreshAttemptsRemaining > 0 {
@@ -712,7 +712,7 @@ final class StatusController: NSObject {
         case .total:
             formatBarMetric(metric, value: snapshot.totalKWh.map { String(format: "%.1fkWh", $0) } ?? "--kWh", showLabels: style.showLabels)
         case .status:
-            formatBarMetric(metric, value: snapshot.status ?? "-", showLabels: style.showLabels)
+            formatBarMetric(metric, value: LocalizedText.status(snapshot.status), showLabels: style.showLabels)
         }
     }
 
@@ -721,51 +721,11 @@ final class StatusController: NSObject {
     }
 
     private func metricTitle(_ metric: BarMetric) -> String {
-        guard settings.appLanguage == .english else { return metric.title }
-        switch metric {
-        case .battery:
-            return "Battery"
-        case .solar:
-            return "PV"
-        case .home:
-            return "Home Load"
-        case .grid:
-            return "Grid Import"
-        case .batteryFlow:
-            return "Battery Flow"
-        case .flow:
-            return "Energy Flow"
-        case .today:
-            return "Today's Yield"
-        case .total:
-            return "Total Yield"
-        case .status:
-            return "Status"
-        }
+        LocalizedText.metricTitle(metric)
     }
 
     private func metricShortTitle(_ metric: BarMetric) -> String {
-        guard settings.appLanguage == .english else { return metric.shortTitle }
-        switch metric {
-        case .battery:
-            return "Batt"
-        case .solar:
-            return "PV"
-        case .home:
-            return "Load"
-        case .grid:
-            return "Grid"
-        case .batteryFlow:
-            return "Flow"
-        case .flow:
-            return "Flow"
-        case .today:
-            return "Yield"
-        case .total:
-            return "Total"
-        case .status:
-            return "Status"
-        }
+        LocalizedText.metricTitle(metric, short: true)
     }
 
     private func barAttributedText(for snapshot: SolixSnapshot, scale: Double, style: BarDisplayStyle) -> NSAttributedString {
@@ -870,26 +830,26 @@ final class StatusController: NSObject {
         case .solar:
             guard let watts = snapshot.solarWatts else { return nil }
             return watts > 0
-                ? ("arrow.down.circle.fill", productionColor(watts), "Solar erzeugt Energie")
-                : ("minus.circle.fill", .systemGray, "Keine Solarleistung")
+                ? ("arrow.down.circle.fill", productionColor(watts), LocalizedText.text("Solar erzeugt Energie", "Solar is producing energy"))
+                : ("minus.circle.fill", .systemGray, LocalizedText.text("Keine Solarleistung", "No solar output"))
         case .grid:
             guard let watts = snapshot.gridWatts else { return nil }
             if watts > 0 {
-                return ("arrow.up.circle.fill", consumptionColor(watts), "Strom wird aus dem Netz bezogen")
+                return ("arrow.up.circle.fill", consumptionColor(watts), LocalizedText.text("Strom wird aus dem Netz bezogen", "Power is imported from the grid"))
             }
             if watts < 0 {
-                return ("arrow.down.circle.fill", storageColor(abs(watts)), "Strom wird ins Netz eingespeist")
+                return ("arrow.down.circle.fill", storageColor(abs(watts)), LocalizedText.text("Strom wird ins Netz eingespeist", "Power is exported to the grid"))
             }
-            return ("minus.circle.fill", .systemGray, "Kein Netzfluss")
+            return ("minus.circle.fill", .systemGray, LocalizedText.text("Kein Netzfluss", "No grid flow"))
         case .batteryFlow:
             guard let watts = snapshot.batteryWatts else { return nil }
             if watts > 0 {
-                return ("arrow.down.circle.fill", storageColor(watts), "Akku wird geladen")
+                return ("arrow.down.circle.fill", storageColor(watts), LocalizedText.text("Akku wird geladen", "Battery is charging"))
             }
             if watts < 0 {
-                return ("arrow.up.circle.fill", consumptionColor(abs(watts)), "Akku gibt Strom ab")
+                return ("arrow.up.circle.fill", consumptionColor(abs(watts)), LocalizedText.text("Akku gibt Strom ab", "Battery is discharging"))
             }
-            return ("minus.circle.fill", .systemGray, "Kein Akku-Fluss")
+            return ("minus.circle.fill", .systemGray, LocalizedText.text("Kein Akku-Fluss", "No battery flow"))
         default:
             return nil
         }
